@@ -2106,7 +2106,7 @@ defined(CONFIG_SANDBOX) || defined(CONFIG_X86)
 	return 0;
 }
 
-static int video_init(void)
+int video_init(void)
 {
 	unsigned char color8;
 

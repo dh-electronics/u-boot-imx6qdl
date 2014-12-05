@@ -152,7 +152,7 @@ void bmp_reloc(void) {
  * Return:      None
  *
  */
-static int do_bmp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_bmp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	cmd_tbl_t *c;
 

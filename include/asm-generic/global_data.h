@@ -91,4 +91,7 @@ typedef struct global_data {
 #define GD_FLG_DISABLE_CONSOLE	0x00040	/* Disable console (in & out)	   */
 #define GD_FLG_ENV_READY	0x00080	/* Env. imported into hash table   */
 
+#define ENABLE_PRINTF() gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
+#define DISABLE_PRINTF() gd->flags |= GD_FLG_DISABLE_CONSOLE;
+
 #endif /* __ASM_GENERIC_GBL_DATA_H */

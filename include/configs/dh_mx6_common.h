@@ -17,7 +17,7 @@
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 
-#define UBOOT_DH_VERSION "0.2.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.3.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -178,7 +178,16 @@
 #define CONFIG_CMD_SETEXPR
 #undef CONFIG_CMD_IMLS
 
-#define CONFIG_BOOTDELAY               1
+ /* Only interrupt autoboot if <del> is pressed. Otherwise, garbage
+  * data on the serial line may interrupt the boot sequence.
+  */
+#define CONFIG_BOOTDELAY		0
+#define CONFIG_ZERO_BOOTDELAY_CHECK
+#define CONFIG_AUTOBOOT
+#define CONFIG_AUTOBOOT_KEYED
+#define CONFIG_AUTOBOOT_PROMPT		\
+	"Press DEL to abort autoboot\n"
+#define CONFIG_AUTOBOOT_STOP_STR	"\x7f"
 
 #define CONFIG_LOADADDR                0x12000000
 #define CONFIG_SYS_TEXT_BASE           0x17800000
@@ -213,100 +222,12 @@
 		"load_update_kernel=dummy\0" \
         "mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
         "mmcpart=1\0" \
-        "update_sd_firmware=" \
-                "if test ${ip_dyn} = yes; then " \
-                        "setenv get_cmd dhcp; " \
-                "else " \
-                        "setenv get_cmd tftp; " \
-                "fi; " \
-                "if mmc dev ${mmcdev}; then "   \
-                        "if ${get_cmd} ${update_sd_firmware_filename}; then " \
-                                "setexpr fw_sz ${filesize} / 0x200; " \
-                                "setexpr fw_sz ${fw_sz} + 1; "  \
-                                "mmc write ${loadaddr} 0x2 ${fw_sz}; " \
-                        "fi; "  \
-                "fi\0" \
-        "mmcroot=/dev/mmcblk0p2 ro\0" \
-        "mmcrootfstype=ext4 rootwait fixrtc\0" \
-        "mmcargs=setenv bootargs console=${console}" \
-                "${optargs} " \
-                "root=${mmcroot} " \
-                "rootfstype=${mmcrootfstype} " \
-                "video=${video}\0" \
-        "loadbootscript=" \
-                "fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
-        "bootscript=echo Running bootscript from mmc ...; " \
-                "source\0" \
-        "loadbootenv=" \
-                "load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt;\0" \
-        "importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-                "env import -t ${loadaddr} ${filesize}\0" \
-        "loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
-        "loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
-        "loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
-        "mmcboot=echo Booting from mmc ...; " \
-                "run mmcargs; " \
-                "bootz ${loadaddr} - ${fdt_addr};\0" \
-        "mmcdefault=echo Booting from mmc ...; " \
-                "run mmcargs; " \
-                "if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-                        "if run loadfdt; then " \
-                                "bootm ${loadaddr} - ${fdt_addr}; " \
-                        "else " \
-                                "if test ${boot_fdt} = try; then " \
-                                        "bootm; " \
-                                "else " \
-                                        "echo WARN: Cannot load the DT; " \
-                                "fi; " \
-                        "fi; " \
-                "else " \
-                        "bootm; " \
-                "fi;\0" \
-        "netargs=setenv bootargs console=${console},${baudrate} " \
-                "root=/dev/nfs " \
-                "ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
-        "netboot=echo Booting from net ...; " \
-                "run netargs; " \
-                "if test ${ip_dyn} = yes; then " \
-                        "setenv get_cmd dhcp; " \
-                "else " \
-                        "setenv get_cmd tftp; " \
-                "fi; " \
-                "${get_cmd} ${uimage}; " \
-                "if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-                        "if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
-                                "bootm ${loadaddr} - ${fdt_addr}; " \
-                        "else " \
-                                "if test ${boot_fdt} = try; then " \
-                                        "bootm; " \
-                                "else " \
-                                        "echo WARN: Cannot load the DT; " \
-                                "fi; " \
-                        "fi; " \
-                "else " \
-                        "bootm; " \
-                "fi;\0" \
-	"ethaddr=00:11:22:33:44:55\0" \
-	"ipaddr=10.64.31.252\0"
+		"ethaddr=00:11:22:33:44:55\0" \
+		"ipaddr=10.64.31.252\0" \
+		"bootlinux=update auto; bootm\0"
 
 #define CONFIG_BOOTCOMMAND \
-        "mmc dev ${mmcdev};" \
-        "if mmc rescan; then " \
-                "echo SD/MMC found on device ${mmcdev};" \
-                "if run loadbootenv; then " \
-                        "run importbootenv;" \
-                "fi;" \
-                "echo Checking if uenvcmd is set ...;" \
-                "if test -n $uenvcmd; then " \
-                        "echo Running uenvcmd ...;" \
-                        "run uenvcmd;" \
-                "fi;" \
-                "echo Running default loadzimage ...;" \
-                "if run loadzimage; then " \
-                        "run loadfdt;" \
-                        "run mmcboot;" \
-                "fi;" \
-        "fi;"
+        "run bootlinux"
 
 #define CONFIG_ARP_TIMEOUT     200UL
 

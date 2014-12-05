@@ -55,6 +55,8 @@ extern void dataflash_print_info(void);
 #ifdef CONFIG_DHCOM
 extern void load_dh_settings_file(void);
 extern void set_dhcom_gpios(void);
+extern void burn_fuses(void);
+extern void init_MAC_address(void);
 #endif
 
 #if defined(CONFIG_HARD_I2C) || \
@@ -616,6 +618,8 @@ void board_init_r(gd_t *id, ulong dest_addr)
 #ifdef CONFIG_DHCOM
 	load_dh_settings_file();
 	set_dhcom_gpios();
+	burn_fuses();
+	init_MAC_address();
 #endif
 	
 	stdio_init();	/* get the devices list going. */

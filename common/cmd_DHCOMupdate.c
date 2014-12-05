@@ -87,11 +87,20 @@ DECLARE_GLOBAL_DATA_PTR;
 // Extern defined functions
 // ===============================================================================================================
 //extern int do_load_wrapper (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_sf.c */
+extern int do_ls_wrapper(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_fs.c */
+extern int do_load_wrapper(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_fs.c */
+extern int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_mem.c */
+extern int do_source(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_source.c */
+extern int do_env_set(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_nvedit.c */
+extern int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_mmc.c */
 extern int do_bmp (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 extern int DHCOMUpdateLED_Init(updateinfo_t *p_stDHupdateINI);
 extern void DHCOMUpdateDelayMs(unsigned long msec);
 extern void DHCOMUpdateLED_SetHigh(void);
 extern void DHCOMUpdateLED_SetLow(void);
+
+extern void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer); /* dh_imx6.c */
 
 //------------------------------------------------------------------------------
 //
@@ -1424,7 +1433,7 @@ usage:
 //
 int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-    char *p_cUSBInit[2]                     = {"usb","start"};
+    // char *p_cUSBInit[2]                     = {"usb","start"};
     char *p_cMMCDevSDCard[3]                = {"mmc","dev","0"};
     char *p_cMMCDevMicroSDCard[3]           = {"mmc","dev","1"};
     char *p_cMMCReScan[2]                   = {"mmc","rescan"};

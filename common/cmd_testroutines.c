@@ -85,7 +85,7 @@ int ext_sram_testdh(int iteration_limit)
 	vu_long	temp;
 	vu_long	anti_pattern;
 	vu_long	num_words;
-	vu_long dummy ;
+	vu_long *dummy ;
 	int	j;
 
 	static const ulong bitpattern[] = {
@@ -108,6 +108,8 @@ int ext_sram_testdh(int iteration_limit)
 
 	printf ("Testing %08x ... %08x:\n", (uint)start, (uint)end);
 	PRINTF("%s:%d: start 0x%p end 0x%p\n",	__FUNCTION__, __LINE__, start, end);
+
+        dummy = map_sysmem(CONFIG_SYS_MEMTEST_SCRATCH, sizeof(vu_long));
 
 	for (;;) {
 
@@ -142,7 +144,7 @@ int ext_sram_testdh(int iteration_limit)
 			for(; val != 0; val <<= 1)
 			{
 				*addr  = val;
-				dummy  = ~val; /* clear the test data off of the bus */
+				*dummy  = ~val; /* clear the test data off of the bus */
 				readback = *addr;
 				if(readback != val)
 				{
@@ -150,7 +152,7 @@ int ext_sram_testdh(int iteration_limit)
 					errs++;
 				}
 				*addr  = ~val;
-				dummy  = val;
+				*dummy  = val;
 				readback = *addr;
 				if(readback != ~val)
 				{
@@ -310,7 +312,7 @@ int ddr3_testdh(int iteration_limit)
 	vu_long	temp;
 	vu_long	anti_pattern;
 	vu_long	num_words;
-	vu_long dummy ;
+	vu_long *dummy;
 	int	j;
 
 	static const ulong bitpattern[] = {
@@ -336,6 +338,8 @@ int ddr3_testdh(int iteration_limit)
 
 	printf ("Testing %08x ... %08x:\n", (uint)start, (uint)end);
 	PRINTF("%s:%d: start 0x%p end 0x%p\n",	__FUNCTION__, __LINE__, start, end);
+
+	dummy = map_sysmem(CONFIG_SYS_MEMTEST_SCRATCH, sizeof(vu_long));
 
 	for (;;) {
 
@@ -370,7 +374,7 @@ int ddr3_testdh(int iteration_limit)
 			for(; val != 0; val <<= 1)
 			{
 				*addr  = val;
-				dummy  = ~val; /* clear the test data off of the bus */
+				*dummy  = ~val; /* clear the test data off of the bus */
 				readback = *addr;
 				if(readback != val)
 				{
@@ -378,13 +382,14 @@ int ddr3_testdh(int iteration_limit)
 					errs++;
 				}
 				*addr  = ~val;
-				dummy  = val;
+				*dummy  = val;
 				readback = *addr;
 				if(readback != ~val)
 				{
 					printf ("FAILURE (data line): Is %08lx, should be %08lx\n",	readback, ~val);
 					errs++;
 				}
+
 			}
 		}
 

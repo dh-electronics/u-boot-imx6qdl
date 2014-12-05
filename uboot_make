@@ -4,8 +4,9 @@ echo ----------------------------
 
 if [ "$#" == "0" ]; then
     echo "Error: No arguments provided"
-    echo "q = Quad core"
+    echo "q_d = Quad or Dual core"
     echo "dl = DualLite core"
+    echo "s = Solo core"
     exit 1
 fi
 
@@ -24,14 +25,19 @@ echo -- delete old u-boot* files
 rm -v u-boot*
 
 echo ----------------------------
-if [ "$1" = "q" ] 
+
+if [ "$1" = "q_d" ] 
 then
-    echo "QUAD core selected"
+    echo "Quad and Dual core selected"
     make dh_imx6q_config
 elif [ "$1" = "dl" ] 
 then
     echo "DualLite core selected"
     make dh_imx6dl_config
+elif [ "$1" = "s" ] 
+then
+    echo "Solo core selected"
+    make dh_imx6s_config
 else
     echo "Wrong argument"
 fi

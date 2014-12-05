@@ -17,7 +17,7 @@
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 
-#define UBOOT_DH_VERSION "0.3.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.3.1.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -200,34 +200,30 @@
 
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
-        "splashimageflashaddr=0x0\0" \
-        "dhsettingsflashaddr=0x100000\0" \
 		"splashimage=0x10000002\0" \
 		"splashpos=m,m\0" \
-        "script=boot.scr\0" \
-        "uimage=uImage\0" \
-        "fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
-        "fdt_addr=0x11000000\0" \
-        "boot_fdt=try\0" \
-        "ip_dyn=yes\0" \
-        "console=ttymxc0,115200\0" \
-        "optargs=\0" \
-        "video=\0" \
-        "fdt_high=0xffffffff\0"   \
-        "initrd_high=0xffffffff\0" \
-		"settings_bin_name=13_DataImage_7inch_FG0700G3DSSW.bin\0" \
-		"splash_name=MX6_480x272.bmp\0" \
-		"load_settings_bin=ext2load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_name}\0" \
-		"load_splash=ext2load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_name}\0" \
+		"settings_bin_file=settings.bin\0" \
+		"splash_file=splash.bmp\0" \
+		"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
+		"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
 		"load_update_kernel=dummy\0" \
         "mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
         "mmcpart=1\0" \
 		"ethaddr=00:11:22:33:44:55\0" \
 		"ipaddr=10.64.31.252\0" \
-		"bootlinux=update auto; bootm\0"
+		"bootenv_file=uLinuxEnv.txt\0" \
+		"bootlinux=if run load_bootenv; then run importbootenv;fi; run load_fdt; run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
+		"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
+		"linuxargs=setenv bootargs console=${console} ${rootfs} ${videoargs} fbcon=${fbcon} ${optargs}\0" \
+		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
+		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+		"fdt_addr=0x11000000\0" \
+		"fdt_high=0xffffffff\0"
 
+		
 #define CONFIG_BOOTCOMMAND \
-        "run bootlinux"
+        "update auto; mmc dev ${mmcdev}; if mmc rescan; then run bootlinux; else echo Linux start failed, because mmc${mmcdev} was not found!;fi;"
 
 #define CONFIG_ARP_TIMEOUT     200UL
 

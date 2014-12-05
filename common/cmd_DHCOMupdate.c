@@ -214,7 +214,7 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
 	DISABLE_PRINTF()
 	ret_value = run_command ("i2c dev 0", 0);
 	ENABLE_PRINTF()
-	if (ret_value == -1)
+	if (ret_value != 0)
 	{
 		return 1;
 	}
@@ -242,7 +242,7 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
 			DISABLE_PRINTF()
 			ret_value = run_command ("i2c dev 2", 0);
 			ENABLE_PRINTF()
-			if (ret_value == -1)
+			if (ret_value != 0)
 			{
 				return 1;
 			}
@@ -269,7 +269,7 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
 			DISABLE_PRINTF()
 			ret_value = run_command ("i2c dev 2", 0);
 			ENABLE_PRINTF()
-			if (ret_value == -1)
+			if (ret_value != 0)
 			{
 				return 1;
 			}
@@ -284,7 +284,7 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
 	DISABLE_PRINTF()
 	ret_value = run_command ("i2c dev 2", 0);
 	ENABLE_PRINTF()
-	if (ret_value == -1)
+	if (ret_value != 0)
 	{
 		return 1;
 	}

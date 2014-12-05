@@ -494,13 +494,17 @@ static int board_get_splashimage(void)
 	/* Load DH settings file from EXT4 Filesystem */
 	if ((command = getenv ("load_splash")) == NULL) 
 	{
-		printf ("## Error: \"load_splash\" not defined\n");
+		// Enable console output	
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		printf ("Error: \"load_splash\" not defined\n");
 		return;
 	}	
 	
-	if (run_command (command, 0) == -1)
+	if (run_command (command, 0) != 0)
 	{
-		printf ("## Error: Command \"load_splash\"\n");
+		// Enable console output	
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		printf ("Warning: Can't load splash bitmap\n");
 		return;
 	}	
 	
@@ -632,10 +636,7 @@ int board_video_skip(void)
 
 #ifdef CONFIG_SPLASH_SCREEN
 	/* Copy Splash-Image to ddr3 ram - DHCOM specific */
-	if(board_get_splashimage())
-	{
-		printf("ERROR: Can't read splash bitmap\n");
-	}
+	board_get_splashimage();
 #endif	
 
 	if (!panel) {
@@ -867,13 +868,17 @@ void load_dh_settings_file(void)
 	/* Load DH settings file from EXT4 Filesystem */
 	if ((command = getenv ("load_settings_bin")) == NULL) 
 	{
-		printf ("## Error: \"load_settings_bin\" not defined\n");
+		// Enable console output	
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		printf ("Error: \"load_settings_bin\" not defined\n");
 		return;
 	}	
 	
-	if (run_command (command, 0) == -1)
+	if (run_command (command, 0) != 0)
 	{
-		printf ("## Error: Command \"load_settings_bin\"\n");
+		// Enable console output	
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		printf ("Warning: Can't load DH settings file\n");		
 		return;
 	}
 	
@@ -1105,6 +1110,14 @@ int dhcom_init(void)
 
 int board_init(void)
 {
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	int reg;
+
+	/* Enable eim_slow clocks */
+	reg = __raw_readl(&mxc_ccm->CCGR6);
+	reg |=  (0x1 << MXC_CCM_CCGR6_EMI_SLOW_OFFSET);
+	writel(reg, &mxc_ccm->CCGR6);
+
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 	

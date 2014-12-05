@@ -17,6 +17,8 @@
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 
+#define UBOOT_DH_VERSION "0.1.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+
 /*
  * Default settings
  */
@@ -133,6 +135,9 @@
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
 #define CONFIG_DOS_PARTITION
+#define CONFIG_BZIP2
+#define CONFIG_CMD_UNZIP
+#define CONFIG_CMD_TESTROUTINES
 
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
@@ -191,7 +196,11 @@
         "video=\0" \
         "fdt_high=0xffffffff\0"   \
         "initrd_high=0xffffffff\0" \
-        "mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
+		"settings_bin_name=13_DataImage_7inch_FG0700G3DSSW.bin\0" \
+		"splash_name=MX6_480x272.bmp\0" \
+		"load_settings_bin=ext2load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_name}\0" \
+		"load_splash=ext2load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_name}\0" \
+        "mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
         "mmcpart=1\0" \
         "update_sd_firmware=" \
                 "if test ${ip_dyn} = yes; then " \
@@ -304,7 +313,7 @@
 #define CONFIG_SYS_BARGSIZE CONFIG_SYS_CBSIZE
 
 #define CONFIG_SYS_MEMTEST_START       0x10000000
-#define CONFIG_SYS_MEMTEST_END         0x10010000
+#define CONFIG_SYS_MEMTEST_END         0x20000000
 #define CONFIG_SYS_MEMTEST_SCRATCH     0x10800000
 
 #define CONFIG_SYS_LOAD_ADDR           CONFIG_LOADADDR

@@ -476,35 +476,33 @@ static int board_get_splashimage(void)
 	struct mmc *mmc;
 	char cENVSDRAMBufferAddress[9];
 	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
-	char cENVSplashImageFlashAddress[9];
-	CopyAddressStringToCharArray(&cENVSplashImageFlashAddress[0], getenv ("splashimageflashaddr"));
 	char cENVSplashImageAddress[9];
 	CopyAddressStringToCharArray(&cENVSplashImageAddress[0], getenv ("splashimage"));
-	
-	char cBlkCnt[9];
+
 	char cSplashSize[9];
-	int curr_device = 2;
-	char *p_cMMCSetDevice[3]     	= {"mmc", "dev", "2"}; 
-	char *p_cMMCRead[5]         	= {"mmc", "read", cENVSDRAMBufferAddress, cENVSplashImageFlashAddress, ""}; 	
-	char *p_cMemCp[4]         		= {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""}; 		
+	char *p_cMemCp[4]         		= {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""}; 	
+
+	ulong addr;
+	char *command;
+	char *env;
+
+	addr = simple_strtoul(getenv ("loadaddr"), NULL, 16);
 	
 	// Disable console output
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
 	
-	// Set eMMC as active device
-	if(do_mmcops(NULL, 0, 3, p_cMMCSetDevice))
+	/* Load DH settings file from EXT4 Filesystem */
+	if ((command = getenv ("load_splash")) == NULL) 
 	{
-		return 1;
-	}
-
-	// Read splash bitmap from eMMC
-	mmc = find_mmc_device(curr_device);	
-	sprintf (&cBlkCnt[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE / mmc->read_bl_len));   
-	p_cMMCRead[4] = &cBlkCnt[0];
-	if(do_mmcops(NULL, 0, 5, p_cMMCRead))	
+		printf ("## Error: \"load_splash\" not defined\n");
+		return;
+	}	
+	
+	if (run_command (command, 0) == -1)
 	{
-		return 1;
-	}
+		printf ("## Error: Command \"load_splash\"\n");
+		return;
+	}	
 	
 	// Copy bitmap to splashscreen addresss
 	// Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2, 
@@ -831,14 +829,19 @@ int board_ehci_hcd_init(int port)
 
 void load_dh_settings_file(void)
 {
-	char cENVSDRAMBufferAddress[9];
+	/*char cENVSDRAMBufferAddress[9];
 	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
 	char cDHSettingsSPIFlashAddress[9];
-	CopyAddressStringToCharArray(&cDHSettingsSPIFlashAddress[0], getenv ("dhsettingsflashaddr"));
+	CopyAddressStringToCharArray(&cDHSettingsSPIFlashAddress[0], getenv ("dhsettingsflashaddr"));*/
 	
-	char *p_cSFProbe[2]         = {"sf", "probe"}; 		
-	char *p_cSFRead[5]         	= {"sf", "read", cENVSDRAMBufferAddress, cDHSettingsSPIFlashAddress, "1000"}; 		
-	ulong addr = CONFIG_LOADADDR;
+	//char *p_cSFProbe[2]         = {"sf", "probe"}; 		
+	//char *p_cSFRead[5]         	= {"sf", "read", cENVSDRAMBufferAddress, cDHSettingsSPIFlashAddress, "1000"}; 		
+	ulong addr;
+	char *command;
+	char *env;
+
+	//env = getenv ("loadaddr");
+	addr = simple_strtoul(getenv ("loadaddr"), NULL, 16);
 	
 	/* initialize DH Global Data */
 	gd->dh_board_settings.cLength = 		DEFAULT_SETTINGS_BLOCK_LENGTH;
@@ -867,8 +870,21 @@ void load_dh_settings_file(void)
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
 	
 	/* Load DH settings file from SPI flash */
-	do_spi_flash(NULL, 0, 2, p_cSFProbe);	
-	do_spi_flash(NULL, 0, 5, p_cSFRead);
+	//do_spi_flash(NULL, 0, 2, p_cSFProbe);	
+	//do_spi_flash(NULL, 0, 5, p_cSFRead);
+
+	/* Load DH settings file from EXT4 Filesystem */
+	if ((command = getenv ("load_settings_bin")) == NULL) 
+	{
+		printf ("## Error: \"load_settings_bin\" not defined\n");
+		return;
+	}	
+	
+	if (run_command (command, 0) == -1)
+	{
+		printf ("## Error: Command \"load_settings_bin\"\n");
+		return;
+	}
 	
 	// Enable console output	
 	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
@@ -906,6 +922,10 @@ void load_dh_settings_file(void)
 
 		gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
 	}	
+	else
+	{
+		gd->dh_board_settings.wValidationID = 0;
+	}
 }
 
 void set_dhcom_gpios(void)

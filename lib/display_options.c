@@ -20,6 +20,10 @@ int display_options (void)
 #else
 	printf ("\n\n%s\n\n", version_string);
 #endif
+
+#ifdef UBOOT_DH_VERSION
+        printf ("DH version %s\n\n", UBOOT_DH_VERSION);
+#endif
 	return 0;
 }
 

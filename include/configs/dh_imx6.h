@@ -31,6 +31,7 @@
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_SYS_MMC_ENV_DEV		2	/* 1 = SDHC3, 2 = SDHC4 (eMMC) */
 #endif
+#define CONFIG_SYS_DEFAULT_MMC_DEV	1   /* 0 = SD, 1 = microSD, 2 = eMMC */
 
 /* Framebuffer */
 #define CONFIG_VIDEO
@@ -50,5 +51,7 @@
 #define CONFIG_CONSOLE_MUX
 #define CONFIG_CMD_BMP
 #define SPLASH_MAX_SIZE 0x200000
+#define CONFIG_VIDEO_BMP_GZIP
+#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE	(2 << 20)	/* for decompressed img */
 
 #endif                         /* __DH_IMX6_CONFIG_H */

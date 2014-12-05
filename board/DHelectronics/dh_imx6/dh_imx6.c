@@ -146,7 +146,7 @@ iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_ENET_TX_EN__ENET_TX_EN	        | MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_TXD0__ENET_TDATA_0	        | MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_TXD1__ENET_TDATA_1	        | MUX_PAD_CTRL(ENET_PAD_CTRL),
-        MX6_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+        MX6_PAD_GPIO_16__ENET_ETHERNET_REF_OUT	| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_RX_ER__ENET_RX_ER	        | MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_RXD0__ENET_RDATA_0 	| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_RXD1__ENET_RDATA_1 	| MUX_PAD_CTRL(ENET_PAD_CTRL),
@@ -249,7 +249,8 @@ void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
 	
 int dram_init(void)
 {
-	gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
+	//gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
+	gd->ram_size = ((ulong)CONFIG_DDR_MB * 1024 * 1024);
 
 	return 0;
 }
@@ -257,7 +258,7 @@ int dram_init(void)
 static void setup_iomux_enet(void)
 {
 	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
-
+	
 	/* Reset PHY */
 	gpio_direction_output(IMX_GPIO_NR(5, 0) , 0);
 	udelay(500);

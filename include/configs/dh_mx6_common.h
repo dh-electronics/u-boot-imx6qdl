@@ -17,7 +17,7 @@
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 
-#define UBOOT_DH_VERSION "0.3.1.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.4.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*

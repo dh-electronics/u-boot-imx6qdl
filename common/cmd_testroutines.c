@@ -572,7 +572,7 @@ int i2c_read_rtc_testdh(void)
 
 #define EIM_CS0RCR1 0x21B8008
 #define EIM_CS0WCR1 0x21B8010 
-int do_dhtestroutines(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
+int do_dhtestroutines(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int iteration_limit = 1;
 	int year, month, day, hour, minutes, seconds;

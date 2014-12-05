@@ -330,8 +330,8 @@ int UpdateGlobalDataDHSettings (ulong addr)
         gd->dh_board_settings.cACBiasFreq = ((readl(addr+24) & 0xFF00) >> 8);
         gd->dh_board_settings.cDatalines = ((readl(addr+24) & 0xFFFF0000) >> 16);
 
-        gd->dh_board_settings.wGPIODir = (readl(addr+32) & 0xFFFF);
-        gd->dh_board_settings.wGPIOState = (readl(addr+36) & 0xFFFF);
+        gd->dh_board_settings.wGPIODir = readl(addr+32);
+        gd->dh_board_settings.wGPIOState = readl(addr+36);
 
         gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
 
@@ -857,7 +857,7 @@ void ShowUpdateError(updateinfo_t *p_stDHupdateINI, char *p_cErrorStringPointer,
 //  Return value:   0 = No error
 //                  1 = error
 //
-int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char *argv[], updateinfo_t *p_stDHupdateINI, char *p_cStorageDevice, char *p_cDevicePartitionNumber)
+int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *p_stDHupdateINI, char *p_cStorageDevice, char *p_cDevicePartitionNumber)
 {
     char cENVSDRAMBufferAddress[9];
     CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
@@ -1422,7 +1422,7 @@ usage:
 //  Return value:   0 = No error
 //                  1 = error
 //
-int do_DHCOMupdate (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
     char *p_cUSBInit[2]                     = {"usb","start"};
     char *p_cMMCDevSDCard[3]                = {"mmc","dev","0"};

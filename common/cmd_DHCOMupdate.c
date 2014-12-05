@@ -86,7 +86,7 @@ DECLARE_GLOBAL_DATA_PTR;
 // ===============================================================================================================
 // Extern defined functions
 // ===============================================================================================================
-//extern int do_fat_fsload (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+//extern int do_load_wrapper (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 extern int do_bmp (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 extern int DHCOMUpdateLED_Init(updateinfo_t *p_stDHupdateINI);
 extern void DHCOMUpdateDelayMs(unsigned long msec);
@@ -615,7 +615,7 @@ int ShowBitmap(updateinfo_t *p_stDHupdateINI, enum BitmapTypeEnum eBitmapType, c
     char cENVSDRAMBufferAddress[9];
 	char cSplashSize[9];
     CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));	
-    char *p_cLoadBmpToSDRAM[5]      = {"fatload","","",cENVSDRAMBufferAddress,""};  
+    char *p_cLoadBmpToSDRAM[5]      = {"load","","",cENVSDRAMBufferAddress,""};  
 	char *p_cMemCp[4]         		= {"cp.b", cENVSDRAMBufferAddress, cBmpSDRAMAddress, ""};
     char *p_cDisplayBmpOnScreen[5]  = {"bmp","display",cBmpSDRAMAddress,"32767","32767"};
     int ret_value                   = 0;
@@ -647,7 +647,7 @@ int ShowBitmap(updateinfo_t *p_stDHupdateINI, enum BitmapTypeEnum eBitmapType, c
     
     // Load bitmap from MMC/SD - Card to SDRAM.
     DISABLE_PRINTF()
-    ret_value = do_fat_fsload(NULL, 0, 5, p_cLoadBmpToSDRAM);
+    ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadBmpToSDRAM);
     ENABLE_PRINTF()
 	
 	// Copy bitmap to splashscreen addresss
@@ -888,10 +888,10 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char *argv[], updateinfo_t *p_stDHu
 	void *p_vUpdateArgument; 
 	char *cmd, *file_name; 	
 	char *p_cCompareString[1]               = {"##DHCOMupdate##\0"};
-	char *p_cLoadDHUpdateIniToSDRAM[5]      = {"fatload","","",cDHUpdateIniSDRAMAddress,"DHupdate.ini"};
-	char *p_cLoadUBootBinToSDRAM[5]         = {"fatload","","",cENVSDRAMBufferAddress,"u-boot.imx"};
-	char *p_cLoadEepromBinToSDRAM[5]        = {"fatload","","",cENVSDRAMBufferAddress,"eeprom.bin"};
-	char *p_cLoadScriptBinToSDRAM[5]        = {"fatload","","",cENVSDRAMBufferAddress,"script.bin"};	
+	char *p_cLoadDHUpdateIniToSDRAM[5]      = {"load","","",cDHUpdateIniSDRAMAddress,"DHupdate.ini"};
+	char *p_cLoadUBootBinToSDRAM[5]         = {"load","","",cENVSDRAMBufferAddress,"u-boot.imx"};
+	char *p_cLoadEepromBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"eeprom.bin"};
+	char *p_cLoadScriptBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"script.bin"};	
 	char *p_cRunScript[2]                	= {"source",cENVSDRAMBufferAddress};
 	char *p_cSetEnvDev[3]					= {"setenv", "dev", ""};
 	char *p_cSetEnvPart[3]					= {"setenv", "part", ""};
@@ -975,7 +975,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char *argv[], updateinfo_t *p_stDHu
     {
         // Try to load DHupdate.ini file to SDRAM.
         ////DISABLE_PRINTF()
-        ret_value = do_fat_fsload(NULL, 0, 5, p_cLoadDHUpdateIniToSDRAM);
+        ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadDHUpdateIniToSDRAM);
         ////SESSION_DEPENDED_PRINTF_ENABLE()
 
         // Check if DHupdate.ini was found on Storage Device
@@ -1145,7 +1145,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char *argv[], updateinfo_t *p_stDHu
 				printf("\n\nLoad u-boot with: %s, %s, %s, %s, %s \n", p_cLoadUBootBinToSDRAM[0], p_cLoadUBootBinToSDRAM[1], p_cLoadUBootBinToSDRAM[2], p_cLoadUBootBinToSDRAM[3], p_cLoadUBootBinToSDRAM[4]);
 
 				////DISABLE_PRINTF()
-				ret_value = do_fat_fsload(NULL, 0, 5, p_cLoadUBootBinToSDRAM);
+				ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadUBootBinToSDRAM);
 				////SESSION_DEPENDED_PRINTF_ENABLE()
 
 				if(ret_value == 0)
@@ -1203,7 +1203,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char *argv[], updateinfo_t *p_stDHu
 				 printf ("\n==> Update: Start to Update display adapter eeprom content\n");
 				// Load eeprom file from Storage Device to SDRAM.
 				////DISABLE_PRINTF()
-				ret_value = do_fat_fsload(NULL, 0, 5, p_cLoadEepromBinToSDRAM);
+				ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadEepromBinToSDRAM);
 				////SESSION_DEPENDED_PRINTF_ENABLE()
 
 				if(ret_value == 0)
@@ -1295,7 +1295,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char *argv[], updateinfo_t *p_stDHu
 			case EXECUTE_BOOTLOADER_SCRIPT:
 				printf ("\n==> Update: Execute Bootloader Script");
 				
-				ret_value = do_fat_fsload(NULL, 0, 5, p_cLoadScriptBinToSDRAM);
+				ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadScriptBinToSDRAM);
 
 				if(ret_value == 0)
 				{

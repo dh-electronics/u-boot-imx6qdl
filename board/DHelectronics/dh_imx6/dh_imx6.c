@@ -25,12 +25,16 @@
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
 #include <i2c.h>
+#include <asm/imx-common/mxc_i2c.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
 extern int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+extern int fuse_read(u32 bank, u32 word, u32 *val);
+extern int fuse_prog(u32 bank, u32 word, u32 val);
+extern int do_i2c_bus_num(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -46,9 +50,64 @@ extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 #define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm  | PAD_CTL_SRE_FAST)
 	
+#define GPIO_PAD_CTRL  (PAD_CTL_HYS |			\
+	PAD_CTL_PUS_100K_UP | PAD_CTL_PUE |			\
+	PAD_CTL_PKE  | PAD_CTL_SPEED_MED |			\
+	PAD_CTL_DSE_40ohm)	
+	
+#define I2C_PAD_CTRL	(PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |	\
+	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |		\
+	PAD_CTL_ODE | PAD_CTL_SRE_FAST)	
+	
 #define FB_SYNC_OE_LOW_ACT		0x80000000
 #define FB_SYNC_CLK_LAT_FALL	0x40000000
 #define FB_SYNC_DATA_INVERT		0x20000000
+
+#define BT_FUSE_SEL				0x00000010
+#define SPI_E_FUSE_CONFIG		0x08000030
+
+#define EEPROM_I2C_ADDRESS		0x50
+
+#define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
+
+struct i2c_pads_info i2c_pad_info0 = {
+	.scl = {
+		.i2c_mode  = MX6_PAD_EIM_D21__I2C1_SCL | PC,
+		.gpio_mode = MX6_PAD_EIM_D21__GPIO_3_21 | PC,
+		.gp = IMX_GPIO_NR(3, 21)
+	},
+	.sda = {
+		 .i2c_mode = MX6_PAD_EIM_D28__I2C1_SDA | PC,
+		 .gpio_mode = MX6_PAD_EIM_D28__GPIO_3_28 | PC,
+		 .gp = IMX_GPIO_NR(3, 28)
+	 }
+};
+
+struct i2c_pads_info i2c_pad_info1 = {
+	.scl = {
+		.i2c_mode  = MX6_PAD_KEY_COL3__I2C2_SCL | PC,
+		.gpio_mode = MX6_PAD_KEY_COL3__GPIO_4_12 | PC,
+		.gp = IMX_GPIO_NR(4, 12)
+	},
+	.sda = {
+		 .i2c_mode = MX6_PAD_KEY_ROW3__I2C2_SDA | PC,
+		 .gpio_mode = MX6_PAD_KEY_ROW3__GPIO_4_13 | PC,
+		 .gp = IMX_GPIO_NR(4, 13)
+	 }
+};
+
+struct i2c_pads_info i2c_pad_info2 = {
+	.scl = {
+		.i2c_mode  = MX6_PAD_GPIO_3__I2C3_SCL | PC,
+		.gpio_mode = MX6_PAD_GPIO_3__GPIO_1_3 | PC,
+		.gp = IMX_GPIO_NR(1, 3)
+	},
+	.sda = {
+		 .i2c_mode = MX6_PAD_GPIO_6__I2C3_SDA | PC,
+		 .gpio_mode = MX6_PAD_GPIO_6__GPIO_1_6 | PC,
+		 .gp = IMX_GPIO_NR(1, 6)
+	 }
+};
 
 unsigned DHCOM_gpios[] = {
 	DHCOM_GPIO_A,
@@ -146,29 +205,29 @@ iomux_v3_cfg_t const usdhc4_pads[] = {
 };
 
 iomux_v3_cfg_t const gpio_pads[] = {
-	MX6_PAD_GPIO_2__GPIO_1_2   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_GPIO_4__GPIO_1_4   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_GPIO_5__GPIO_1_5   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_DAT17__GPIO_6_3   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_GPIO_19__GPIO_4_5   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_DI0_PIN4__GPIO_4_20   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_EIM_D27__GPIO_3_27   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_KEY_ROW0__GPIO_4_7   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_KEY_COL1__GPIO_4_8   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_NANDF_CS1__GPIO_6_14   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_NANDF_CS2__GPIO_6_15   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_KEY_ROW1__GPIO_4_9   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD3_DAT5__GPIO_7_0   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD3_DAT4__GPIO_7_1   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_VSYNC__GPIO_5_21   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_GPIO_18__GPIO_7_13   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD1_CMD__GPIO_1_18   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD1_DAT0__GPIO_1_16   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD1_DAT1__GPIO_1_17   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD1_DAT2__GPIO_1_19   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_SD1_CLK__GPIO_1_20   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_PIXCLK__GPIO_5_18   | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_MCLK__GPIO_5_19   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_GPIO_2__GPIO_1_2   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_GPIO_4__GPIO_1_4   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_GPIO_5__GPIO_1_5   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT17__GPIO_6_3   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_GPIO_19__GPIO_4_5   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_DI0_PIN4__GPIO_4_20   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_EIM_D27__GPIO_3_27   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_KEY_ROW0__GPIO_4_7   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_KEY_COL1__GPIO_4_8   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_NANDF_CS1__GPIO_6_14   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_NANDF_CS2__GPIO_6_15   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_KEY_ROW1__GPIO_4_9   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD3_DAT5__GPIO_7_0   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD3_DAT4__GPIO_7_1   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_CSI0_VSYNC__GPIO_5_21   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_GPIO_18__GPIO_7_13   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD1_CMD__GPIO_1_18   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD1_DAT0__GPIO_1_16   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD1_DAT1__GPIO_1_17   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD1_DAT2__GPIO_1_19   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_SD1_CLK__GPIO_1_20   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_CSI0_PIXCLK__GPIO_5_18   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_CSI0_MCLK__GPIO_5_19   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 };
 
 void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
@@ -356,7 +415,6 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 	MX6_PAD_DI0_PIN15__IPU1_DI0_PIN15,
 	MX6_PAD_DI0_PIN2__IPU1_DI0_PIN2,
 	MX6_PAD_DI0_PIN3__IPU1_DI0_PIN3,
-	MX6_PAD_DI0_PIN4__GPIO_4_20,
 	MX6_PAD_DISP0_DAT0__IPU1_DISP0_DAT_0,
 	MX6_PAD_DISP0_DAT1__IPU1_DISP0_DAT_1,
 	MX6_PAD_DISP0_DAT2__IPU1_DISP0_DAT_2,
@@ -883,6 +941,94 @@ void set_dhcom_gpios(void)
 	}
 }
 
+void burn_fuses(void)
+{
+	u32 val;
+	int ret;
+	
+	if(fuse_read(0, 6, &val))
+	{
+		printf("Fusemap: ERROR Can't read BT_FUSE_SEL bit!\n");
+		return;
+	}
+	
+	if(!(val & BT_FUSE_SEL))
+	{
+		if(fuse_prog(0, 5, SPI_E_FUSE_CONFIG))
+		{
+			printf("Fusemap: ERROR Can't write BOOT_CFG bits!\n");
+			return;
+		}
+		if(fuse_prog(0, 6, BT_FUSE_SEL))	
+		{
+			printf("Fusemap: ERROR Can't write BT_FUSE_SEL bit!\n");
+			return;
+		}
+		printf("Fusemap: Burning BOOT_CFG bits\n");
+	}
+}
+
+void init_MAC_address(void)
+{
+	u32 val;
+	unsigned char linebuf[6];
+	unsigned char env_enetaddr[6];
+	unsigned char default_mac[6]={0x00,0x11,0x22,0x33,0x44,0x55};
+	u8 mac[6];
+	int i;
+	
+	if(fuse_read(4, 2, &val))
+	{
+		printf("Init MAC: ERROR Can't read lower MAC address!\n");
+		return;
+	}	
+	
+	if (!eth_getenv_enetaddr("ethaddr", env_enetaddr))
+	{
+		printf("Init MAC: Can't find ethaddr! Generating ENV entry!\n");
+		eth_setenv_enetaddr("ethaddr", default_mac);	
+		for(i = 0; i < 6; i++)
+		{
+			env_enetaddr[i] = default_mac[i];
+		}		
+	}
+	
+	if((val == 0) || (!memcmp(env_enetaddr, default_mac, 6)))
+	{
+		if (i2c_set_bus_num(2) != 0)
+		{
+			printf("Init MAC: ERROR Can't set I2C bus number!\n");
+		}
+		if (i2c_read(EEPROM_I2C_ADDRESS, 0xfa, 0x1, linebuf, 0x6) != 0)
+		{
+			printf("Init MAC: ERROR Can't read MAC from EEPROM!\n");
+		}
+		val = (linebuf[5]) | (linebuf[4] << 8) | (linebuf[3] << 16) | (linebuf[2] << 24);
+		if(fuse_prog(4, 2, val))
+		{
+			printf("Fusemap: ERROR Can't write lower MAC to fusemap!\n");
+			return;
+		}
+		val = (linebuf[1]) | (linebuf[0] << 8);
+		if(fuse_prog(4, 3, val))
+		{
+			printf("Fusemap: ERROR Can't write higher MAC to fusemap!\n");
+			return;
+		}
+		printf("Fusemap: Burning MAC address\n");
+
+		for(i = 0; i < 6; i++)
+		{
+			mac[i] = (u8)linebuf[i];
+		}
+		if (is_valid_ether_addr(mac))
+		{
+			eth_setenv_enetaddr("ethaddr", mac);	
+		}
+		saveenv();
+	}
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -898,6 +1044,8 @@ int dhcom_init(void)
 {
         load_dh_settings_file();
         set_dhcom_gpios();
+        burn_fuses();
+        init_MAC_address();
         return 0;
 }
 
@@ -905,11 +1053,16 @@ int board_init(void)
 {
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
-
+	
+#ifdef CONFIG_I2C_MXC	
+	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info0);
+	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);	
+	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
+#endif
+	
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif	
-
 	return 0;
 }
 

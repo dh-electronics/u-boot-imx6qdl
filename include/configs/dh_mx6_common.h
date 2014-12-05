@@ -17,7 +17,9 @@
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 
-#define UBOOT_DH_VERSION "0.4.1.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define BOOT_CFI2
+
+#define UBOOT_DH_VERSION "0.4.1.1" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -121,6 +123,12 @@
 #define CONFIG_I2C_MXC
 #define CONFIG_SYS_I2C_SPEED		100000
 
+#ifdef BOOT_CFI2
+#define CONFIG_SYS_I2C_EEPROM_ADDR 0x50
+#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1 /* Bosch CFI2 EEPROM */
+#define EEPROM_I2C_BUS_NUM 0
+#endif
+
 /* MMC Configs */
 #define CONFIG_FSL_ESDHC
 #define CONFIG_FSL_USDHC
@@ -141,6 +149,9 @@
 #define CONFIG_BZIP2
 #define CONFIG_CMD_UNZIP
 #define CONFIG_CMD_TESTROUTINES
+#ifdef BOOT_CFI2
+#define CONFIG_CMD_CFI2BOOT
+#endif
 
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP

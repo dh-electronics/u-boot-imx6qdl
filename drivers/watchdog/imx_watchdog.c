@@ -19,6 +19,9 @@ struct watchdog_regs {
 #define WCR_WDBG	0x02
 #define WCR_WDE		0x04	/* WDOG enable */
 #define WCR_WDT		0x08
+#define WCR_SRS         0x10
+#define WCR_WDA         0x20
+#define WCR_SRE         0x40
 #define WCR_WDW		0x80
 #define SET_WCR_WT(x)	(x << 8)
 
@@ -45,8 +48,13 @@ void hw_watchdog_init(void)
 #define CONFIG_WATCHDOG_TIMEOUT_MSECS 128000
 #endif
 	timeout = (CONFIG_WATCHDOG_TIMEOUT_MSECS / 500) - 1;
-	writew(WCR_WDZST | WCR_WDBG | WCR_WDE | WCR_WDT |
+
+/*	writew(WCR_WDZST | WCR_WDBG | WCR_WDE | WCR_WDT |
 		WCR_WDW | SET_WCR_WT(timeout), &wdog->wcr);
+*/
+	/* LZ 2014-11-18 */
+        writew(WCR_WDZST | WCR_WDBG | WCR_WDE | WCR_SRS | WCR_WDA |
+                WCR_WDW | SET_WCR_WT(timeout), &wdog->wcr);
 	hw_watchdog_reset();
 }
 #endif

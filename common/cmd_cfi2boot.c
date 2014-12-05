@@ -28,6 +28,7 @@
 #if defined(CONFIG_CMD_CFI2BOOT)
 #include <command.h>
 #include <environment.h>
+#include <malloc.h>
 #include <i2c.h>
 
 #include <linux/ctype.h>
@@ -42,7 +43,7 @@
 #define BOOTCFG_EEPROM_BLK_SIZE 256  /* eeprom got blocks with 256 bytes,
                                         each block got its own i2c addr */
 #define BOOTCFG_READBLOCK	64
-
+#define MAX_WRITE_TRYS          5    /* max number of trys if writing to eeprom fails */
 
 #define BOOTCFG_DEFAULT		 "\
 active_set=0 state_0=new state_1=app \
@@ -52,13 +53,13 @@ md5sum_localfs_0=123456789 md5sum_localfs_1=123456789 \
 md5sum_optfs_0=123456789 md5sum_optfs_1=123456789 \
 fw_version_0=0 fw_version_1=0"
 
-#define KEY_ACTIVE_SET		"active_set"
-#define KEY_STATE		"state_"
-#define MAX_KEY_LEN		0x20
-#define STATE_VAL_LEN		0x03
+#define KEY_ACTIVE_SET	"active_set"
+#define KEY_STATE	"state_"
+#define MAX_KEY_LEN	0x20
+#define STATE_VAL_LEN	0x03
 
-enum 	part_state { empty=0, new, try, approved, failed, defect, set_default=failed };
-char*  	state_str[6] = { "emp", "new", "try", "app", "fai", "def" };
+enum part_state { empty=0, new=1, try=2, approved=3, failed=4, defect=5, set_default=failed };
+const char* STATE_STR[6] = { "emp", "new", "try", "app", "fai", "def" };
 
 struct bootcfg {
 	uchar	active_set;
@@ -71,14 +72,19 @@ struct bootcfg {
 
 int read_bootcfg(struct bootcfg* p_cfg);
 
+/*
+ * search key-string in buffer-string
+ * and return pointer to value-string
+ * */
 char* get_value_of_key(char* buffer, char* key)
 {
 	char* pkey = NULL;
 
 	/* search substring in configuration string */
 	pkey = strstr(buffer, key);
-	if (pkey == NULL)
+	if (pkey == NULL) {
 		return NULL;
+	}
 
 	/* go 'key=' characters ahead to get gointer to matching value */
 	pkey += (strlen(key) + 1);
@@ -91,6 +97,8 @@ int i2c_write_eeprom(uchar* src_data, uint32_t dest_offset, uint32_t length)
 	int32_t write_index, tx_len, error;
 	int32_t ee_addr;
 	uchar block_id = 0;
+	uchar* validation_mem;
+	int compare, try_counter;
 
 	old_bus = I2C_GET_BUS();
 	I2C_SET_BUS(EEPROM_I2C_BUS_NUM);
@@ -98,17 +106,17 @@ int i2c_write_eeprom(uchar* src_data, uint32_t dest_offset, uint32_t length)
 	/* max 16 byte on one page write */
 	for (write_index = 0; write_index < length; write_index +=16) {
 
-	        /* get block ee_addr of eeprom */
+	        /* get block addr of eeprom (2 LSBs of chip-addr) */
 	        block_id = 0x07 & (uchar)((dest_offset + write_index) / BOOTCFG_EEPROM_BLK_SIZE);
 
 	        /* setup length of next i2c write */
 		if ((length - write_index) < 16) {
-			tx_len = length - write_index;
+			tx_len = length - write_index; /* setup remaining bytes (if less than 16 bytes) */
 		} else {
-		        tx_len = 16;
+		        tx_len = 16; /* transfer next 16 bytes */
 		}
 
-		/* write only in one block (only to one eeprom ee_addr) */
+		/* write only in one block (only to one eeprom chip addr) */
 		if (block_id != (0x07 & ((uchar)((dest_offset + write_index + tx_len - 1 ) / BOOTCFG_EEPROM_BLK_SIZE)))) {
 
 		        /* write only until the end of the block */
@@ -118,28 +126,49 @@ int i2c_write_eeprom(uchar* src_data, uint32_t dest_offset, uint32_t length)
 
 		/* calculate eeprom addr within block */
 		ee_addr = dest_offset + write_index;
-		ee_addr -= block_id * BOOTCFG_EEPROM_BLK_SIZE; /* substract Block offset (done via i2c ee_addr) */
+		ee_addr -= block_id * BOOTCFG_EEPROM_BLK_SIZE; /* substract Block offset (done via i2c chip addr) */
 
+		/* write loop with a verification read after writing */
+		try_counter = 0;
+		compare = 1; /* != 0 means validation result is fail */
+		do {
+		        try_counter++;
 
-		error = i2c_write( BOOTCFG_EEPROM_ADDR | block_id,
-		                ee_addr,
-				1,
-				(uchar*)src_data + write_index,
-				tx_len);
+                        error = i2c_write( BOOTCFG_EEPROM_ADDR | block_id,
+                                        ee_addr,
+                                        1,
+                                        (uchar*)src_data + write_index,
+                                        tx_len);
 
-		if (error) {
-		        printf("Error during I2C write operation!\n");
-			return -1;
-		}
+                        if (error) {
+                                printf("ERROR: I2C write failed!\n");
+                                continue;
+                        }
 
-		udelay(5000);
+                        udelay(50000); /* important: eeprom needs time to store data */
+
+                        validation_mem = (uchar*)malloc(tx_len);
+                        error = i2c_read(   BOOTCFG_EEPROM_ADDR | block_id,
+                                        ee_addr,
+                                        1,
+                                        validation_mem,
+                                        tx_len);
+
+                        compare = memcmp(validation_mem, (uchar*)src_data + write_index, tx_len);
+                        free(validation_mem);
+
+                        if (compare | error) {
+                                printf("ERROR: I2C write validation failed %d at try#=%d!\n",
+                                                compare, try_counter);
+                        }
+		} while (compare && try_counter < MAX_WRITE_TRYS);
 	}
 
 	I2C_SET_BUS(old_bus);
 	return 0;
 }
 
-int write_bootcfg_chg(struct bootcfg* p_cfg, char* pValue, char* newValue, int32_t length)
+int write_bootcfg_chg(struct bootcfg* p_cfg, char* pValue, const char* newValue, int32_t length)
 {
 	uint32_t crc32_calc;
 	struct bootcfg bootcfg_verify;
@@ -150,13 +179,18 @@ int write_bootcfg_chg(struct bootcfg* p_cfg, char* pValue, char* newValue, int32
 
 	/* calculate crc32 and update RAM data */
 	crc32_calc = crc32(0, (uint8_t*)p_cfg->buffer, STR_LEN_TERMINATED(p_cfg->length));
+
 	memcpy(&p_cfg->buffer[STR_LEN_TERMINATED(p_cfg->length)], &crc32_calc, sizeof(uint32_t));
 
 	/* write new value */
-	i2c_write_eeprom((uchar*)pValue, (pValue-p_cfg->buffer), length);
+	i2c_write_eeprom( (uchar*)pValue,
+	                  (pValue - p_cfg->buffer),
+	                  length);
 
 	/* update crc32 */
-	i2c_write_eeprom((uchar*)&p_cfg->buffer[STR_LEN_TERMINATED(p_cfg->length)], STR_LEN_TERMINATED(p_cfg->length), sizeof(uint32_t));
+	i2c_write_eeprom( (uchar*)&p_cfg->buffer[STR_LEN_TERMINATED(p_cfg->length)],
+	                  STR_LEN_TERMINATED(p_cfg->length),
+	                  sizeof(uint32_t));
 
 	/* read back, compare */
 	bootcfg_verify.buffer = p_cfg->buffer + BOOTCFG_EEPROM_SIZE;
@@ -170,6 +204,7 @@ int write_bootcfg_chg(struct bootcfg* p_cfg, char* pValue, char* newValue, int32
 		printf  ("Error in write validation at %d! Risk of corrupted data!!\n", compare);
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -193,8 +228,6 @@ int read_bootcfg(struct bootcfg* p_cfg)
                          (uchar*)&p_cfg->buffer[idx],
                          BOOTCFG_READBLOCK);
 
-                udelay(50000);
-
                 if (strnlen(&p_cfg->buffer[idx], BOOTCFG_READBLOCK) != BOOTCFG_READBLOCK) {
                         break;
                 }
@@ -207,8 +240,6 @@ int read_bootcfg(struct bootcfg* p_cfg)
                 goto exit;
         }
 
-        // printf  ("read data = %s\n", p_cfg->buffer);
-
         /* read crc32 from eeprom */
         p_cfg->length = strnlen(p_cfg->buffer, BOOTCFG_EEPROM_SIZE);
         block_id = 0x07 & (uchar)((BOOTCFG_EEPROM_OFFSET + STR_LEN_TERMINATED(p_cfg->length)) / BOOTCFG_EEPROM_BLK_SIZE);
@@ -217,7 +248,7 @@ int read_bootcfg(struct bootcfg* p_cfg)
                         1,
                         (uint8_t*)&crc32_read,
                         sizeof(uint32_t));
-        udelay(50000);
+
         crc32_calc = crc32( 0, (uint8_t*)p_cfg->buffer, STR_LEN_TERMINATED(p_cfg->length));
         if  (crc32_calc != crc32_read)  {
                 printf  ("CRC32 compare failed!\n");
@@ -235,30 +266,40 @@ int handle_state(struct bootcfg* p_cfg)
 	char* 	pValue = NULL;
 	char 	tmpkey[MAX_KEY_LEN];
 
-	/* build key of active_set state_[01] */
+	/* build key-string of active_set state_[01] */
 	sprintf (tmpkey, "%s%d", KEY_STATE, p_cfg->active_set);
+
+	/* search key-string in read config-string and get pointer to value-string*/
 	pValue = get_value_of_key(p_cfg->buffer, tmpkey);
+	if (pValue == NULL) {
+	        printf("ERROR: Key \"%s\" not found!\n", tmpkey);
+	        return 1;
+	}
 
 	/* check for state 'approved' */
-	if (0 == strncmp(pValue, state_str[approved], strnlen(state_str[approved], MAX_KEY_LEN)))
-		return 0; /* nothing to do */
+	if (0 == strncmp(pValue, STATE_STR[approved], strnlen(STATE_STR[approved], MAX_KEY_LEN))) {
+	        /* nothing to do - boot system without change of bootcfg */
+		return 0;
+	}
 
 	/* check for state 'new' */
-	if (0 == strncmp(pValue, state_str[new], strnlen(state_str[new], MAX_KEY_LEN))) {
+	if (0 == strncmp(pValue, STATE_STR[new], strnlen(STATE_STR[new], MAX_KEY_LEN))) {
+	        /* updated bootcfg - change state to 'try' */
 		p_cfg->state[p_cfg->active_set] = try;
 		write_bootcfg_chg(	p_cfg,
 					pValue,
-					state_str[p_cfg->state[p_cfg->active_set]],
+					STATE_STR[p_cfg->state[p_cfg->active_set]],
 					STATE_VAL_LEN);
 		return 0;
 	}
 
 	/* check for state 'try' */
-	if (0 == strncmp(pValue, state_str[try], strnlen(state_str[try], MAX_KEY_LEN))) {
+	if (0 == strncmp(pValue, STATE_STR[try], strnlen(STATE_STR[try], MAX_KEY_LEN))) {
+	        /* already state try - there must have been a failed boot-process - set to failded */
 		p_cfg->state[p_cfg->active_set] = failed;
 		write_bootcfg_chg(	p_cfg,
 					pValue,
-					state_str[p_cfg->state[p_cfg->active_set]],
+					STATE_STR[p_cfg->state[p_cfg->active_set]],
 					STATE_VAL_LEN);
 		/* switch active partition set - see processing below */
 	}
@@ -275,7 +316,7 @@ int handle_state(struct bootcfg* p_cfg)
 	pValue = get_value_of_key(p_cfg->buffer, tmpkey);
 
 	/* check for state 'approved' */
-	if (0 == strncmp(pValue, state_str[approved], strnlen(state_str[approved], MAX_KEY_LEN))) {
+	if (0 == strncmp(pValue, STATE_STR[approved], strnlen(STATE_STR[approved], MAX_KEY_LEN))) {
 	        /* if state is approved then boot the system */
 		return 0;
 	}

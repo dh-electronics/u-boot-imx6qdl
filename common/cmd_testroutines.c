@@ -38,7 +38,7 @@
 #include <asm/errno.h>
 #include <asm/arch/gpio.h>
 
-
+#include <i2c.h>
 #include <watchdog.h>
 #include <malloc.h>
 #include <asm/byteorder.h>
@@ -49,7 +49,7 @@
 #include <net.h>
 #include <fat.h>
 
-#include <i2c.h>		   // use i2c functionality
+		   // use i2c functionality
 #include <RV_3029_rtc.h>  // defines to use the rtc mcp79411
 
 #include <dh_settings.h>

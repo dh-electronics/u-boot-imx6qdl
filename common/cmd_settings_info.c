@@ -44,7 +44,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int do_settings_info ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+int do_settings_info ( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {                                                                   
     printf("  VALIDATION_ID:    \"%c%c\"\n", (char)gd->dh_board_settings.wValidationID, (char)(gd->dh_board_settings.wValidationID >> 8));
     printf("  DISPLAY_ID:       0x%02x\n", gd->dh_board_settings.cDisplayID);

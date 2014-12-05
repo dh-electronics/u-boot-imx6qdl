@@ -453,6 +453,7 @@ struct display_info_t {
 	struct	fb_videomode mode;
 };
 
+/* LZ: not used yet
 static int detect_hdmi(struct display_info_t const *dev)
 {
 	struct hdmi_regs *hdmi	= (struct hdmi_regs *)HDMI_ARB_BASE_ADDR;
@@ -463,7 +464,7 @@ static void enable_hdmi(struct display_info_t const *dev)
 {
 	imx_enable_hdmi_phy();
 }
-
+*/
 static int detect_i2c(struct display_info_t const *dev)
 {
 	return ((0 == i2c_set_bus_num(dev->bus))
@@ -476,39 +477,33 @@ static int detect_i2c(struct display_info_t const *dev)
 static int board_get_splashimage(void)
 {
 #ifdef DH_IMX6_EMMC_VERSION
-	struct mmc *mmc;
 	char cENVSDRAMBufferAddress[9];
-	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
 	char cENVSplashImageAddress[9];
+
+	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
 	CopyAddressStringToCharArray(&cENVSplashImageAddress[0], getenv ("splashimage"));
 
 	char cSplashSize[9];
-	char *p_cMemCp[4]         		= {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""}; 	
+	char *p_cMemCp[4] = {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""};
 
-	ulong addr;
 	char *command;
-	char *env;
 
-	addr = simple_strtoul(getenv ("loadaddr"), NULL, 16);
-	
 	// Disable console output
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
 	
 	/* Load DH settings file from EXT4 Filesystem */
-	if ((command = getenv ("load_splash")) == NULL) 
-	{
+	if ((command = getenv ("load_splash")) == NULL) {
 		// Enable console output	
 		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
 		printf ("Error: \"load_splash\" not defined\n");
-		return;
+		return -ENOENT;
 	}	
 	
-	if (run_command (command, 0) != 0)
-	{
+	if (run_command (command, 0) != 0) {
 		// Enable console output	
 		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
 		printf ("Warning: Can't load splash bitmap\n");
-		return;
+		return -EIO;
 	}	
 	
 	// Copy bitmap to splashscreen addresss
@@ -518,7 +513,7 @@ static int board_get_splashimage(void)
 	p_cMemCp[3] = &cSplashSize[0];
 	if(do_mem_cp(NULL, 0, 4, p_cMemCp))
 	{
-		return 1;
+		return -EIO;
 	}
 	
 	// Enable console output	
@@ -529,6 +524,7 @@ static int board_get_splashimage(void)
 }
 #endif /* CONFIG_SPLASH_SCREEN */
 
+/* LZ: not used yet
 static void enable_lvds(struct display_info_t const *dev)
 {
 	struct iomuxc *iomux = (struct iomuxc *)
@@ -538,6 +534,7 @@ static void enable_lvds(struct display_info_t const *dev)
 	writel(reg, &iomux->gpr[2]);
 	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
 }
+*/
 
 static void enable_rgb(struct display_info_t const *dev)
 {
@@ -835,7 +832,6 @@ void load_dh_settings_file(void)
 {
 	ulong addr;
 	char *command;
-	char *env;
 	uchar ucBuffer[DHCOM_DISPLAY_SETTINGS_SIZE];
 	int ret_value = 0;
 
@@ -1001,7 +997,6 @@ void set_dhcom_gpios(void)
 void burn_fuses(void)
 {
 	u32 val;
-	int ret;
 	
 	if(fuse_read(0, 6, &val))
 	{
@@ -1016,6 +1011,7 @@ void burn_fuses(void)
 			printf("Fusemap: ERROR Can't write BOOT_CFG bits!\n");
 			return;
 		}
+
 		if(fuse_prog(0, 6, BT_FUSE_SEL))	
 		{
 			printf("Fusemap: ERROR Can't write BT_FUSE_SEL bit!\n");

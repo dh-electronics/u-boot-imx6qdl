@@ -52,6 +52,11 @@ extern int  AT91F_DataflashInit(void);
 extern void dataflash_print_info(void);
 #endif
 
+#ifdef CONFIG_DHCOM
+extern void load_dh_settings_file(void);
+extern void set_dhcom_gpios(void);
+#endif
+
 #if defined(CONFIG_HARD_I2C) || \
 	defined(CONFIG_SYS_I2C)
 #include <i2c.h>
@@ -608,6 +613,11 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	arm_pci_init();
 #endif
 
+#ifdef CONFIG_DHCOM
+	load_dh_settings_file();
+	set_dhcom_gpios();
+#endif
+	
 	stdio_init();	/* get the devices list going. */
 
 	jumptable_init();

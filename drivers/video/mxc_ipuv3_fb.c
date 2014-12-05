@@ -256,10 +256,10 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		sig_cfg.clkidle_en = 1;
 
 	debug("pixclock = %ul Hz\n",
-		(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
+		(u32) (/*PICOS2KHZ(*/fbi->var.pixclock/*)*/ * 1000UL));
 
 	if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-				(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
+				(/*PICOS2KHZ(*/fbi->var.pixclock/*)*/) * 1000UL,
 				fbi->var.xres, fbi->var.yres,
 				out_pixel_fmt,
 				fbi->var.left_margin,

@@ -64,6 +64,7 @@ COBJS-$(CONFIG_CMD_BOOTSTAGE) += cmd_bootstage.o
 COBJS-$(CONFIG_CMD_CACHE) += cmd_cache.o
 COBJS-$(CONFIG_CMD_CBFS) += cmd_cbfs.o
 COBJS-$(CONFIG_CMD_CONSOLE) += cmd_console.o
+COBJS-$(CONFIG_CMD_SETTINGS_INFO) += cmd_settings_info.o
 COBJS-$(CONFIG_CMD_CPLBINFO) += cmd_cplbinfo.o
 COBJS-$(CONFIG_DATAFLASH_MMC_SELECT) += cmd_dataflash_mmc_mux.o
 COBJS-$(CONFIG_CMD_DATE) += cmd_date.o

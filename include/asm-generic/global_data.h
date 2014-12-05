@@ -73,6 +73,9 @@ typedef struct global_data {
 	int		cur_i2c_bus;	/* current used i2c bus */
 #endif
 	struct arch_global_data arch;	/* architecture-specific data */
+#ifdef CONFIG_DHCOM
+    settingsinfo_t  dh_board_settings;  /* DH settings block */	
+#endif
 } gd_t;
 #endif
 

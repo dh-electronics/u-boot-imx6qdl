@@ -152,6 +152,10 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 
 typedef void (interrupt_handler_t)(void *);
 
+// Added by DH - AG
+// 2014-04-01
+#include <dh_settings.h>
+
 #include <asm/u-boot.h> /* boot information for Linux kernel */
 #include <asm/global_data.h>	/* global data used for startup functions */
 

@@ -31,7 +31,7 @@
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_SYS_MMC_ENV_DEV		2	/* 1 = SDHC3, 2 = SDHC4 (eMMC) */
 #endif
-#define CONFIG_SYS_DEFAULT_MMC_DEV	1   /* 0 = SD, 1 = microSD, 2 = eMMC */
+#define CONFIG_SYS_DEFAULT_MMC_DEV	0   /* 0 = SD, 1 = microSD, 2 = eMMC */
 
 /* Framebuffer */
 #define CONFIG_VIDEO

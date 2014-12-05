@@ -65,6 +65,230 @@ DECLARE_GLOBAL_DATA_PTR;
 #if defined(CONFIG_CMD_TESTROUTINES)
 #define DEVELOPERTESTS
 
+/*
+ * Perform a memory test on external sram. The address-space is hardcoded!!
+ * This routine is similar to the more complete alternative test which can be configure
+ * with CONFIG_SYS_ALT_MEMTEST for the mtest command.
+ */
+int ext_sram_testdh(int iteration_limit)
+{
+	vu_long	*addr, *start, *end;
+	ulong	val;
+	ulong	readback;
+	ulong	errs = 0;
+	int iterations = 1;
+
+	vu_long	len;
+	vu_long	offset;
+	vu_long	test_offset;
+	vu_long	pattern;
+	vu_long	temp;
+	vu_long	anti_pattern;
+	vu_long	num_words;
+	vu_long dummy ;
+	int	j;
+
+	static const ulong bitpattern[] = {
+		0x00000001,	/* single bit */
+		0x00000003,	/* two adjacent bits */
+		0x00000007,	/* three adjacent bits */
+		0x0000000F,	/* four adjacent bits */
+		0x00000005,	/* two non-adjacent bits */
+		0x00000015,	/* three non-adjacent bits */
+		0x00000055,	/* four non-adjacent bits */
+		0xaaaaaaaa,	/* alternating 1/0 */
+	};
+
+	// set start and stop address from board configuration -> A16 and A17 are not connected -> max 128 kByte
+	start = (ulong *)(0x08000000);
+	end = (ulong *)(0x0801FFFF);
+
+	// choose test pattern
+	pattern = 0;
+
+	printf ("Testing %08x ... %08x:\n", (uint)start, (uint)end);
+	PRINTF("%s:%d: start 0x%p end 0x%p\n",	__FUNCTION__, __LINE__, start, end);
+
+	for (;;) {
+
+		// check if count of test-loops reached
+		if (iteration_limit && iterations > iteration_limit)
+		{
+			printf("Tested %d iteration(s) with %lu errors.\n",	iterations-1, errs);
+			return errs != 0;
+		}
+
+		printf("Iteration: %6d\r", iterations);
+		PRINTF("\n");
+		iterations++;
+
+		/*
+		 * Data line test:
+		 * write a pattern to the first location, write the 1's complement to a 'parking'
+		 * address (changes the state of the data bus so a floating bus doen't give a false OK), and then
+		 * read the value back. Note that we read it back into a variable because the next time we read it,
+		 * it might be right (been there, tough to explain to the quality guys why it prints a failure when the
+		 * "is" and "should be" are obviously the same in the error message).
+		 *
+		 * Rather than exhaustively testing, we test some
+		 * patterns by shifting '1' bits through a field of
+		 * '0's and '0' bits through a field of '1's (i.e.
+		 * pattern and ~pattern).
+		 */
+		addr = start;
+		for (j = 0; j < sizeof(bitpattern)/sizeof(bitpattern[0]); j++)
+		{
+			val = bitpattern[j];
+			for(; val != 0; val <<= 1)
+			{
+				*addr  = val;
+				dummy  = ~val; /* clear the test data off of the bus */
+				readback = *addr;
+				if(readback != val)
+				{
+					printf ("FAILURE (data line): expected %08lx, actual %08lx\n", val, readback);
+					errs++;
+				}
+				*addr  = ~val;
+				dummy  = val;
+				readback = *addr;
+				if(readback != ~val)
+				{
+					printf ("FAILURE (data line): Is %08lx, should be %08lx\n",	readback, ~val);
+					errs++;
+				}
+			}
+		}
+
+		/*
+		 * Based on code whose Original Author and Copyright
+		 * information follows: Copyright (c) 1998 by Michael
+		 * Barr. This software is placed into the public
+		 * domain and may be used for any purpose. However,
+		 * this notice must not be changed or removed and no
+		 * warranty is either expressed or implied by its
+		 * publication or distribution.
+		 */
+
+		/*
+		 * Address line test
+		 *
+		 * Description: Test the address bus wiring in a memory region by performing a walking
+		 *              1's test on the relevant bits of the address and checking for aliasing.
+		 *              This test will find single-bit address failures such as stuck -high,
+		 *              stuck-low, and shorted pins. The base address and size of the region are
+		 *              selected by the caller.
+		 *
+		 * Notes:	For best results, the selected base address should have enough LSB 0's to
+		 *              guarantee single address bit changes. For example, to test a 64-Kbyte
+		 *              region, select a base address on a 64-Kbyte boundary. Also, select the
+		 *              region size as a power-of-two if at all possible.
+		 */
+		len = ((ulong)end - (ulong)start)/sizeof(vu_long);
+		pattern = (vu_long) 0xaaaaaaaa;
+		anti_pattern = (vu_long) 0x55555555;
+
+		PRINTF("%s:%d: length = 0x%.8lx\n",	__FUNCTION__, __LINE__,	len);
+		/*
+		 * Write the default pattern at each of the
+		 * power-of-two offsets.
+		 */
+		for (offset = 1; offset < len; offset <<= 1)
+		{
+			start[offset] = pattern;
+		}
+
+		/*
+		 * Check for address bits stuck high.
+		 */
+		test_offset = 0;
+		start[test_offset] = anti_pattern; // change state of lsb-address-line
+										   // write anti-pattern if lsb-address is defect you would write to offset=1 and not test_offset=0
+
+		for (offset = 1; offset < len; offset <<= 1)
+		{
+			temp = start[offset];
+			if (temp != pattern)
+			{
+			  printf ("\nFAILURE: Address bit stuck high @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx\n", (ulong)&start[offset], pattern, temp);
+			  errs++;
+			}
+		}
+		start[test_offset] = pattern;
+		WATCHDOG_RESET();
+
+		/*
+		 * Check for addr bits stuck low or shorted.
+		 */
+		for (test_offset = 1; test_offset < len; test_offset <<= 1)
+		{
+			start[test_offset] = anti_pattern;
+
+			for (offset = 1; offset < len; offset <<= 1)
+			{
+			  temp = start[offset];
+			  if ((temp != pattern) && (offset != test_offset))
+			  {
+				printf ("\nFAILURE: Address bit stuck low or shorted @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx\n", (ulong)&start[offset], pattern, temp);
+				errs++;
+			  }
+			}
+			start[test_offset] = pattern;
+		}
+
+		/*
+		 * Description:
+		 * Test the integrity of a physical memory device by performing an
+		 * increment/decrement test over the entire region. In the process every
+		 * storage bit in the device is tested as a zero and a one. The base address
+		 * and the size of the region are selected by the caller.
+		 */
+
+		num_words = ((ulong)end - (ulong)start)/sizeof(vu_long) + 1;
+
+		/*
+		 * Fill memory with a known pattern.
+		 */
+		for (pattern = 1, offset = 0; offset < num_words; pattern++, offset++)
+		{
+			WATCHDOG_RESET();
+			start[offset] = pattern;
+		}
+
+		/*
+		 * Check each location and invert it for the second pass.
+		 */
+		for (pattern = 1, offset = 0; offset < num_words; pattern++, offset++)
+		{
+			WATCHDOG_RESET();
+			temp = start[offset];
+			if (temp != pattern)
+			{
+			  printf ("\nFAILURE (read/write) @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx)\n", (ulong)&start[offset], pattern, temp);
+			  errs++;
+			}
+
+			anti_pattern = ~pattern;
+			start[offset] = anti_pattern;
+		}
+
+		/*
+		 * Check each location for the inverted pattern and zero it.
+		 */
+		for (pattern = 1, offset = 0; offset < num_words; pattern++, offset++)
+		{
+			WATCHDOG_RESET();
+			anti_pattern = ~pattern;
+			temp = start[offset];
+			if (temp != anti_pattern)
+			{
+			  printf ("\nFAILURE (read/write): @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx)\n",	(ulong)&start[offset], anti_pattern, temp);
+			  errs++;
+			}
+			start[offset] = 0;
+		}
+	}
+}
 
 /*
  * Perform a memory test. This routine is similar to the more complete alternative test which can be configure
@@ -346,6 +570,8 @@ int i2c_read_rtc_testdh(void)
 	return 0;
 }
 
+#define EIM_CS0RCR1 0x21B8008
+#define EIM_CS0WCR1 0x21B8010 
 int do_dhtestroutines(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
 {
 	int iteration_limit = 1;
@@ -373,6 +599,39 @@ int do_dhtestroutines(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
 		return ddr3_testdh(iteration_limit);
 	}
 
+	/* run sram test */
+	if (strcmp(cmd, "sram") == 0)
+	{
+		iteration_limit = 100;
+		printf("starting %d sram test-routines ...\n\n", iteration_limit);
+		
+		if(argc > 2)
+		{
+			cmd = argv[2];
+			if(strcmp(cmd, "highspeed") == 0)
+			{
+				writel(0xA022000, EIM_CS0RCR1);
+				writel(0xA092480, EIM_CS0WCR1);	
+				printf("Speed: ~12MByte/sec.\n");				
+			}
+		}
+		else
+		{
+			printf("Speed: ~7MByte/sec.\n");
+		}		
+		ext_sram_testdh(iteration_limit);
+		if(argc > 2)
+		{		
+			cmd = argv[2];
+			if(strcmp(cmd, "highspeed") == 0)
+			{
+				writel(0x1C022000, EIM_CS0RCR1);
+				writel(0x1C092480, EIM_CS0WCR1);				
+			}
+		}
+		
+		return 0;
+	}	
 
 	/* configure rtc and start rtc */
 	if (strcmp(cmd, "setrtc") == 0)
@@ -399,7 +658,21 @@ int do_dhtestroutines(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
 		printf("read date from rtc ...\n\n");
 		return i2c_read_rtc_testdh();
 	}
-
+	
+	/* run endless test */
+	if (strcmp(cmd, "endless") == 0)
+	{
+		while(true)
+		{
+			printf("\nstarting ddr3 test-routine ...\n");
+			iteration_limit = 2;
+			ddr3_testdh(iteration_limit);
+			iteration_limit = 10;
+			printf("\nstarting %d sram test-routines ...\n", iteration_limit);
+			printf("Speed: ~7MByte/sec.\n");
+			ext_sram_testdh(iteration_limit);
+		}
+	}
 usage:
 	cmd_usage(cmdtp);
 	return 1;
@@ -414,6 +687,8 @@ U_BOOT_CMD(
   "---------------------------\n\n"
   "testdh ddr3 [interations] - run ddr3 test\n"
   "testdh setrtc yy mm dd hour min sec\n"
-  "testdh readrtc       - read date from rtc\n");
+  "testdh readrtc - read date from rtc\n"
+  "testdh sram [highspeed] - run external sram test\n"
+  "testdh endless - run endless sram and ddr3 test\n");
 
 #endif/* CONFIG_CMD_TESTROUTINES */

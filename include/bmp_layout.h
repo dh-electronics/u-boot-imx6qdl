@@ -58,4 +58,19 @@ typedef struct bmp_image {
 #define BMP_BI_RLE8	1
 #define BMP_BI_RLE4	2
 
+int bmp_signature_valid(bmp_image_t *bmp);
+__u32 bmp_get_file_size(bmp_image_t *bmp);
+__u32 bmp_get_data_offset(bmp_image_t *bmp);
+__u32 bmp_get_size(bmp_image_t *bmp);
+__u32 bmp_get_width(bmp_image_t *bmp);
+__u32 bmp_get_height(bmp_image_t *bmp);
+__u16 bmp_get_planes(bmp_image_t *bmp);
+__u16 bmp_get_bit_count(bmp_image_t *bmp);
+__u32 bmp_get_compression(bmp_image_t *bmp);
+__u32 bmp_get_image_size(bmp_image_t *bmp);
+__u32 bmp_get_x_pixels_per_m(bmp_image_t *bmp);
+__u32 bmp_get_y_pixels_per_m(bmp_image_t *bmp);
+__u32 bmp_get_colors_used(bmp_image_t *bmp);
+__u32 bmp_get_colors_important(bmp_image_t *bmp);
+
 #endif							/* _BMP_H_ */

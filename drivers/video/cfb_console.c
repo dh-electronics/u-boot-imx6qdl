@@ -1460,8 +1460,7 @@ int video_display_bitmap(ulong bmp_image, int x, int y)
 
 	WATCHDOG_RESET();
 
-	if (!((bmp->header.signature[0] == 'B') &&
-	      (bmp->header.signature[1] == 'M'))) {
+	if (!bmp_signature_valid(bmp)) {
 
 #ifdef CONFIG_VIDEO_BMP_GZIP
 		/*
@@ -1491,8 +1490,7 @@ int video_display_bitmap(ulong bmp_image, int x, int y)
 		 */
 		bmp = (bmp_image_t *) dst;
 
-		if (!((bmp->header.signature[0] == 'B') &&
-		      (bmp->header.signature[1] == 'M'))) {
+		if (!bmp_signature_valid(bmp)) {
 			printf("Error: no valid bmp.gz image at %lx\n",
 			       bmp_image);
 			free(dst);
@@ -1504,11 +1502,11 @@ int video_display_bitmap(ulong bmp_image, int x, int y)
 #endif /* CONFIG_VIDEO_BMP_GZIP */
 	}
 
-	width = le32_to_cpu(bmp->header.width);
-	height = le32_to_cpu(bmp->header.height);
-	bpp = le16_to_cpu(bmp->header.bit_count);
-	colors = le32_to_cpu(bmp->header.colors_used);
-	compression = le32_to_cpu(bmp->header.compression);
+	width = bmp_get_width(bmp);
+	height = bmp_get_height(bmp);
+	bpp = bmp_get_bit_count(bmp);
+	colors = bmp_get_colors_used(bmp);
+	compression = bmp_get_compression(bmp);
 
 	debug("Display-bmp: %ld x %ld  with %d colors\n",
 	      width, height, colors);
@@ -1553,7 +1551,7 @@ int video_display_bitmap(ulong bmp_image, int x, int y)
 	if ((y + height) > VIDEO_VISIBLE_ROWS)
 		height = VIDEO_VISIBLE_ROWS - y;
 
-	bmap = (uchar *) bmp + le32_to_cpu(bmp->header.data_offset);
+	bmap = (uchar *) bmp + bmp_get_data_offset(bmp);
 	fb = (uchar *) (video_fb_address +
 			((y + height - 1) * VIDEO_COLS * VIDEO_PIXEL_SIZE) +
 			x * VIDEO_PIXEL_SIZE);
@@ -1565,7 +1563,7 @@ int video_display_bitmap(ulong bmp_image, int x, int y)
 #endif
 
 	/* We handle only 4, 8, or 24 bpp bitmaps */
-	switch (le16_to_cpu(bmp->header.bit_count)) {
+	switch (bmp_get_bit_count(bmp)) {
 	case 4:
 		padded_line -= width / 2;
 		ycount = height;
@@ -1799,7 +1797,7 @@ int video_display_bitmap(ulong bmp_image, int x, int y)
 		break;
 	default:
 		printf("Error: %d bit/pixel bitmaps not supported by U-Boot\n",
-			le16_to_cpu(bmp->header.bit_count));
+			bmp_get_bit_count(bmp));
 		break;
 	}
 

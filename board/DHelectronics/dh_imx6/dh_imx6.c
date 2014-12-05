@@ -27,6 +27,7 @@
 #include <i2c.h>
 DECLARE_GLOBAL_DATA_PTR;
 
+
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
 	PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
@@ -266,7 +267,9 @@ int board_phy_config(struct phy_device *phydev)
 static iomux_v3_cfg_t const backlight_pads[] = {
 	/* Backlight on RGB connector: J15 */
 	MX6_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
-#define RGB_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
+	MX6_PAD_EIM_D27__GPIO_3_27 | MUX_PAD_CTRL(NO_PAD_CTRL),
+#define RGB_BACKLIGHT_GP IMX_GPIO_NR(3, 27)
+#define PWM_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
 
 	/* Backlight on LVDS connector: J6 */
 	MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -348,6 +351,7 @@ static void enable_rgb(struct display_info_t const *dev)
 		rgb_pads,
 		 ARRAY_SIZE(rgb_pads));
 	gpio_direction_output(RGB_BACKLIGHT_GP, 1);
+	gpio_direction_output(PWM_BACKLIGHT_GP, 0);
 }
 
 static struct display_info_t const displays[] = {/*{
@@ -413,7 +417,7 @@ static struct display_info_t const displays[] = {/*{
 } }, */{
 	.bus	= 2,
 	.addr	= 0x48,
-	.pixfmt	= IPU_PIX_FMT_RGB666,
+	.pixfmt	= IPU_PIX_FMT_BGR24,//IPU_PIX_FMT_RGB666,
 	.detect	= detect_i2c,
 	.enable	= enable_rgb,
 	.mode	= {
@@ -421,13 +425,13 @@ static struct display_info_t const displays[] = {/*{
 		.refresh        = 57,
 		.xres           = 800,
 		.yres           = 480,
-		.pixclock       = 37037,
-		.left_margin    = 40,
-		.right_margin   = 60,
+		.pixclock       = 33260,
+		.left_margin    = 42,
+		.right_margin   = 86,
 		.upper_margin   = 10,
-		.lower_margin   = 10,
-		.hsync_len      = 20,
-		.vsync_len      = 10,
+		.lower_margin   = 33,
+		.hsync_len      = 128,
+		.vsync_len      = 2,
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED
 } } };
@@ -437,6 +441,7 @@ int board_video_skip(void)
 	int i;
 	int ret;
 	char const *panel = getenv("panel");
+
 	if (!panel) {
 		for (i = 0; i < ARRAY_SIZE(displays); i++) {
 			struct display_info_t const *dev = displays+i;
@@ -482,7 +487,7 @@ static void setup_display(void)
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 	int reg;
-
+	
 	enable_ipu_clock();
 	//imx_setup_hdmi();
 
@@ -608,7 +613,7 @@ int board_init(void)
 {
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
-
+	
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif	

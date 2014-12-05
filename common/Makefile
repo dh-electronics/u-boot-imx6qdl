@@ -221,7 +221,14 @@ endif
 ifdef CONFIG_SPD_EEPROM
 SPD := y
 endif
+ifdef CONFIG_CMD_BMP
+BMP_LAYOUT := y
+endif
+ifdef CONFIG_SPLASH_SCREEN
+BMP_LAYOUT := y
+endif
 COBJS-$(SPD) += ddr_spd.o
+COBJS-$(BMP_LAYOUT) += bmp_layout.o
 COBJS-$(CONFIG_HWCONFIG) += hwconfig.o
 COBJS-$(CONFIG_BOUNCE_BUFFER) += bouncebuf.o
 COBJS-y += console.o
@@ -258,6 +265,7 @@ $(obj)../tools/envcrc:
 # SEE README.arm-unaligned-accesses
 $(obj)hush.o: CFLAGS += $(PLATFORM_NO_UNALIGNED)
 $(obj)fdt_support.o: CFLAGS += $(PLATFORM_NO_UNALIGNED)
+$(obj)bmp_layout.o: CFLAGS += $(PLATFORM_NO_UNALIGNED)
 
 #########################################################################
 

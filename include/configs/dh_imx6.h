@@ -23,7 +23,7 @@
 #elif defined(CONFIG_MX6DL)
 #define CONFIG_DEFAULT_FDT_FILE	"imx6dl-dheva01.dtb"
 #endif
-#define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)
+//#define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)
 
 #include "dh_mx6_common.h"
 

@@ -13,7 +13,7 @@
 #define MXC_CPU_MX6SL		0x60
 #define MXC_CPU_MX6DL		0x61
 #define MXC_CPU_MX6SOLO		0x62
-#define MXC_CPU_MX6Q		0x63
+#define MXC_CPU_MX6Q_D		0x63
 
 #define is_soc_rev(rev)	((get_cpu_rev() & 0xFF) - rev)
 u32 get_cpu_rev(void);

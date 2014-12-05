@@ -214,7 +214,7 @@ const struct boot_mode soc_boot_modes[] = {
 void s_init(void)
 {
 	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
-	int is_6q = is_cpu_type(MXC_CPU_MX6Q);
+	int is_6q = is_cpu_type(MXC_CPU_MX6Q_D);
 	u32 mask480;
 	u32 mask528;
 

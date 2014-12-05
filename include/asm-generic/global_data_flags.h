@@ -26,3 +26,4 @@
 #define GD_FLG_ENV_READY	0x0080	/* Environment imported into hash table */
 
 #endif
+

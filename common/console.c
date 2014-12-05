@@ -420,10 +420,10 @@ void putc(const char c)
 		return;
 #endif
 
-#ifdef CONFIG_DISABLE_CONSOLE
+//#ifdef CONFIG_DISABLE_CONSOLE
 	if (gd->flags & GD_FLG_DISABLE_CONSOLE)
 		return;
-#endif
+//#endif
 
 	if (!gd->have_console)
 		return pre_console_putc(c);
@@ -444,10 +444,10 @@ void puts(const char *s)
 		return;
 #endif
 
-#ifdef CONFIG_DISABLE_CONSOLE
+//#ifdef CONFIG_DISABLE_CONSOLE
 	if (gd->flags & GD_FLG_DISABLE_CONSOLE)
 		return;
-#endif
+//#endif
 
 	if (!gd->have_console)
 		return pre_console_puts(s);

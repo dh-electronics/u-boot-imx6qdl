@@ -49,5 +49,6 @@
 //#define CONFIG_IMX_HDMI
 #define CONFIG_CONSOLE_MUX
 #define CONFIG_CMD_BMP
+#define SPLASH_MAX_SIZE 0x200000
 
 #endif                         /* __DH_IMX6_CONFIG_H */

@@ -72,6 +72,10 @@ iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_RGMII_RD0__GPIO_6_25            | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+iomux_v3_cfg_t const usb_pads[] = {
+	MX6_PAD_EIM_D31__GPIO_3_31		| MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
 static void setup_iomux_enet(void)
 {
 	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
@@ -81,10 +85,8 @@ static void setup_iomux_enet(void)
 	udelay(500);
 	gpio_set_value(IMX_GPIO_NR(5, 0), 1);
 
-        /* Enable VIO */
-        gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
-        udelay(500);
-        gpio_set_value(IMX_GPIO_NR(1, 7), 1);
+    /* Enable VIO */
+	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
 }
 
 iomux_v3_cfg_t const usdhc2_pads[] = {
@@ -153,7 +155,7 @@ int board_mmc_getcd(struct mmc *mmc)
 		ret = gpio_get_value(USDHC2_CD_GPIO);
 		break;
 	case USDHC3_BASE_ADDR:
-		ret = gpio_get_value(USDHC3_CD_GPIO);
+		ret = !gpio_get_value(USDHC3_CD_GPIO);
 		break;
 	case USDHC4_BASE_ADDR:
 		ret = 1; /* eMMC/uSDHC4 is always present */
@@ -239,7 +241,7 @@ static int setup_fec(void)
         int ret;
 
         /* set gpr1[21] to select anatop clock */
-        clrsetbits_le32(&iomuxc_regs->gpr[1], 0x1 << 21, 1);
+        clrsetbits_le32(&iomuxc_regs->gpr[1], 0x1 << 21, 0x1 << 21);
 
         ret = enable_fec_anatop_clock(ENET_50MHz);
         if (ret)
@@ -252,10 +254,6 @@ static int setup_fec(void)
 int board_phy_config(struct phy_device *phydev)
 {
 	//mx6_rgmii_rework(phydev);
-
-#ifdef  CONFIG_FEC_MXC
-        setup_fec();
-#endif
 
 	if (phydev->drv->config)
 		phydev->drv->config(phydev);
@@ -568,6 +566,10 @@ int board_eth_init(bd_t *bis)
 	int ret;
 
 	setup_iomux_enet();
+	
+#ifdef  CONFIG_FEC_MXC
+        setup_fec();
+#endif	
 
 	ret = cpu_eth_init(bis);
 	if (ret)
@@ -575,6 +577,22 @@ int board_eth_init(bd_t *bis)
 
 	return ret;
 }
+
+#ifdef CONFIG_USB_EHCI_MX6
+int board_ehci_hcd_init(int port)
+{
+	imx_iomux_v3_setup_multiple_pads(usb_pads, ARRAY_SIZE(usb_pads));
+
+    /* Enable USB VBUS */
+    gpio_direction_output(IMX_GPIO_NR(3, 31) , 1);
+    //udelay(500);
+    //gpio_set_value(IMX_GPIO_NR(1, 7), 1);	
+	
+	
+	return 0;
+}
+
+#endif
 
 int board_early_init_f(void)
 {

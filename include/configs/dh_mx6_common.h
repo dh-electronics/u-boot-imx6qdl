@@ -17,8 +17,9 @@
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 
-#define UBOOT_DH_VERSION "0.1.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.2.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
+#define BOOTLOADER_FLASH_OFFSET				0x400
 /*
  * Default settings
  */
@@ -93,6 +94,7 @@
 #define CONFIG_MXC_UART
 
 #define CONFIG_CMD_SETTINGS_INFO
+#define CONFIG_CMD_DHCOM_UPDATE
 
 /* Fuses */
 #define CONFIG_CMD_FUSE
@@ -110,6 +112,7 @@
 #define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(2, 30)<<8))
 #define CONFIG_SF_DEFAULT_SPEED 25000000
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
+#define CONFIG_SF_PAGE_SIZE	256
 #endif
 
 /* I2C Configs */
@@ -180,6 +183,13 @@
 #define CONFIG_LOADADDR                0x12000000
 #define CONFIG_SYS_TEXT_BASE           0x17800000
 
+/*
+ * Flash Update defines (Command do_update())
+ */
+#define UPDATE_DHUPDATE_INI_SDRAM_ADDRESS           "10000000"  /* should equal os base */
+#define UPDATE_BMP_SDRAM_ADDRESS                    "10100002"
+
+
 #define CONFIG_EXTRA_ENV_SETTINGS \
         "splashimageflashaddr=0x0\0" \
         "dhsettingsflashaddr=0x100000\0" \
@@ -200,6 +210,7 @@
 		"splash_name=MX6_480x272.bmp\0" \
 		"load_settings_bin=ext2load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_name}\0" \
 		"load_splash=ext2load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_name}\0" \
+		"load_update_kernel=dummy\0" \
         "mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
         "mmcpart=1\0" \
         "update_sd_firmware=" \

@@ -2129,7 +2129,7 @@ void video_clear(void)
 #endif
 }
 
-static int video_init(void)
+int video_init(void)
 {
 	unsigned char color8;
 

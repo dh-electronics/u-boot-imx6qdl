@@ -122,4 +122,7 @@ typedef struct global_data {
 #define GD_FLG_SPL_INIT		0x00400	/* spl_init() has been called	   */
 #define GD_FLG_SKIP_RELOC	0x00800	/* Don't relocate */
 
+#define ENABLE_PRINTF() gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
+#define DISABLE_PRINTF() gd->flags |= GD_FLG_DISABLE_CONSOLE;
+
 #endif /* __ASM_GENERIC_GBL_DATA_H */

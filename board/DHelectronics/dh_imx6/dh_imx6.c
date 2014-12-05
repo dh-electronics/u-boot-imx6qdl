@@ -829,16 +829,11 @@ int board_ehci_hcd_init(int port)
 
 void load_dh_settings_file(void)
 {
-	/*char cENVSDRAMBufferAddress[9];
-	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
-	char cDHSettingsSPIFlashAddress[9];
-	CopyAddressStringToCharArray(&cDHSettingsSPIFlashAddress[0], getenv ("dhsettingsflashaddr"));*/
-	
-	//char *p_cSFProbe[2]         = {"sf", "probe"}; 		
-	//char *p_cSFRead[5]         	= {"sf", "read", cENVSDRAMBufferAddress, cDHSettingsSPIFlashAddress, "1000"}; 		
 	ulong addr;
 	char *command;
 	char *env;
+	uchar ucBuffer[DHCOM_DISPLAY_SETTINGS_SIZE];
+	int ret_value = 0;
 
 	//env = getenv ("loadaddr");
 	addr = simple_strtoul(getenv ("loadaddr"), NULL, 16);
@@ -868,10 +863,6 @@ void load_dh_settings_file(void)
 
 	// Disable console output
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
-	
-	/* Load DH settings file from SPI flash */
-	//do_spi_flash(NULL, 0, 2, p_cSFProbe);	
-	//do_spi_flash(NULL, 0, 5, p_cSFRead);
 
 	/* Load DH settings file from EXT4 Filesystem */
 	if ((command = getenv ("load_settings_bin")) == NULL) 
@@ -926,6 +917,47 @@ void load_dh_settings_file(void)
 	{
 		gd->dh_board_settings.wValidationID = 0;
 	}
+	
+	/* Check and Read Display data from EEPROM if enabled */
+	if((gd->dh_board_settings.wHWConfigFlags & SETTINGS_HW_EN_DISP_ADPT_EE_CHK) != 0)
+	{
+		/* Set i2c driver to use i2c bus 0  */
+		DISABLE_PRINTF()
+		run_command ("i2c dev 0", 0);
+		ENABLE_PRINTF()
+
+		i2c_init (CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+		ret_value = i2c_read(DISPLAY_ADAPTER_EEPROM_ADDR, 0, 1, &ucBuffer[0], DHCOM_DISPLAY_SETTINGS_SIZE);
+
+		/* Set i2c driver back to use i2c bus 2 */
+		DISABLE_PRINTF()
+		run_command ("i2c dev 2", 0);
+		ENABLE_PRINTF()
+
+		if((ret_value == 0) && (ucBuffer[2] == 'D') && (ucBuffer[3] == 'H'))
+		{
+			gd->dh_board_settings.cDisplayID = ucBuffer[1];
+
+			gd->dh_board_settings.wYResolution = (ucBuffer[5] << 8) | ucBuffer[4];
+			gd->dh_board_settings.wXResolution = (ucBuffer[7] << 8) | ucBuffer[6];
+
+			gd->dh_board_settings.wLCDConfigFlags = (ucBuffer[9] << 8) | ucBuffer[8];
+			gd->dh_board_settings.wPixelClock = (ucBuffer[11] << 8) | ucBuffer[10];
+
+			gd->dh_board_settings.wVPulseWidth = (ucBuffer[13] << 8) | ucBuffer[12];
+			gd->dh_board_settings.wHPulseWidth = (ucBuffer[15] << 8) | ucBuffer[14];
+
+			gd->dh_board_settings.wHBackPorch = (ucBuffer[17] << 8) | ucBuffer[16];
+			gd->dh_board_settings.wHFrontPorch = (ucBuffer[19] << 8) | ucBuffer[18];
+
+			gd->dh_board_settings.wVBackPorch = (ucBuffer[21] << 8) | ucBuffer[20];
+			gd->dh_board_settings.wVFrontPorch = (ucBuffer[23] << 8) | ucBuffer[22];
+
+			gd->dh_board_settings.cACBiasTrans = ucBuffer[24];
+			gd->dh_board_settings.cACBiasFreq = ucBuffer[25];
+			gd->dh_board_settings.cDatalines = (ucBuffer[27] << 8) | ucBuffer[26];
+		}
+	}		
 }
 
 void set_dhcom_gpios(void)
@@ -990,18 +1022,18 @@ void burn_fuses(void)
 
 void init_MAC_address(void)
 {
-	u32 val;
+	u32 val = 0;
 	unsigned char linebuf[6];
 	unsigned char env_enetaddr[6];
 	unsigned char default_mac[6]={0x00,0x11,0x22,0x33,0x44,0x55};
 	u8 mac[6];
-	int i;
+	int i = 0;
 	
 	if(fuse_read(4, 2, &val))
 	{
 		printf("Init MAC: ERROR Can't read lower MAC address!\n");
 		return;
-	}	
+	}
 	
 	if (!eth_getenv_enetaddr("ethaddr", env_enetaddr))
 	{
@@ -1018,10 +1050,12 @@ void init_MAC_address(void)
 		if (i2c_set_bus_num(2) != 0)
 		{
 			printf("Init MAC: ERROR Can't set I2C bus number!\n");
+			return;
 		}
 		if (i2c_read(EEPROM_I2C_ADDRESS, 0xfa, 0x1, linebuf, 0x6) != 0)
 		{
 			printf("Init MAC: ERROR Can't read MAC from EEPROM!\n");
+			return;
 		}
 		val = (linebuf[5]) | (linebuf[4] << 8) | (linebuf[3] << 16) | (linebuf[2] << 24);
 		if(fuse_prog(4, 2, val))

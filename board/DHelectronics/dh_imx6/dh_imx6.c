@@ -55,7 +55,7 @@ extern int do_i2c_bus_num(cmd_tbl_t *cmdtp, int flag, int argc, char * const arg
 #define GPIO_PAD_CTRL  (PAD_CTL_HYS |			\
 	/* PAD_CTL_PUS_100K_UP  | PAD_CTL_PUE | */		\
 	/* PAD_CTL_PKE  |*/ PAD_CTL_SPEED_MED |			\
-        PAD_CTL_DSE_DISABLE)
+        PAD_CTL_DSE_40ohm)
 
 #define I2C_PAD_CTRL	(PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |	\
 	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |		\

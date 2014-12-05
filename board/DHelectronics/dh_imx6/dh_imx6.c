@@ -49,24 +49,26 @@ extern int do_i2c_bus_num(cmd_tbl_t *cmdtp, int flag, int argc, char * const arg
 	
 #define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm  | PAD_CTL_SRE_FAST)
-	
+
+/* LZ: Set Drive Strength Field to Hi-Z */
+/* LZ: Disable Pull/Keeper for DHCOM GPIOs*/
 #define GPIO_PAD_CTRL  (PAD_CTL_HYS |			\
-	PAD_CTL_PUS_100K_UP | PAD_CTL_PUE |			\
-	PAD_CTL_PKE  | PAD_CTL_SPEED_MED |			\
-	PAD_CTL_DSE_40ohm)	
-	
+	/* PAD_CTL_PUS_100K_UP  | PAD_CTL_PUE | */		\
+	/* PAD_CTL_PKE  |*/ PAD_CTL_SPEED_MED |			\
+        PAD_CTL_DSE_DISABLE)
+
 #define I2C_PAD_CTRL	(PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |	\
 	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |		\
 	PAD_CTL_ODE | PAD_CTL_SRE_FAST)	
 	
-#define FB_SYNC_OE_LOW_ACT		0x80000000
+#define FB_SYNC_OE_LOW_ACT	0x80000000
 #define FB_SYNC_CLK_LAT_FALL	0x40000000
-#define FB_SYNC_DATA_INVERT		0x20000000
+#define FB_SYNC_DATA_INVERT	0x20000000
 
-#define BT_FUSE_SEL				0x00000010
-#define SPI_E_FUSE_CONFIG		0x08000030
+#define BT_FUSE_SEL		0x00000010
+#define SPI_E_FUSE_CONFIG	0x08000030
 
-#define EEPROM_I2C_ADDRESS		0x50
+#define EEPROM_I2C_ADDRESS	0x50
 
 #define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
 
@@ -970,27 +972,24 @@ void set_dhcom_gpios(void)
 {
 	int i;
 	int mask = 0x1;
-	// Setup alternate function
+
+	// Setup alternate function and configure pads
 	imx_iomux_v3_setup_multiple_pads(gpio_pads, ARRAY_SIZE(gpio_pads));
 	
 	
-	for(i = 0; i < 23; i++)
-	{
-		if(gd->dh_board_settings.wGPIODir & mask)
-		{
+	for(i = 0; i < 23; i++) {
+
+		if(gd->dh_board_settings.wGPIODir & mask) {
 			// Set to input
 			gpio_direction_input(DHCOM_gpios[i]);		
 		}
-		else
-		{ 
-			// Set to output
-			if(gd->dh_board_settings.wGPIOState & mask)
-			{
+		else {
+		        // Set to output
+			if(gd->dh_board_settings.wGPIOState & mask) {
 				// Set to high
 				gpio_direction_output(DHCOM_gpios[i] , 1);
 			}
-			else
-			{
+			else {
 				// Set to low
 				gpio_direction_output(DHCOM_gpios[i] , 0);
 			}

@@ -16,10 +16,9 @@
 #define DH_IMX6_EMMC_VERSION
 //#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
-
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "0.4.1.1" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.4.1.2" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -230,8 +229,9 @@
 		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
 		"fdt_addr=0x11000000\0" \
-		"fdt_high=0xffffffff\0"
-
+		"fdt_high=0xffffffff\0" \
+		"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
+		"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0"
 		
 #define CONFIG_BOOTCOMMAND \
         "update auto; mmc dev ${mmcdev}; if mmc rescan; then run bootlinux; else echo Linux start failed, because mmc${mmcdev} was not found!;fi;"

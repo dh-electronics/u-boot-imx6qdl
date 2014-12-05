@@ -18,7 +18,7 @@
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "0.4.1.5" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.4.2.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -212,7 +212,7 @@
 #define CONFIG_EXTRA_ENV_SETTINGS \
 		"splashimage=0x10000002\0" \
 		"splashpos=m,m\0" \
-		"settings_bin_file=settings.bin\0" \
+		"settings_bin_file=default_settings.bin\0" \
 		"splash_file=splash.bmp\0" \
 		"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
 		"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
@@ -222,7 +222,10 @@
 		"ethaddr=00:11:22:33:44:55\0" \
 		"ipaddr=10.64.31.252\0" \
 		"bootenv_file=uLinuxEnv.txt\0" \
-		"bootlinux=if run load_bootenv; then run importbootenv;fi; run load_fdt; run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
+		"bootlinux=if run load_bootenv; then run importbootenv;fi;" \
+                        " setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs;" \
+                        " setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt;" \
+                        " run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 		"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
 		"linuxargs=setenv bootargs console=${console} ${rootfs} ${videoargs} fbcon=${fbcon} ${optargs}\0" \
 		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \

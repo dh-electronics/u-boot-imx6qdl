@@ -37,6 +37,9 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define ENET_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+	
+#define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED |		\
+	PAD_CTL_DSE_40ohm  | PAD_CTL_SRE_FAST)
 
 int dram_init(void)
 {
@@ -46,8 +49,8 @@ int dram_init(void)
 }
 
 iomux_v3_cfg_t const uart1_pads[] = {
-	MX6_PAD_CSI0_DAT10__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX6_PAD_CSI0_DAT11__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
+  MX6_PAD_SD3_DAT7__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
+  MX6_PAD_SD3_DAT6__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
 iomux_v3_cfg_t const enet_pads[] = {
@@ -508,6 +511,22 @@ static void setup_display(void)
 }
 #endif /* CONFIG_VIDEO_IPUV3 */
 
+#ifdef CONFIG_MXC_SPI
+iomux_v3_cfg_t const ecspi1_pads[] = {
+	/* SS0 */
+	MX6_PAD_EIM_EB2__GPIO_2_30   | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D17__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D18__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D16__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+};
+
+void setup_spi(void)
+{
+	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
+					 ARRAY_SIZE(ecspi1_pads));
+}
+#endif
+
 /*
  * Do not overwrite the console
  * Use always serial for U-Boot console
@@ -545,6 +564,10 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
+#ifdef CONFIG_MXC_SPI
+	setup_spi();
+#endif	
+	
 	return 0;
 }
 

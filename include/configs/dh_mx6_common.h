@@ -38,6 +38,18 @@
 #define CONFIG_MXC_OCOTP
 #endif
 
+/* SPI Flash Configs */
+#define CONFIG_CMD_SF
+#ifdef CONFIG_CMD_SF
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_SST
+#define CONFIG_MXC_SPI
+#define CONFIG_SF_DEFAULT_BUS  0
+#define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(2, 30)<<8))
+#define CONFIG_SF_DEFAULT_SPEED 25000000
+#define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
+#endif
+
 /* I2C Configs */
 #define CONFIG_CMD_I2C
 #define CONFIG_I2C_MULTI_BUS
@@ -103,6 +115,10 @@
 #define CONFIG_SYS_TEXT_BASE           0x17800000
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
+    "mmcerase=" \
+		"mw.b 10000000 ff 1000;" \
+		"mmc dev 2;" \
+		"mmc write 10000000 0 1000\0" \
 	"script=boot.scr\0" \
 	"uimage=uImage\0" \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
@@ -252,10 +268,17 @@
 
 #define CONFIG_ENV_SIZE			(8 * 1024)
 
-#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_ENV_IS_IN_SPI_FLASH // CONFIG_ENV_IS_IN_MMC
 
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_ENV_OFFSET		(6 * 64 * 1024)
+#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
+#define CONFIG_ENV_OFFSET		(768 * 1024)
+#define CONFIG_ENV_SECT_SIZE	(8 * 1024)
+#define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
+#define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
+#define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
+#define CONFIG_ENV_SPI_MAX_HZ	CONFIG_SF_DEFAULT_SPEED
 #endif
 
 #define CONFIG_OF_LIBFDT

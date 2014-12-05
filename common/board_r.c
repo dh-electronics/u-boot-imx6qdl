@@ -759,6 +759,9 @@ init_fnc_t init_sequence_r[] = {
 	 */
 	initr_pci,
 #endif
+#ifdef CONFIG_DHCOM
+        dhcom_init,
+#endif
 #ifdef CONFIG_WINBOND_83C553
 	initr_w83c553f,
 #endif

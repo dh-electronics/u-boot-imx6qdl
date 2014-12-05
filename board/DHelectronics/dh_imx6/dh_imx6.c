@@ -25,10 +25,12 @@
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
 #include <i2c.h>
+
 DECLARE_GLOBAL_DATA_PTR;
 
 extern int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -43,41 +45,36 @@ extern int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 	
 #define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm  | PAD_CTL_SRE_FAST)
-
-//------------------------------------------------------------------------------
-//
-//  Function:  CopyAddressStringToCharArray
-//
-//  Copy address string content to local char array
-//
-//  Commit values:  - *p_cCharArray = Pointer to the Char Array
-//                  - *p_cPointer = Copy Pointer
-//
-//  Return value:   -
-//
-void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
-{
-    int i,j;
-    for(i = 0, j = 0; i < 8; i++, j++)
-    {
-        // Check if string contains "0x"
-        if(p_cPointer[j] == 'x')
-        {
-            i = 0;
-            j++;
-        }
-        p_cCharArray[i] = p_cPointer[j];
-    }
-    
-    p_cCharArray[i] = '\0';
-}	
 	
-int dram_init(void)
-{
-	gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
+#define FB_SYNC_OE_LOW_ACT		0x80000000
+#define FB_SYNC_CLK_LAT_FALL	0x40000000
+#define FB_SYNC_DATA_INVERT		0x20000000
 
-	return 0;
-}
+unsigned DHCOM_gpios[] = {
+	DHCOM_GPIO_A,
+	DHCOM_GPIO_B,
+	DHCOM_GPIO_C,
+	DHCOM_GPIO_D,
+	DHCOM_GPIO_E,
+	DHCOM_GPIO_F,
+	DHCOM_GPIO_G,
+	DHCOM_GPIO_H,
+	DHCOM_GPIO_I,
+	DHCOM_GPIO_J,
+	DHCOM_GPIO_K,
+	DHCOM_GPIO_L,
+	DHCOM_GPIO_M,
+	DHCOM_GPIO_N,
+	DHCOM_GPIO_O,
+	DHCOM_GPIO_P,
+	DHCOM_GPIO_Q,
+	DHCOM_GPIO_R,
+	DHCOM_GPIO_S,
+	DHCOM_GPIO_T,
+	DHCOM_GPIO_U,
+	DHCOM_GPIO_V,
+	DHCOM_GPIO_W,
+};
 
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT7__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
@@ -106,19 +103,6 @@ iomux_v3_cfg_t const enet_pads[] = {
 iomux_v3_cfg_t const usb_pads[] = {
         MX6_PAD_EIM_D31__GPIO_3_31              | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
-
-static void setup_iomux_enet(void)
-{
-	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
-
-	/* Reset PHY */
-	gpio_direction_output(IMX_GPIO_NR(5, 0) , 0);
-	udelay(500);
-	gpio_set_value(IMX_GPIO_NR(5, 0), 1);
-
-        /* Enable VIO */
-        gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
-}
 
 iomux_v3_cfg_t const usdhc2_pads[] = {
 	MX6_PAD_SD2_CLK__USDHC2_CLK	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -160,6 +144,69 @@ iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_DAT6__USDHC4_DAT6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD4_DAT7__USDHC4_DAT7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
+
+iomux_v3_cfg_t const gpio_pads[] = {
+	MX6_PAD_GPIO_2__GPIO_1_2   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_GPIO_4__GPIO_1_4   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_GPIO_5__GPIO_1_5   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT17__GPIO_6_3   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_GPIO_19__GPIO_4_5   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_DI0_PIN4__GPIO_4_20   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_EIM_D27__GPIO_3_27   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_ROW0__GPIO_4_7   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_COL1__GPIO_4_8   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_CS1__GPIO_6_14   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_CS2__GPIO_6_15   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_ROW1__GPIO_4_9   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD3_DAT5__GPIO_7_0   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD3_DAT4__GPIO_7_1   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_VSYNC__GPIO_5_21   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_GPIO_18__GPIO_7_13   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD1_CMD__GPIO_1_18   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD1_DAT0__GPIO_1_16   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD1_DAT1__GPIO_1_17   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD1_DAT2__GPIO_1_19   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD1_CLK__GPIO_1_20   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_PIXCLK__GPIO_5_18   | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_MCLK__GPIO_5_19   | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
+{
+    int i,j;
+    for(i = 0, j = 0; i < 8; i++, j++)
+    {
+        // Check if string contains "0x"
+        if(p_cPointer[j] == 'x')
+        {
+            i = 0;
+            j++;
+        }
+        p_cCharArray[i] = p_cPointer[j];
+    }
+    
+    p_cCharArray[i] = '\0';
+}	
+	
+int dram_init(void)
+{
+	gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
+
+	return 0;
+}
+
+static void setup_iomux_enet(void)
+{
+	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
+
+	/* Reset PHY */
+	gpio_direction_output(IMX_GPIO_NR(5, 0) , 0);
+	udelay(500);
+	gpio_set_value(IMX_GPIO_NR(5, 0), 1);
+
+    /* Enable VIO */
+	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
+}
 
 static void setup_iomux_uart(void)
 {
@@ -382,26 +429,34 @@ static int board_get_splashimage(void)
 	char *p_cMMCSetDevice[3]     	= {"mmc", "dev", "2"}; 
 	char *p_cMMCRead[5]         	= {"mmc", "read", cENVSDRAMBufferAddress, cENVSplashImageFlashAddress, ""}; 	
 	char *p_cMemCp[4]         		= {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""}; 		
-	int ret_value = 0;
 	
 	// Disable console output
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
 	
 	// Set eMMC as active device
-	ret_value = do_mmcops(NULL, 0, 3, p_cMMCSetDevice);
+	if(do_mmcops(NULL, 0, 3, p_cMMCSetDevice))
+	{
+		return 1;
+	}
 
 	// Read splash bitmap from eMMC
 	mmc = find_mmc_device(curr_device);	
 	sprintf (&cBlkCnt[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE / mmc->read_bl_len));   
 	p_cMMCRead[4] = &cBlkCnt[0];
-	ret_value = do_mmcops(NULL, 0, 5, p_cMMCRead);	
+	if(do_mmcops(NULL, 0, 5, p_cMMCRead))	
+	{
+		return 1;
+	}
 	
 	// Copy bitmap to splashscreen addresss
 	// Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2, 
 	//       since the use of a four-byte alignment will cause alignment exceptions at run-time.
 	sprintf (&cSplashSize[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE));  
 	p_cMemCp[3] = &cSplashSize[0];
-	ret_value = do_mem_cp(NULL, 0, 4, p_cMemCp);	
+	if(do_mem_cp(NULL, 0, 4, p_cMemCp))
+	{
+		return 1;
+	}
 	
 	// Enable console output	
 	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
@@ -430,7 +485,7 @@ static void enable_rgb(struct display_info_t const *dev)
         gpio_direction_output(PWM_BACKLIGHT_GP, 0);
 }
 
-static struct display_info_t const displays[] = {/*{
+static struct display_info_t displays[] = {/*{
 	.bus	= -1,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
@@ -497,7 +552,7 @@ static struct display_info_t const displays[] = {/*{
 	.detect	= detect_i2c,
 	.enable	= enable_rgb,
 	.mode	= {
-		.name           = "wvga-rgb",
+		.name           = "RGB",
 		.refresh        = 57,
 		.xres           = 800,
 		.yres           = 480,
@@ -517,15 +572,19 @@ int board_video_skip(void)
 	int i;
 	int ret;
 	char const *panel = getenv("panel");
+	int clksonframe = 0;
 
 #ifdef CONFIG_SPLASH_SCREEN
 	/* Copy Splash-Image to ddr3 ram - DHCOM specific */
-	board_get_splashimage();
+	if(board_get_splashimage())
+	{
+		printf("ERROR: Can't read splash bitmap\n");
+	}
 #endif	
 
 	if (!panel) {
 		for (i = 0; i < ARRAY_SIZE(displays); i++) {
-			struct display_info_t const *dev = displays+i;
+			struct display_info_t *dev = displays+i;
 			if (dev->detect && dev->detect(dev)) {
 				panel = dev->mode.name;
 				printf("auto-detected panel %s\n", panel);
@@ -536,6 +595,42 @@ int board_video_skip(void)
 			panel = displays[0].mode.name;
 			printf("No panel detected: default to %s\n", panel);
 			i = 0;
+			
+			/* Setup display settings from DH settings file */
+			displays[0].mode.xres = gd->dh_board_settings.wXResolution;
+			displays[0].mode.yres = gd->dh_board_settings.wYResolution;
+			displays[0].mode.pixclock = gd->dh_board_settings.wPixelClock;
+			displays[0].mode.left_margin = gd->dh_board_settings.wHFrontPorch;
+			displays[0].mode.hsync_len = gd->dh_board_settings.wHPulseWidth;
+			displays[0].mode.right_margin = gd->dh_board_settings.wHBackPorch;
+			displays[0].mode.upper_margin = gd->dh_board_settings.wVFrontPorch;
+			displays[0].mode.vsync_len = gd->dh_board_settings.wVPulseWidth;
+			displays[0].mode.lower_margin = gd->dh_board_settings.wVBackPorch;
+			clksonframe = ((gd->dh_board_settings.wXResolution + gd->dh_board_settings.wHFrontPorch + gd->dh_board_settings.wHPulseWidth + gd->dh_board_settings.wHBackPorch) *
+								 (gd->dh_board_settings.wYResolution + gd->dh_board_settings.wVFrontPorch + gd->dh_board_settings.wVPulseWidth + gd->dh_board_settings.wVBackPorch));
+			displays[0].mode.refresh = ((gd->dh_board_settings.wPixelClock * 1000) / (clksonframe));
+			displays[0].mode.sync = 0;
+			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG))
+			{
+				displays[0].mode.sync |= FB_SYNC_VERT_HIGH_ACT;
+			}
+			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG))
+			{
+				displays[0].mode.sync |= FB_SYNC_HOR_HIGH_ACT;
+			}			
+			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG))
+			{
+				displays[0].mode.sync |= FB_SYNC_CLK_LAT_FALL;
+			}
+			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG)
+			{
+				displays[0].mode.sync |= FB_SYNC_OE_LOW_ACT;
+			}
+			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG)
+			{
+				displays[0].mode.sync |= FB_SYNC_DATA_INVERT;
+			}			
+			displays[0].mode.vmode = FB_VMODE_NONINTERLACED;
 		}
 	} else {
 		for (i = 0; i < ARRAY_SIZE(displays); i++) {
@@ -676,6 +771,118 @@ int board_ehci_hcd_init(int port)
 }
 #endif
 
+void load_dh_settings_file(void)
+{
+	char cENVSDRAMBufferAddress[9];
+	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
+	char cDHSettingsSPIFlashAddress[9];
+	CopyAddressStringToCharArray(&cDHSettingsSPIFlashAddress[0], getenv ("dhsettingsflashaddr"));
+	
+	char *p_cSFProbe[2]         = {"sf", "probe"}; 		
+	char *p_cSFRead[5]         	= {"sf", "read", cENVSDRAMBufferAddress, cDHSettingsSPIFlashAddress, "1000"}; 		
+	ulong addr = CONFIG_LOADADDR;
+	
+	/* initialize DH Global Data */
+	gd->dh_board_settings.cLength = 		DEFAULT_SETTINGS_BLOCK_LENGTH;
+	gd->dh_board_settings.cDisplayID = 		DEFAULT_SETTINGS_DISPLAY_ID;
+	gd->dh_board_settings.wValidationID = 	0;
+	gd->dh_board_settings.wYResolution = 	DEFAULT_SETTINGS_Y_RESOLUTION;
+	gd->dh_board_settings.wXResolution = 	DEFAULT_SETTINGS_X_RESOLUTION;
+	gd->dh_board_settings.wLCDConfigFlags = DEFAULT_SETTINGS_LCD_CONFIG_FLAGS;
+	gd->dh_board_settings.wPixelClock = 	DEFAULT_SETTINGS_PIXEL_CLOCK;
+	gd->dh_board_settings.wVPulseWidth = 	DEFAULT_SETTINGS_V_PULSE_WIDTH;
+	gd->dh_board_settings.wHPulseWidth = 	DEFAULT_SETTINGS_H_PULSE_WIDTH;
+	gd->dh_board_settings.wHBackPorch = 	DEFAULT_SETTINGS_H_BACK_PORCH;
+	gd->dh_board_settings.wHFrontPorch = 	DEFAULT_SETTINGS_H_FRONT_PORCH;
+	gd->dh_board_settings.wVBackPorch = 	DEFAULT_SETTINGS_V_BACK_PORCH;
+	gd->dh_board_settings.wVFrontPorch = 	DEFAULT_SETTINGS_V_FRONT_PORCH;
+	gd->dh_board_settings.cACBiasTrans = 	DEFAULT_SETTINGS_AC_BIAS_TRANS;
+	gd->dh_board_settings.cACBiasFreq = 	DEFAULT_SETTINGS_AC_BIAS_FREQ;
+	gd->dh_board_settings.cDatalines = 		DEFAULT_SETTINGS_DATALINES;
+	gd->dh_board_settings.wGPIODir = 		DEFAULT_SETTINGS_GPIO_DIRECTION;
+	gd->dh_board_settings.wGPIOState = 		DEFAULT_SETTINGS_GPIO_STATE;
+	gd->dh_board_settings.wHWConfigFlags = 	DEFAULT_SETTINGS_HW_CONFIG_FLAGS;
+	
+	printf("Load DH settings...\n");
+
+	// Disable console output
+	gd->flags |= GD_FLG_DISABLE_CONSOLE;
+	
+	/* Load DH settings file from SPI flash */
+	do_spi_flash(NULL, 0, 2, p_cSFProbe);	
+	do_spi_flash(NULL, 0, 5, p_cSFRead);
+	
+	// Enable console output	
+	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+
+	/* copy settingsblock from dram into the dh_board_settings structure */
+	gd->dh_board_settings.wValidationID = ((readl(addr) & 0xFFFF0000) >> 16);
+
+	// settings.bin file Valid Mask should be "DH" = 0x4844
+	if(gd->dh_board_settings.wValidationID == 0x4844)
+	{
+		gd->dh_board_settings.cLength = (readl(addr) & 0xFF);
+		gd->dh_board_settings.cDisplayID = ((readl(addr) & 0xFF00) >> 8);
+
+		gd->dh_board_settings.wYResolution = (readl(addr+4) & 0xFFFF);
+		gd->dh_board_settings.wXResolution = ((readl(addr+4) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wLCDConfigFlags = (readl(addr+8) & 0xFFFF);
+		gd->dh_board_settings.wPixelClock = ((readl(addr+8) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wVPulseWidth = (readl(addr+12) & 0xFFFF);
+		gd->dh_board_settings.wHPulseWidth = ((readl(addr+12) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wHBackPorch = (readl(addr+16) & 0xFFFF);
+		gd->dh_board_settings.wHFrontPorch = ((readl(addr+16) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wVBackPorch = (readl(addr+20) & 0xFFFF);
+		gd->dh_board_settings.wVFrontPorch = ((readl(addr+20) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.cACBiasTrans = (readl(addr+24) & 0xFF);
+		gd->dh_board_settings.cACBiasFreq = ((readl(addr+24) & 0xFF00) >> 8);
+		gd->dh_board_settings.cDatalines = ((readl(addr+24) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wGPIODir = (readl(addr+32));
+		gd->dh_board_settings.wGPIOState = (readl(addr+36));
+
+		gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
+	}	
+}
+
+void set_dhcom_gpios(void)
+{
+	int i;
+	int mask = 0x1;
+	// Setup alternate function
+	imx_iomux_v3_setup_multiple_pads(gpio_pads, ARRAY_SIZE(gpio_pads));
+	
+	
+	for(i = 0; i < 23; i++)
+	{
+		if(gd->dh_board_settings.wGPIODir & mask)
+		{
+			// Set to input
+			gpio_direction_input(DHCOM_gpios[i]);		
+		}
+		else
+		{ 
+			// Set to output
+			if(gd->dh_board_settings.wGPIOState & mask)
+			{
+				// Set to high
+				gpio_direction_output(DHCOM_gpios[i] , 1);
+			}
+			else
+			{
+				// Set to low
+				gpio_direction_output(DHCOM_gpios[i] , 0);
+			}
+		}
+		mask = mask << 1;
+	}
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -685,6 +892,13 @@ int board_early_init_f(void)
 #endif
 
 	return 0;
+}
+
+int dhcom_init(void)
+{
+        load_dh_settings_file();
+        set_dhcom_gpios();
+        return 0;
 }
 
 int board_init(void)
@@ -721,6 +935,6 @@ int board_late_init(void)
 
 int checkboard(void)
 {
-	puts("Board: MX6-SabreSD\n");
+	puts("Board: DHCOM i.MX6\n");
 	return 0;
 }

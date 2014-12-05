@@ -258,10 +258,10 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	if (fbi->var.sync & FB_SYNC_CLK_IDLE_EN)
 		sig_cfg.clkidle_en = 1;
 
-	debug("pixclock = %lu Hz\n", PICOS2KHZ(fbi->var.pixclock) * 1000UL);
+	debug("pixclock = %ul Hz\n", (u32) (fbi->var.pixclock * 1000UL));
 
 	if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-				(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
+				(fbi->var.pixclock) * 1000UL,
 				fbi->var.xres, fbi->var.yres,
 				out_pixel_fmt,
 				fbi->var.left_margin,

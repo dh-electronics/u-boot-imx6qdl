@@ -100,6 +100,9 @@ typedef struct global_data {
 #endif
 	struct udevice *cur_serial_dev;	/* current serial device */
 	struct arch_global_data arch;	/* architecture-specific data */
+#ifdef CONFIG_DHCOM
+    settingsinfo_t  dh_board_settings;  /* DH settings block */	
+#endif
 } gd_t;
 #endif
 

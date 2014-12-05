@@ -510,7 +510,7 @@ static int do_spi_flash_test(int argc, char * const argv[])
 }
 #endif /* CONFIG_CMD_SF_TEST */
 
-static int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc,
+int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc,
 			char * const argv[])
 {
 	const char *cmd;

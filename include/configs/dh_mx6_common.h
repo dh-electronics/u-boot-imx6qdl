@@ -15,7 +15,62 @@
 
 #define DH_IMX6_EMMC_VERSION
 //#define DH_IMX6_NAND_VERSION
+#define CONFIG_DHCOM
 
+/*
+ * Default settings
+ */
+#define DEFAULT_SETTINGS_BLOCK_LENGTH       0x2C        /* 44 Byte */
+#define DEFAULT_SETTINGS_DISPLAY_ID         0x01
+#define DEFAULT_SETTINGS_Y_RESOLUTION       272
+#define DEFAULT_SETTINGS_X_RESOLUTION       480
+#define DEFAULT_SETTINGS_LCD_CONFIG_FLAGS   0x03E7      /* includes GPIO G for BE enable */
+
+#define DEFAULT_SETTINGS_PIXEL_CLOCK        11100
+#define DEFAULT_SETTINGS_V_PULSE_WIDTH      11
+#define DEFAULT_SETTINGS_H_PULSE_WIDTH      42
+#define DEFAULT_SETTINGS_H_BACK_PORCH       2
+#define DEFAULT_SETTINGS_H_FRONT_PORCH      3
+#define DEFAULT_SETTINGS_V_BACK_PORCH       2
+#define DEFAULT_SETTINGS_V_FRONT_PORCH      3
+#define DEFAULT_SETTINGS_AC_BIAS_TRANS      0
+#define DEFAULT_SETTINGS_AC_BIAS_FREQ       0
+#define DEFAULT_SETTINGS_DATALINES          24
+
+#define DEFAULT_SETTINGS_GPIO_DIRECTION     0x1FF       /* 1 = Input, 0 = Output --> bits 0 - 8 = GPIO A - I */
+#define DEFAULT_SETTINGS_GPIO_STATE         0x055       /* 0 = Low, 1 = High --> bits 0 - 8 = GPIO A - I */
+
+#define DEFAULT_SETTINGS_HW_CONFIG_FLAGS    0x027E     	/* SILENT_MODE = off , UPDATE_DEV = all , USE_DA_EEPROM_SETTINGS = on */
+
+#define DEFAULT_BACKLIGHT_PWM				57  		/* DHCOM GPIO_PWM - this is fix and not to change with settings.bin functionality */
+
+/*
+ * DHCOM GPIOS
+ */
+#define DHCOM_GPIO_A	IMX_GPIO_NR(1, 2)
+#define DHCOM_GPIO_B	IMX_GPIO_NR(1, 4)
+#define DHCOM_GPIO_C	IMX_GPIO_NR(1, 5)
+#define DHCOM_GPIO_D	IMX_GPIO_NR(6, 3)
+#define DHCOM_GPIO_E	IMX_GPIO_NR(4, 5)
+#define DHCOM_GPIO_F	IMX_GPIO_NR(4, 20)
+#define DHCOM_GPIO_G	IMX_GPIO_NR(3, 27)
+#define DHCOM_GPIO_H	IMX_GPIO_NR(4, 7)
+#define DHCOM_GPIO_I	IMX_GPIO_NR(4, 8)
+#define DHCOM_GPIO_J	IMX_GPIO_NR(6, 14)
+#define DHCOM_GPIO_K	IMX_GPIO_NR(6, 15)
+#define DHCOM_GPIO_L	IMX_GPIO_NR(4, 9)
+#define DHCOM_GPIO_M	IMX_GPIO_NR(7, 0)
+#define DHCOM_GPIO_N	IMX_GPIO_NR(7, 1)
+#define DHCOM_GPIO_O	IMX_GPIO_NR(5, 21)
+#define DHCOM_GPIO_P	IMX_GPIO_NR(7, 13)
+#define DHCOM_GPIO_Q	IMX_GPIO_NR(1, 18)
+#define DHCOM_GPIO_R	IMX_GPIO_NR(1, 16)
+#define DHCOM_GPIO_S	IMX_GPIO_NR(1, 17)
+#define DHCOM_GPIO_T	IMX_GPIO_NR(1, 19)
+#define DHCOM_GPIO_U	IMX_GPIO_NR(1, 20)
+#define DHCOM_GPIO_V	IMX_GPIO_NR(5, 18)
+#define DHCOM_GPIO_W	IMX_GPIO_NR(5, 19)
+ 
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
 
@@ -34,6 +89,8 @@
 #define CONFIG_MXC_GPIO
 
 #define CONFIG_MXC_UART
+
+#define CONFIG_CMD_SETTINGS_INFO
 
 /* Fuses */
 #define CONFIG_CMD_FUSE
@@ -120,7 +177,9 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
         "splashimageflashaddr=0x0\0" \
+        "dhsettingsflashaddr=0x100000\0" \
 		"splashimage=0x10000002\0" \
+		"splashpos=m,m\0" \
         "script=boot.scr\0" \
         "uimage=uImage\0" \
         "fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \

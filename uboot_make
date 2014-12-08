@@ -1,5 +1,5 @@
 echo ============================
-echo --> run u-boot i.mx6 build 
+echo -- run u-boot i.mx6 build 
 echo ----------------------------
 
 if [ "$#" == "0" ]; then
@@ -10,18 +10,18 @@ if [ "$#" == "0" ]; then
     exit 1
 fi
 
-echo --> setup toolchain 
+echo -- setup toolchain 
 PATH=$PATH:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin/armv7a-vfp-neon-linux-gnueabi
 export PATH
 CROSS_COMPILE=armv7a-
 export CROSS_COMPILE
 
 echo ----------------------------
-echo --> make distclean
+echo -- make distclean
 make distclean
 
 echo ----------------------------
-echo --> delete old u-boot* files
+echo -- delete old u-boot* files
 rm -v u-boot*
 
 echo ----------------------------
@@ -42,10 +42,10 @@ else
     echo "Wrong argument"
 fi
 
-echo --> make u-boot imx6 
+echo -- make u-boot imx6 
 make -j5 all > u-boot.txt
 echo make messages: u-boot.txt
 
 echo ----------------------------
-echo --> make u-boot imx6 done 
+echo -- make u-boot imx6 done 
 echo ============================

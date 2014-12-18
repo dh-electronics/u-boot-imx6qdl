@@ -53,13 +53,15 @@ md5sum_localfs_0=123456789 md5sum_localfs_1=123456789 \
 md5sum_optfs_0=123456789 md5sum_optfs_1=123456789 \
 fw_version_0=0 fw_version_1=0"
 
-#define KEY_ACTIVE_SET	"active_set"
-#define KEY_STATE	"state_"
-#define MAX_KEY_LEN	0x20
-#define STATE_VAL_LEN	0x03
+#define KEY_ACTIVE_SET	        "active_set"
+#define KEY_STATE	        "state_"
+#define MAX_KEY_LEN	        0x20
+#define STATE_VAL_LEN	        0x03
+#define KEY_ACTIVE_VAL_LEN      0x01
 
 enum part_state { empty=0, new=1, try=2, approved=3, failed=4, defect=5, set_default=failed };
 const char* STATE_STR[6] = { "emp", "new", "try", "app", "fai", "def" };
+const char* ACTIVE_SET_STR[2] = { "0", "1" };
 
 struct bootcfg {
 	uchar	active_set;
@@ -273,7 +275,7 @@ int handle_state(struct bootcfg* p_cfg)
 	pValue = get_value_of_key(p_cfg->buffer, tmpkey);
 	if (pValue == NULL) {
 	        printf("ERROR: Key \"%s\" not found!\n", tmpkey);
-	        return 1;
+	        return -1;
 	}
 
 	/* check for state 'approved' */
@@ -300,28 +302,48 @@ int handle_state(struct bootcfg* p_cfg)
 		write_bootcfg_chg(	p_cfg,
 					pValue,
 					STATE_STR[p_cfg->state[p_cfg->active_set]],
-					STATE_VAL_LEN);
+					STATE_VAL_LEN);		
+					
 		/* switch active partition set - see processing below */
 	}
 
 	/* other states then approved or new:
-	   -> switch active partition set 		*/
+	   -> switch active partition set */
 	if (p_cfg->active_set == 0)
 		p_cfg->active_set = 1;
 	else
 		p_cfg->active_set = 0;
+	
 
+		
 	/* build key of active_set state_[01] */
 	sprintf (tmpkey, "%s%d", KEY_STATE, p_cfg->active_set);
 	pValue = get_value_of_key(p_cfg->buffer, tmpkey);
 
 	/* check for state 'approved' */
 	if (0 == strncmp(pValue, STATE_STR[approved], strnlen(STATE_STR[approved], MAX_KEY_LEN))) {
+	
+	        /* write that we have switched the active_set */
+	
+		/* search key-string in read config-string and get pointer to value-string*/
+	        pValue = get_value_of_key(p_cfg->buffer, KEY_ACTIVE_SET);
+	        if (pValue == NULL) {
+	                printf("ERROR: Key \"%s\" not found!\n", tmpkey);
+	                return -1;
+	        }
+	
+	        /* write new active_set value to eeprom */	
+	        write_bootcfg_chg( p_cfg,
+			           pValue,
+			           ACTIVE_SET_STR[p_cfg->active_set],
+			           KEY_ACTIVE_VAL_LEN);		
+	
 	        /* if state is approved then boot the system */
 		return 0;
 	}
 
-	return 1; /* error do not boot */
+        printf("ERROR: Do not boot!\n");
+	return -1; /* error do not boot */
 }
 
 int write_default_bootcfg(void)

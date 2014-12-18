@@ -35,6 +35,28 @@
 /System.map
 /u-boot*
 /boards.cfg
+/u-boot
+/u-boot.hex
+/u-boot.imx
+/u-boot.txt
+/u-boot-with-spl.imx
+/u-boot-with-nand-spl.imx
+/u-boot.map
+/u-boot.srec
+/u-boot.ldr
+/u-boot.ldr.hex
+/u-boot.ldr.srec
+/u-boot.img
+/u-boot.kwb
+/u-boot.sha1
+/u-boot.dis
+/u-boot.lds
+/u-boot.ubl
+/u-boot.ais
+/u-boot.dtb
+/u-boot.sb
+/u-boot.bd
+/u-boot.geany
 
 #
 # git files that we don't want to ignore even it they are dot-files

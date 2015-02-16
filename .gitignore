@@ -57,6 +57,9 @@
 /u-boot.sb
 /u-boot.bd
 /u-boot.geany
+/uboot_bincopy
+/uboot_refresh_Win_source
+
 
 #
 # git files that we don't want to ignore even it they are dot-files

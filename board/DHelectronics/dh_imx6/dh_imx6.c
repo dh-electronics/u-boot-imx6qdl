@@ -401,17 +401,22 @@ int board_phy_config(struct phy_device *phydev)
 
 #if defined(CONFIG_VIDEO_IPUV3)
 
-static iomux_v3_cfg_t const backlight_pads[] = {
-	/* Backlight on RGB connector: J15 */
-	MX6_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
-        MX6_PAD_EIM_D27__GPIO_3_27 | MUX_PAD_CTRL(NO_PAD_CTRL),
-#define RGB_BACKLIGHT_GP IMX_GPIO_NR(3, 27)
+static iomux_v3_cfg_t const backlight_pwm_pad[] = {
+	MX6_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL)
 #define PWM_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
+};
+
+//static iomux_v3_cfg_t const backlight_pads[] = {
+	/* Backlight on RGB connector: J15 */
+//	MX6_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
+//	MX6_PAD_EIM_D27__GPIO_3_27 | MUX_PAD_CTRL(NO_PAD_CTRL),
+//#define RGB_BACKLIGHT_GP IMX_GPIO_NR(3, 27)
+//#define PWM_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
 
 	/* Backlight on LVDS connector: J6 */
-	MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(NO_PAD_CTRL),
-#define LVDS_BACKLIGHT_GP IMX_GPIO_NR(1, 18)
-};
+//	MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(NO_PAD_CTRL),
+//#define LVDS_BACKLIGHT_GP IMX_GPIO_NR(1, 18)
+//};
 
 static iomux_v3_cfg_t const rgb_pads[] = {
 	MX6_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
@@ -541,8 +546,13 @@ static void enable_rgb(struct display_info_t const *dev)
 	imx_iomux_v3_setup_multiple_pads(
 		rgb_pads,
 		 ARRAY_SIZE(rgb_pads));
+<<<<<<< HEAD
 	gpio_direction_output(RGB_BACKLIGHT_GP, 1);
         gpio_direction_output(PWM_BACKLIGHT_GP, 0);
+=======
+	//gpio_direction_output(RGB_BACKLIGHT_GP, 1);
+	//gpio_direction_output(PWM_BACKLIGHT_GP, 0);
+>>>>>>> e06afbb... Add backlight enable GPIO and PWM support.
 }
 
 static struct display_info_t displays[] = {/*{
@@ -766,10 +776,10 @@ static void setup_display(void)
 	writel(reg, &iomux->gpr[3]);
 
 	/* backlights off until needed */
-	imx_iomux_v3_setup_multiple_pads(backlight_pads,
+	/*imx_iomux_v3_setup_multiple_pads(backlight_pads,
 					 ARRAY_SIZE(backlight_pads));
 	gpio_direction_input(LVDS_BACKLIGHT_GP);
-	gpio_direction_input(RGB_BACKLIGHT_GP);
+	gpio_direction_input(RGB_BACKLIGHT_GP);*/
 }
 #endif /* CONFIG_VIDEO_IPUV3 */
 
@@ -994,6 +1004,93 @@ void set_dhcom_gpios(void)
 	}
 }
 
+void set_dhcom_backlight_gpio(void)
+{
+	int backlight_gpio;
+	int backlight_en_pol;
+	int backlight_pwm_pol;
+	int disable_backlight = 0;
+	char const *panel = getenv("panel");
+	const char *no_panel = "no_panel";
+
+	if(panel) {
+		if (!strcmp(panel, no_panel)) {
+			disable_backlight = 1;
+		}
+	}
+
+
+	/* Init backlight PWM Pin */
+	imx_iomux_v3_setup_multiple_pads(backlight_pwm_pad, ARRAY_SIZE(backlight_pwm_pad));
+
+	// Mask Backlight enable GPIO
+	backlight_gpio = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_EN_GPIO_FLAG) >> 7);
+
+	// Check if backlight enable ist specified
+	if(backlight_gpio != 0) {
+		// Covert to struct gpio number
+		backlight_gpio = backlight_gpio - 1;
+
+		// Mask Backlight pol flag: 0 = active high; 1 = active low
+		backlight_en_pol = (gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IBL_FLAG);
+
+		// Mask Backlight PWM pol flag: 0 = active high; 1 = active low
+		backlight_pwm_pol = (gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_PWM_POL_FLAG);
+		
+		if(disable_backlight == 1) {
+			// Disable backlight pin till linux is running
+			if(backlight_en_pol == 0)
+			{
+				// Set to low
+				gpio_direction_output(DHCOM_gpios[backlight_gpio] , 0);
+			}
+			else
+			{
+				// Set to high
+				gpio_direction_output(DHCOM_gpios[backlight_gpio] , 1);
+			}
+
+			// Disable backlight PWM pin till linux is running
+			if(backlight_pwm_pol == 0)
+			{
+				// Set to low
+				gpio_direction_output(PWM_BACKLIGHT_GP, 0);
+			}
+			else
+			{
+				// Set to high
+				gpio_direction_output(PWM_BACKLIGHT_GP, 1);
+			}
+		}
+		else {
+			// Enable backlight
+			if(backlight_en_pol == 0)
+			{
+				// Set to low
+				gpio_direction_output(DHCOM_gpios[backlight_gpio] , 1);
+			}
+			else
+			{
+				// Set to high
+				gpio_direction_output(DHCOM_gpios[backlight_gpio] , 0);
+			}
+
+			// Disable backlight PWM pin till linux is running
+			if(backlight_pwm_pol == 0)
+			{
+				// Set to low
+				gpio_direction_output(PWM_BACKLIGHT_GP, 1);
+			}
+			else
+			{
+				// Set to high
+				gpio_direction_output(PWM_BACKLIGHT_GP, 0);
+			}
+		}
+
+	}
+
+}
 void burn_fuses(void)
 {
 	u32 val;
@@ -1099,6 +1196,7 @@ int dhcom_init(void)
 {
         load_dh_settings_file();
         set_dhcom_gpios();
+        set_dhcom_backlight_gpio();
         burn_fuses();
         init_MAC_address();
         return 0;

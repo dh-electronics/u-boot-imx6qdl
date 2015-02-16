@@ -210,6 +210,7 @@
 
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
+		"panel=no_panel\0" \
 		"splashimage=0x10000002\0" \
 		"splashpos=m,m\0" \
 		"settings_bin_file=default_settings.bin\0" \

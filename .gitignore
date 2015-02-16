@@ -50,6 +50,9 @@
 /u-boot.sb
 /u-boot.bd
 /u-boot.geany
+/uboot_bincopy
+/uboot_refresh_Win_source
+
 
 #
 # Generated files

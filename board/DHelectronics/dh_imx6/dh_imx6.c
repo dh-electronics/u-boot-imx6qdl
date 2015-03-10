@@ -206,6 +206,28 @@ iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_DAT7__USDHC4_DAT7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
+iomux_v3_cfg_t nfc_pads[] = {
+	MX6_PAD_NANDF_CLE__RAWNAND_CLE		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_ALE__RAWNAND_ALE		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_WP_B__RAWNAND_RESETN	| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_RB0__RAWNAND_READY0	| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_CS0__RAWNAND_CE0N		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	/*MX6_PAD_NANDF_CS1__RAWNAND_CE1N		| MUX_PAD_CTRL(NO_PAD_CTRL),*/
+	/*MX6_PAD_NANDF_CS2__RAWNAND_CE2N		| MUX_PAD_CTRL(NO_PAD_CTRL),*/
+	/*MX6_PAD_NANDF_CS3__RAWNAND_CE3N		| MUX_PAD_CTRL(NO_PAD_CTRL),*/
+	MX6_PAD_SD4_CMD__RAWNAND_RDN		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_SD4_CLK__RAWNAND_WRN		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D0__RAWNAND_D0		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D1__RAWNAND_D1		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D2__RAWNAND_D2		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D3__RAWNAND_D3		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D4__RAWNAND_D4		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D5__RAWNAND_D5		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D6__RAWNAND_D6		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_NANDF_D7__RAWNAND_D7		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	/*MX6_PAD_SD4_DAT0__RAWNAND_DQS		| MUX_PAD_CTRL(NO_PAD_CTRL),*/
+};
+
 iomux_v3_cfg_t const gpio_pads[] = {
 	MX6_PAD_GPIO_2__GPIO_1_2   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 	MX6_PAD_GPIO_4__GPIO_1_4   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
@@ -270,6 +292,35 @@ static void setup_iomux_enet(void)
 	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
 }
 
+static void setup_gpmi_nand(void)
+{
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+
+	/* config gpmi nand iomux */
+	imx_iomux_v3_setup_multiple_pads(nfc_pads,
+					 ARRAY_SIZE(nfc_pads));
+
+	/* config gpmi and bch clock to 100 MHz */
+	clrsetbits_le32(&mxc_ccm->cs2cdr,
+			MXC_CCM_CS2CDR_ENFC_CLK_PODF_MASK |
+			MXC_CCM_CS2CDR_ENFC_CLK_PRED_MASK |
+			MXC_CCM_CS2CDR_ENFC_CLK_SEL_MASK,
+			MXC_CCM_CS2CDR_ENFC_CLK_PODF(0) |
+			MXC_CCM_CS2CDR_ENFC_CLK_PRED(3) |
+			MXC_CCM_CS2CDR_ENFC_CLK_SEL(3));
+
+	/* enable gpmi and bch clock gating */
+	setbits_le32(&mxc_ccm->CCGR4,
+		     MXC_CCM_CCGR4_RAWNAND_U_BCH_INPUT_APB_MASK |
+		     MXC_CCM_CCGR4_RAWNAND_U_GPMI_BCH_INPUT_BCH_MASK |
+		     MXC_CCM_CCGR4_RAWNAND_U_GPMI_BCH_INPUT_GPMI_IO_MASK |
+		     MXC_CCM_CCGR4_RAWNAND_U_GPMI_INPUT_APB_MASK |
+		     MXC_CCM_CCGR4_PL301_MX6QPER1_BCH_OFFSET);
+
+	/* enable apbh clock gating */
+	setbits_le32(&mxc_ccm->CCGR0, MXC_CCM_CCGR0_APBHDMA_MASK);
+}
+
 static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
@@ -279,7 +330,9 @@ static void setup_iomux_uart(void)
 struct fsl_esdhc_cfg usdhc_cfg[3] = {
 	{USDHC2_BASE_ADDR},
 	{USDHC3_BASE_ADDR},
+#ifndef DH_IMX6_NAND_VERSION
 	{USDHC4_BASE_ADDR},
+#endif
 };
 
 #define USDHC2_CD_GPIO	IMX_GPIO_NR(6, 16)
@@ -297,9 +350,11 @@ int board_mmc_getcd(struct mmc *mmc)
 	case USDHC3_BASE_ADDR:
 		ret = !gpio_get_value(USDHC3_CD_GPIO);
 		break;
+#ifndef DH_IMX6_NAND_VERSION
 	case USDHC4_BASE_ADDR:
 		ret = 1; /* eMMC/uSDHC4 is always present */
 		break;
+#endif
 	}
 
 	return ret;
@@ -1221,6 +1276,10 @@ int board_init(void)
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
 #endif
 	
+#ifdef DH_IMX6_NAND_VERSION
+	setup_gpmi_nand();
+#endif
+
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif	

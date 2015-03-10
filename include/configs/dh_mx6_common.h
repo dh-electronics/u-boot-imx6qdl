@@ -18,7 +18,7 @@
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "0.4.2.2" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.4.2.3" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -166,6 +166,35 @@
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_SMSC
 
+/* NAND Configs */
+#ifdef DH_IMX6_NAND_VERSION
+	#define CONFIG_CMD_NAND_TRIMFFS
+	#define CONFIG_CMD_TIME
+        #define CONFIG_CMD_NAND
+
+	/* NAND stuff */
+	#define CONFIG_NAND_MXS
+	#define CONFIG_SYS_MAX_NAND_DEVICE     1
+	#define CONFIG_SYS_NAND_MAX_CHIPS	1
+ 	#define CONFIG_SYS_NAND_BASE           0x40000000
+	#define CONFIG_SYS_NAND_5_ADDR_CYCLE
+	#define CONFIG_SYS_NAND_ONFI_DETECTION
+	 
+	/* DMA stuff, needed for GPMI/MXS NAND support */
+	#define CONFIG_APBH_DMA
+	#define CONFIG_APBH_DMA_BURST
+	#define CONFIG_APBH_DMA_BURST8
+
+	/* UBI/UBIFS config options */
+	#define CONFIG_LZO
+	#define CONFIG_MTD_DEVICE
+	#define CONFIG_MTD_PARTITIONS
+	#define CONFIG_RBTREE
+	#define CONFIG_CMD_MTDPARTS
+	#define CONFIG_CMD_UBI
+	#define CONFIG_CMD_UBIFS
+#endif
+
 /* USB Configs */
 #define CONFIG_CMD_USB
 #define CONFIG_CMD_FAT
@@ -208,6 +237,10 @@
 #define UPDATE_DHUPDATE_INI_SDRAM_ADDRESS           "10000000"  /* should equal os base */
 #define UPDATE_BMP_SDRAM_ADDRESS                    "10100002"
 
+#ifdef DH_IMX6_NAND_VERSION
+	#define MTDIDS_DEFAULT		"nand0=gpmi-nand"
+	#define MTDPARTS_DEFAULT	"mtdparts=gpmi-nand:52428800(boot),-(rootfs)"
+#endif
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 		"panel=no_panel\0" \

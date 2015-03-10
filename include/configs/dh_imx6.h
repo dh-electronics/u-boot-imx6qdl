@@ -27,7 +27,11 @@
 
 #include "dh_mx6_common.h"
 
-#define CONFIG_SYS_FSL_USDHC_NUM	3
+#ifdef DH_IMX6_NAND_VERSION
+	#define CONFIG_SYS_FSL_USDHC_NUM	2
+#else
+	#define CONFIG_SYS_FSL_USDHC_NUM	3
+#endif
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_SYS_MMC_ENV_DEV		2	/* 1 = SDHC3, 2 = SDHC4 (eMMC) */
 #endif

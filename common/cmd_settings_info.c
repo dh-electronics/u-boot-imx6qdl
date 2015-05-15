@@ -53,6 +53,22 @@ int do_settings_info ( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
     printf("  Y_RESOLUTION:     %d pixel\n", gd->dh_board_settings.wYResolution);
     printf("  PIXEL_CLOCK:      %d kHz\n", gd->dh_board_settings.wPixelClock);   
     printf("  LCD_CONFIG_FLAGS: 0x%x\n", gd->dh_board_settings.wLCDConfigFlags);  
+    printf("        IVS:        0x%x\n", (gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG));
+    printf("        IHS:        0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG) >> 1));
+    printf("        IPC:        0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG) >> 2));
+    printf("        IOE:        0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG) >> 3));
+    printf("        IDATA:      0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG) >> 4));
+    printf("        ACT_PAS:    0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_ACT_PAS_FLAG) >> 5));
+    printf("        PWM_POL:    0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_PWM_POL_FLAG) >> 6));
+    printf("        BL_EN_GPIO: 0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_EN_GPIO_FLAG) >> 7));
+    printf("        IBL:        0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IBL_FLAG) >> 11));
+    // settings.bin file Valid Mask should be "V2" = 0x3256
+    if(gd->dh_board_settings.wValidationID == 0x3256)
+    {
+        printf("        BL_ON:      0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_ON_FLAG) >> 12));
+        printf("        DI_TYPE:    0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13));
+        printf("        NEXT_DI:    0x%x\n", ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_NEXT_DI_FLAG) >> 16));
+    }
     printf("  HSW:              %d pixel clocks\n", gd->dh_board_settings.wHPulseWidth);  
     printf("  VSW:              %d line clocks\n", gd->dh_board_settings.wVPulseWidth);      
     printf("  HFP:              %d pixel clocks\n", gd->dh_board_settings.wHFrontPorch);   
@@ -67,6 +83,22 @@ int do_settings_info ( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
     printf("  GPIO_STATE:       0x%08x\n", gd->dh_board_settings.wGPIOState);
     printf("  HW_CONFIG_FLAGS:  0x%04x\n\n", gd->dh_board_settings.wHWConfigFlags);    
     
+
+
+
+#define SETTINGS_LCD_IVS_FLAG           (0x1 << 0)
+#define SETTINGS_LCD_IHS_FLAG           (0x1 << 1)
+#define SETTINGS_LCD_IPC_FLAG           (0x1 << 2)
+#define SETTINGS_LCD_IOE_FLAG           (0x1 << 3)
+#define SETTINGS_LCD_IDATA_FLAG         (0x1 << 4)
+#define SETTINGS_LCD_ACT_PAS_FLAG       (0x1 << 5)
+#define SETTINGS_LCD_PWM_POL_FLAG       (0x1 << 6)
+#define SETTINGS_LCD_BL_EN_GPIO_FLAG    (0xF << 7)
+#define SETTINGS_LCD_IBL_FLAG           (0x1 << 11)
+#define SETTINGS_LCD_BL_ON_FLAG         (0x1 << 12)
+#define SETTINGS_LCD_DI_TYPE_FLAG       (0x7 << 13)
+#define SETTINGS_LCD_NEXT_DI_FLAG       (0x7 << 16)
+
     return 0;
 }
 

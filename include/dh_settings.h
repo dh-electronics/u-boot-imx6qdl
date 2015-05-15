@@ -46,8 +46,7 @@ typedef struct settingsinfo {
     u16     wYResolution;       // Display y resolution
     u16     wXResolution;       // Display x resolution
     
-    u16     wLCDConfigFlags;    // Display configuration flags
-    u16     wPixelClock;        // Display pixel clock
+    u32     wPixelClock;        // Display pixel clock
 
     u16     wVPulseWidth;       // VSYNC pulse width
     u16     wHPulseWidth;       // HSYNC pulse width
@@ -62,6 +61,8 @@ typedef struct settingsinfo {
     u8      cACBiasFreq;        // AC Bias frequency
     u16     cDatalines;         // Number of display datalines
     
+    u32     wLCDConfigFlags;    // Display configuration flags
+
     u32     wGPIODir;           // DHCOM GPIO default direction
     u32     wGPIOState;         // DHCOM GPIO default state
 
@@ -79,6 +80,9 @@ typedef struct settingsinfo {
 #define SETTINGS_LCD_PWM_POL_FLAG       (0x1 << 6)
 #define SETTINGS_LCD_BL_EN_GPIO_FLAG    (0xF << 7)
 #define SETTINGS_LCD_IBL_FLAG           (0x1 << 11)
+#define SETTINGS_LCD_BL_ON_FLAG         (0x1 << 12)
+#define SETTINGS_LCD_DI_TYPE_FLAG       (0x7 << 13)
+#define SETTINGS_LCD_NEXT_DI_FLAG       (0x7 << 16)
 
 #define SETTINGS_HW_SILENT_MODE_FLAG    (0x1 << 0)
 

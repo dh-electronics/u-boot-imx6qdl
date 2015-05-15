@@ -292,6 +292,7 @@ static void setup_iomux_enet(void)
 	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
 }
 
+#ifdef DH_IMX6_NAND_VERSION
 static void setup_gpmi_nand(void)
 {
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
@@ -320,6 +321,7 @@ static void setup_gpmi_nand(void)
 	/* enable apbh clock gating */
 	setbits_le32(&mxc_ccm->CCGR0, MXC_CCM_CCGR0_APBHDMA_MASK);
 }
+#endif
 
 static void setup_iomux_uart(void)
 {
@@ -899,6 +901,17 @@ void load_dh_settings_file(void)
 	char *command;
 	uchar ucBuffer[DHCOM_DISPLAY_SETTINGS_SIZE];
 	int ret_value = 0;
+	int iDI_TYPE = 0;
+	uchar buf[512];
+	int backlight_gpio = 0;
+	int backlight_en_pol = 0;
+	int backlight_pwm_pol = 0;
+	int backlight_on = 0;
+	int h_sync_inv = 0;
+	int v_sync_inv = 0;
+	int DE_inv = 0;
+	int PCLK_inv = 0;
+
 
 	//env = getenv ("loadaddr");
 	addr = simple_strtoul(getenv ("loadaddr"), NULL, 16);
@@ -934,7 +947,7 @@ void load_dh_settings_file(void)
 	{
 		// Enable console output	
 		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
-		printf ("Error: \"load_settings_bin\" not defined\n");
+		printf ("Warning: \"load_settings_bin\" not defined\n");
 		return;
 	}	
 	
@@ -942,8 +955,8 @@ void load_dh_settings_file(void)
 	{
 		// Enable console output	
 		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
-		printf ("Warning: Can't load DH settings file\n");		
-		return;
+		printf ("Info: Can't load DH settings file\n");		
+		//return; // Don't return, because display settings needs to be loaded from eeprom in that case
 	}
 	
 	// Enable console output	
@@ -981,7 +994,40 @@ void load_dh_settings_file(void)
 		gd->dh_board_settings.wGPIOState = (readl(addr+36));
 
 		gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
-	}	
+	}
+
+	// settings.bin file Valid Mask should be "V2" = 0x3256
+	else if(gd->dh_board_settings.wValidationID == 0x3256)
+	{
+		gd->dh_board_settings.cLength = (readl(addr) & 0xFF);
+		gd->dh_board_settings.cDisplayID = ((readl(addr) & 0xFF00) >> 8);
+
+		gd->dh_board_settings.wYResolution = (readl(addr+4) & 0xFFFF);
+		gd->dh_board_settings.wXResolution = ((readl(addr+4) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wPixelClock = (readl(addr+8));
+
+		gd->dh_board_settings.wVPulseWidth = (readl(addr+12) & 0xFFFF);
+		gd->dh_board_settings.wHPulseWidth = ((readl(addr+12) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wHBackPorch = (readl(addr+16) & 0xFFFF);
+		gd->dh_board_settings.wHFrontPorch = ((readl(addr+16) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wVBackPorch = (readl(addr+20) & 0xFFFF);
+		gd->dh_board_settings.wVFrontPorch = ((readl(addr+20) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.cACBiasTrans = (readl(addr+24) & 0xFF);
+		gd->dh_board_settings.cACBiasFreq = ((readl(addr+24) & 0xFF00) >> 8);
+		gd->dh_board_settings.cDatalines = ((readl(addr+24) & 0xFFFF0000) >> 16);
+
+		gd->dh_board_settings.wLCDConfigFlags = (readl(addr+28));
+
+		gd->dh_board_settings.wGPIODir = (readl(addr+32));
+		gd->dh_board_settings.wGPIOState = (readl(addr+36));
+
+		gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
+	}
+	
 	else
 	{
 		gd->dh_board_settings.wValidationID = 0;
@@ -1005,6 +1051,8 @@ void load_dh_settings_file(void)
 
 		if((ret_value == 0) && (ucBuffer[2] == 'D') && (ucBuffer[3] == 'H'))
 		{
+			gd->dh_board_settings.wValidationID = 0x4844; // Display settings "DH"
+
 			gd->dh_board_settings.cDisplayID = ucBuffer[1];
 
 			gd->dh_board_settings.wYResolution = (ucBuffer[5] << 8) | ucBuffer[4];
@@ -1026,7 +1074,152 @@ void load_dh_settings_file(void)
 			gd->dh_board_settings.cACBiasFreq = ucBuffer[25];
 			gd->dh_board_settings.cDatalines = (ucBuffer[27] << 8) | ucBuffer[26];
 		}
-	}		
+
+		else if((ret_value == 0) && (ucBuffer[2] == 'V') && (ucBuffer[3] == '2'))
+		{
+			gd->dh_board_settings.wValidationID = 0x3256; // DIsplay settings "V2"
+
+			gd->dh_board_settings.cDisplayID = ucBuffer[1];
+
+			gd->dh_board_settings.wYResolution = (ucBuffer[5] << 8) | ucBuffer[4];
+			gd->dh_board_settings.wXResolution = (ucBuffer[7] << 8) | ucBuffer[6];
+
+			gd->dh_board_settings.wPixelClock = (ucBuffer[11] << 24) | (ucBuffer[10]  << 16) | (ucBuffer[9] << 8) | ucBuffer[8];
+
+			gd->dh_board_settings.wVPulseWidth = (ucBuffer[13] << 8) | ucBuffer[12];
+			gd->dh_board_settings.wHPulseWidth = (ucBuffer[15] << 8) | ucBuffer[14];
+
+			gd->dh_board_settings.wHBackPorch = (ucBuffer[17] << 8) | ucBuffer[16];
+			gd->dh_board_settings.wHFrontPorch = (ucBuffer[19] << 8) | ucBuffer[18];
+
+			gd->dh_board_settings.wVBackPorch = (ucBuffer[21] << 8) | ucBuffer[20];
+			gd->dh_board_settings.wVFrontPorch = (ucBuffer[23] << 8) | ucBuffer[22];
+
+			gd->dh_board_settings.cACBiasTrans = ucBuffer[24];
+			gd->dh_board_settings.cACBiasFreq = ucBuffer[25];
+			gd->dh_board_settings.cDatalines = (ucBuffer[27] << 8) | ucBuffer[26];
+
+			gd->dh_board_settings.wLCDConfigFlags = (ucBuffer[31] << 24) | (ucBuffer[30]  << 16) | (ucBuffer[29] << 8) | ucBuffer[28];
+		}
+		
+		else
+		{
+			printf ("Info: Can't load DH settings file from eeprom\n");		
+		}
+	}
+
+	// Set ENV Linux Kernel parameter
+	// DHCOM settings "V2" = 0x3256 or "DH" = 0x4844
+	if((gd->dh_board_settings.wValidationID == 0x3256) || (gd->dh_board_settings.wValidationID == 0x4844))
+	{	
+		iDI_TYPE = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13);
+
+		// Mask Backlight enable GPIO
+		backlight_gpio = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_EN_GPIO_FLAG) >> 7);
+		
+		// Covert to struct gpio number
+		backlight_gpio = backlight_gpio - 1;		
+
+		// Mask Backlight pol flag: 0 = active high; 1 = active low
+		backlight_en_pol = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IBL_FLAG) >> 11) ;
+
+		// Mask Backlight PWM pol flag: 0 = active high; 1 = active low
+		backlight_pwm_pol = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_PWM_POL_FLAG) >> 6);
+
+		// Mask Backlight ON pol flag: 0 = backlight off; 1 = backlight on
+		backlight_on = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_ON_FLAG) >> 12);
+		
+		// Display control flags
+		v_sync_inv = (gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG);
+		h_sync_inv = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG) >> 1);
+		PCLK_inv = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG) >> 2);
+		DE_inv = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG) >> 3);
+
+		// Set Display Type to RGB for old settings file
+		if(gd->dh_board_settings.wValidationID == 0x4844)
+		{
+			iDI_TYPE = 2; // RGB Display
+		}
+
+		switch (iDI_TYPE)
+		{
+		case 0: // Ignore Display settings	
+			setenv("parallel_display", NULL);	
+			setenv("lvds_display0", NULL);
+			setenv("lvds_display1", NULL);
+			setenv("pwm_bl.set", NULL);			
+		   	break;
+		case 1: // Headless
+			sprintf((char *)buf, "'parallel_display.disable'");	
+			setenv("parallel_display", (char *)buf);
+			sprintf((char *)buf, "'imx_ldb.disable0'");	
+			setenv("lvds_display0", (char *)buf);
+			sprintf((char *)buf, "'imx_ldb.disable1'");	
+			setenv("lvds_display1", (char *)buf);
+			sprintf((char *)buf, "'BLGPIO:%d,BLINV:%d,BLON:%d,PWMINV:%d'",DHCOM_gpios[backlight_gpio], backlight_en_pol, backlight_on, backlight_pwm_pol);	
+			setenv("pwm_bl.set", (char *)buf);
+		   	break;
+		case 2: // RGB
+			sprintf((char *)buf, "'parallel_display.timings=ID:%d,PCLK:%d,XRES:%d,YRES:%d,HFP:%d,HBP:%d,HSYNC:%d,VFP:%d,VBP:%d,VSYNC:%d,HINV:%d,VINV:%d,DEINV:%d,PCLKPOL:%d'",
+		                 gd->dh_board_settings.cDisplayID, (gd->dh_board_settings.wPixelClock*1000), gd->dh_board_settings.wXResolution,
+		                 gd->dh_board_settings.wYResolution, gd->dh_board_settings.wHFrontPorch, gd->dh_board_settings.wHBackPorch, 
+		                 gd->dh_board_settings.wHPulseWidth, gd->dh_board_settings.wVFrontPorch, gd->dh_board_settings.wVBackPorch, 
+		                 gd->dh_board_settings.wVPulseWidth, h_sync_inv, v_sync_inv, DE_inv, PCLK_inv);	
+			setenv("parallel_display", (char *)buf);
+			sprintf((char *)buf, "'imx_ldb.disable0'");	
+			setenv("lvds_display0", (char *)buf);
+			sprintf((char *)buf, "'imx_ldb.disable1'");	
+			setenv("lvds_display1", (char *)buf);
+			sprintf((char *)buf, "'BLGPIO:%d,BLINV:%d,BLON:%d,PWMINV:%d'",DHCOM_gpios[backlight_gpio], backlight_en_pol, backlight_on, backlight_pwm_pol);	
+			setenv("pwm_bl.set", (char *)buf);
+		   	break;
+		case 3: // LVDS0
+			sprintf((char *)buf, "'parallel_display.disable'");	
+			setenv("parallel_display", (char *)buf);		
+			sprintf((char *)buf, "'imx_ldb.timings0=ID:%d,PCLK:%d,XRES:%d,YRES:%d,HFP:%d,HBP:%d,HSYNC:%d,VFP:%d,VBP:%d,VSYNC:%d,HINV:%d,VINV:%d,DEINV:%d,PCLKPOL:%d'",
+		                 gd->dh_board_settings.cDisplayID, (gd->dh_board_settings.wPixelClock*1000), gd->dh_board_settings.wXResolution,
+		                 gd->dh_board_settings.wYResolution, gd->dh_board_settings.wHFrontPorch, gd->dh_board_settings.wHBackPorch, 
+		                 gd->dh_board_settings.wHPulseWidth, gd->dh_board_settings.wVFrontPorch, gd->dh_board_settings.wVBackPorch, 
+		                 gd->dh_board_settings.wVPulseWidth, h_sync_inv, v_sync_inv, DE_inv, PCLK_inv);	
+			setenv("lvds_display0", (char *)buf);
+			sprintf((char *)buf, "'imx_ldb.disable1'");	
+			setenv("lvds_display1", (char *)buf);
+			sprintf((char *)buf, "'BLGPIO:%d,BLINV:%d,BLON:%d,PWMINV:%d'",DHCOM_gpios[backlight_gpio], backlight_en_pol, backlight_on, backlight_pwm_pol);	
+			setenv("pwm_bl.set", (char *)buf);
+		   	break;
+		case 4: // LVDS1
+			sprintf((char *)buf, "'parallel_display.disable'");	
+			setenv("parallel_display", (char *)buf);
+			sprintf((char *)buf, "'imx_ldb.disable0'");	
+			setenv("lvds_display0", (char *)buf);		
+			sprintf((char *)buf, "'imx_ldb.timings1=ID:%d,PCLK:%d,XRES:%d,YRES:%d,HFP:%d,HBP:%d,HSYNC:%d,VFP:%d,VBP:%d,VSYNC:%d,HINV:%d,VINV:%d,DEINV:%d,PCLKPOL:%d'",
+		                 gd->dh_board_settings.cDisplayID, (gd->dh_board_settings.wPixelClock*1000), gd->dh_board_settings.wXResolution,
+		                 gd->dh_board_settings.wYResolution, gd->dh_board_settings.wHFrontPorch, gd->dh_board_settings.wHBackPorch, 
+		                 gd->dh_board_settings.wHPulseWidth, gd->dh_board_settings.wVFrontPorch, gd->dh_board_settings.wVBackPorch, 
+		                 gd->dh_board_settings.wVPulseWidth, h_sync_inv, v_sync_inv, DE_inv, PCLK_inv);	
+			setenv("lvds_display1", (char *)buf);
+			sprintf((char *)buf, "'BLGPIO:%d,BLINV:%d,BLON:%d,PWMINV:%d'",DHCOM_gpios[backlight_gpio], backlight_en_pol, backlight_on, backlight_pwm_pol);	
+			setenv("pwm_bl.set", (char *)buf);
+		   	break;
+		case 5: // Dual LVDS
+			sprintf((char *)buf, "'parallel_display.disable'");	
+			setenv("parallel_display", (char *)buf);		
+			sprintf((char *)buf, "'imx_ldb.timings0=ID:%d,PCLK:%d,XRES:%d,YRES:%d,HFP:%d,HBP:%d,HSYNC:%d,VFP:%d,VBP:%d,VSYNC:%d,HINV:%d,VINV:%d,DEINV:%d,PCLKPOL:%d'",
+		                 gd->dh_board_settings.cDisplayID, (gd->dh_board_settings.wPixelClock*1000), gd->dh_board_settings.wXResolution,
+		                 gd->dh_board_settings.wYResolution, gd->dh_board_settings.wHFrontPorch, gd->dh_board_settings.wHBackPorch, 
+		                 gd->dh_board_settings.wHPulseWidth, gd->dh_board_settings.wVFrontPorch, gd->dh_board_settings.wVBackPorch, 
+		                 gd->dh_board_settings.wVPulseWidth, h_sync_inv, v_sync_inv, DE_inv, PCLK_inv);	
+			setenv("lvds_display0", (char *)buf);
+			setenv("lvds_display1", NULL); // Delete lvds_display1 ENV variable for Dual channel LVDS display
+			sprintf((char *)buf, "'BLGPIO:%d,BLINV:%d,BLON:%d,PWMINV:%d'",DHCOM_gpios[backlight_gpio], backlight_en_pol, backlight_on, backlight_pwm_pol);	
+			setenv("pwm_bl.set", (char *)buf);
+		   	break;
+		default:
+			break;
+		  
+		}
+	}
+
 }
 
 void set_dhcom_gpios(void)

@@ -13,12 +13,12 @@
 
 #include "mx6_common.h"
 
-#define DH_IMX6_EMMC_VERSION
-//#define DH_IMX6_NAND_VERSION
+//#define DH_IMX6_EMMC_VERSION
+#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "0.4.2.4" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "0.4.2.5" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -239,20 +239,18 @@
 
 #ifdef DH_IMX6_NAND_VERSION
 	#define MTDIDS_DEFAULT		"nand0=gpmi-nand"
-	#define MTDPARTS_DEFAULT	"mtdparts=gpmi-nand:52428800(boot),-(rootfs)"
+	#define MTDPARTS_DEFAULT	"mtdparts=gpmi-nand:-(gpmi-nand)"
 #endif
 
-#define CONFIG_EXTRA_ENV_SETTINGS \
+#define CONFIG_EXTRA_ENV_SETTINGS_BASE \
 		"panel=no_panel\0" \
 		"splashimage=0x10000002\0" \
 		"splashpos=m,m\0" \
 		"settings_bin_file=default_settings.bin\0" \
 		"splash_file=splash.bmp\0" \
-		"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
-		"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
 		"load_update_kernel=dummy\0" \
-        "mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
-        "mmcpart=1\0" \
+		"mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
+		"mmcpart=1\0" \
 		"ethaddr=00:11:22:33:44:55\0" \
 		"ipaddr=10.64.31.252\0" \
 		"bootenv_file=uLinuxEnv.txt\0" \
@@ -269,6 +267,22 @@
 		"fdt_high=0xffffffff\0" \
 		"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 		"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0"
+		
+#if defined(DH_IMX6_NAND_VERSION)
+	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \
+		"mtdid=" MTDIDS_DEFAULT "\0"					\
+		"mtdparts=" MTDPARTS_DEFAULT "\0"				\
+		"load_settings_bin=ubi part gpmi-nand; ubifsmount ubi0:boot; ubifsload ${loadaddr} ${settings_bin_file}; ubifsumount\0" \
+		"load_splash=dummy\0" \
+		""
+#elif defined(DH_IMX6_EMMC_VERSION)
+	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \
+		"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
+		"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
+		""
+#endif		
+		
+#define	CONFIG_EXTRA_ENV_SETTINGS CONFIG_EXTRA_ENV_SETTINGS_BASE CONFIG_EXTRA_ENV_SETTINGS_SELECT
 		
 #define CONFIG_BOOTCOMMAND \
         "update auto; mmc dev ${mmcdev}; if mmc rescan; then run bootlinux; else echo Linux start failed, because mmc${mmcdev} was not found!;fi;"

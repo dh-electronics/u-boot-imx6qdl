@@ -1139,6 +1139,7 @@ void load_dh_settings_file(void)
 		if(gd->dh_board_settings.wValidationID == 0x4844)
 		{
 			iDI_TYPE = 2; // RGB Display
+			backlight_on = 1; // Set backlight_on flag
 		}
 
 		switch (iDI_TYPE)
@@ -1261,19 +1262,32 @@ void set_dhcom_backlight_gpio(void)
 	char const *panel = getenv("panel");
 	const char *no_panel = "no_panel";
 
-	if(panel) {
-		if (!strcmp(panel, no_panel)) {
+	if(panel) 
+	{
+		if (!strcmp(panel, no_panel)) 
+		{
 			disable_backlight = 1;
 		}
 	}
-
+	else
+	{
+		// If display interface is enabled check BL_ON flag (0 = backlight off / 1 = backlight on)
+		if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_ON_FLAG)
+		{
+			disable_backlight = 0;
+		}
+		else
+		{
+			disable_backlight = 1;
+		}
+	}
 
 	/* Init backlight PWM Pin */
 	imx_iomux_v3_setup_multiple_pads(backlight_pwm_pad, ARRAY_SIZE(backlight_pwm_pad));
 
 	// Mask Backlight enable GPIO
 	backlight_gpio = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_BL_EN_GPIO_FLAG) >> 7);
-
+	
 	// Check if backlight enable ist specified
 	if(backlight_gpio != 0) {
 		// Covert to struct gpio number

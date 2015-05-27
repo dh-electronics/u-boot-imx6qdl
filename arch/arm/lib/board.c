@@ -54,6 +54,7 @@ extern void dataflash_print_info(void);
 
 #ifdef CONFIG_DHCOM
 extern void load_dh_settings_file(void);
+extern void generate_dh_settings_kernel_args(void);
 extern void set_dhcom_gpios(void);
 extern void set_dhcom_backlight_gpio(void);
 extern void burn_fuses(void);
@@ -621,6 +622,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 
 #ifdef CONFIG_DHCOM
 	load_dh_settings_file();
+	generate_dh_settings_kernel_args();
 	set_dhcom_gpios();
 	set_dhcom_backlight_gpio();
 	burn_fuses();

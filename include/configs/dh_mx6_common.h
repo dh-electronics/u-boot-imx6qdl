@@ -13,12 +13,12 @@
 
 #include "mx6_common.h"
 
-//#define DH_IMX6_EMMC_VERSION
-#define DH_IMX6_NAND_VERSION
+#define DH_IMX6_EMMC_VERSION
+//#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "0.4.2.5" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "1.0.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -259,7 +259,7 @@
                         " setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt;" \
                         " run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 		"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
-		"linuxargs=setenv bootargs console=${console} ${rootfs} ${videoargs} fbcon=${fbcon} ${optargs}\0" \
+		"linuxargs=setenv bootargs console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} ${MOD_NAME} ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
 		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
 		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
@@ -279,6 +279,7 @@
 	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \
 		"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
 		"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
+		"mmc_rootfs_part=2\0" \
 		""
 #endif		
 		

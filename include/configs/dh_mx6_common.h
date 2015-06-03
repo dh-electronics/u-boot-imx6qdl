@@ -18,28 +18,28 @@
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "1.0.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "1.0.0.1" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
  * Default settings
  */
 #define DEFAULT_SETTINGS_BLOCK_LENGTH       0x2C        /* 44 Byte */
-#define DEFAULT_SETTINGS_DISPLAY_ID         0x01
-#define DEFAULT_SETTINGS_Y_RESOLUTION       272
-#define DEFAULT_SETTINGS_X_RESOLUTION       480
-#define DEFAULT_SETTINGS_LCD_CONFIG_FLAGS   0x03E7      /* includes GPIO G for BE enable */
+#define DEFAULT_SETTINGS_DISPLAY_ID         0xFF
+#define DEFAULT_SETTINGS_Y_RESOLUTION       0xFFFF
+#define DEFAULT_SETTINGS_X_RESOLUTION       0xFFFF
+#define DEFAULT_SETTINGS_LCD_CONFIG_FLAGS   0xFFFFFFFF      /* includes GPIO G for BE enable */
 
-#define DEFAULT_SETTINGS_PIXEL_CLOCK        11100
-#define DEFAULT_SETTINGS_V_PULSE_WIDTH      11
-#define DEFAULT_SETTINGS_H_PULSE_WIDTH      42
-#define DEFAULT_SETTINGS_H_BACK_PORCH       2
-#define DEFAULT_SETTINGS_H_FRONT_PORCH      3
-#define DEFAULT_SETTINGS_V_BACK_PORCH       2
-#define DEFAULT_SETTINGS_V_FRONT_PORCH      3
-#define DEFAULT_SETTINGS_AC_BIAS_TRANS      0
-#define DEFAULT_SETTINGS_AC_BIAS_FREQ       0
-#define DEFAULT_SETTINGS_DATALINES          24
+#define DEFAULT_SETTINGS_PIXEL_CLOCK        0xFFFFFFFF
+#define DEFAULT_SETTINGS_V_PULSE_WIDTH      0xFFFF
+#define DEFAULT_SETTINGS_H_PULSE_WIDTH      0xFFFF
+#define DEFAULT_SETTINGS_H_BACK_PORCH       0xFFFF
+#define DEFAULT_SETTINGS_H_FRONT_PORCH      0xFFFF
+#define DEFAULT_SETTINGS_V_BACK_PORCH       0xFFFF
+#define DEFAULT_SETTINGS_V_FRONT_PORCH      0xFFFF
+#define DEFAULT_SETTINGS_AC_BIAS_TRANS      0xFF
+#define DEFAULT_SETTINGS_AC_BIAS_FREQ       0xFF
+#define DEFAULT_SETTINGS_DATALINES          0xFFFF
 
 #define DEFAULT_SETTINGS_GPIO_DIRECTION     0x1FF       /* 1 = Input, 0 = Output --> bits 0 - 8 = GPIO A - I */
 #define DEFAULT_SETTINGS_GPIO_STATE         0x055       /* 0 = Low, 1 = High --> bits 0 - 8 = GPIO A - I */
@@ -259,7 +259,7 @@
                         " setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt;" \
                         " run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 		"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
-		"linuxargs=setenv bootargs console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} ${MOD_NAME} ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
+		"linuxargs=setenv bootargs console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} dhcom=${dhcom} ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
 		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
 		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \

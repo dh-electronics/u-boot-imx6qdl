@@ -95,6 +95,7 @@ extern int do_source(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern int do_env_set(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_nvedit.c */
 extern int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_mmc.c */
 extern int do_bmp (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+extern int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern int DHCOMUpdateLED_Init(updateinfo_t *p_stDHupdateINI);
 extern void DHCOMUpdateDelayMs(unsigned long msec);
 extern void DHCOMUpdateLED_SetHigh(void);
@@ -949,6 +950,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 	int iUpdateLoopCounter = 0;
 	int iLoadUpdateKernel = 0;
     int i = 0;	
+    uchar buf[128];
 
 	void *p_vUpdateArgument; 
 	char *cmd, *file_name; 	
@@ -959,8 +961,6 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 	char *p_cLoadScriptBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"script.bin"};	
 	char *p_cLoadSettingsBinToSDRAM[5]      = {"load","","",cENVSDRAMBufferAddress,"settings.bin"};
 	char *p_cRunScript[2]                	= {"source",cENVSDRAMBufferAddress};
-	char *p_cSetEnvDev[3]					= {"setenv", "dev", ""};
-	char *p_cSetEnvPart[3]					= {"setenv", "part", ""};
 
 	int ret_value = 0;
 	
@@ -1429,11 +1429,12 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 		
 		printf ("\n==> Update: Start to Load Update Kernel\n");
 		
-		p_cSetEnvDev[2] = p_cStorageDevice;
-		p_cSetEnvPart[2] = p_cDevicePartitionNumber;
- 		
-		ret_value = do_env_set(NULL, 0, 3, p_cSetEnvDev);
-		ret_value = do_env_set(NULL, 0, 3, p_cSetEnvPart);			
+		// Set current Update device and partition for update kernel
+		sprintf((char *)buf, "%s",p_cStorageDevice);	
+		setenv("src_intf", (char *)buf);	
+   
+		sprintf((char *)buf, "%s",p_cDevicePartitionNumber);	
+		setenv("src_dev_part", (char *)buf);   
 		
 		run_command (cmd, 0);
 		// If run command returns --> show error
@@ -1478,6 +1479,8 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
     char *p_cMMCReScan[2]                   = {"mmc","rescan"};
     char *p_cCompareString[1]               = {"##DHCOMupdate##\0"};
     char *cmd;
+    
+    char *p_cUSBInit[2]                     = {"usb","start"};
     
     char cSDCardStorageDevice[4]            = {"mmc\0"};
     char cMicroSDCardDevicePartitionNumber[4]    = {"1:1\0"};   	
@@ -1611,9 +1614,14 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
                  if(((iStartUpAutomaticallyUpdate == 1) && (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_HOST_1_PORT)) ||
                    (iStartUpAutomaticallyUpdate == 0))
                 {
+			
+                   // Initialize USB Stick
+                    printf ("--> Update: Try to initialize USB Stick on Host Port:");
+                    ret_value = do_usb(NULL, 0, 2, p_cUSBInit);	
+			
                     // Call update function, if USB init returns success
-                    //if(ret_value == 0)
-                    //{
+                    if(ret_value == 0)
+                    {
                         ret_value = DHCOMupdate (cmdtp, argc, argv, &stDHupdateINI, &cUSBStorageDevice[0], &cUSBHost1DevicePartitionNumber[0]);
                         
                         // Update success
@@ -1640,8 +1648,8 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
                         {
                             printf ("\n");
                         }
-                    //} 
-                    //else
+                    } 
+                    else
                     {
                         printf ("\n--> Update INFO: No USB Stick detected!\n");
                     }

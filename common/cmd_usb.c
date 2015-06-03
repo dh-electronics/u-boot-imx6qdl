@@ -587,7 +587,7 @@ static int usb_device_info(void)
 /******************************************************************************
  * usb command intepreter
  */
-static int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+/*static*/ int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct usb_device *udev = NULL;
 	int i;

@@ -264,7 +264,8 @@ iomux_v3_cfg_t const gpio_pads[] = {
 
 iomux_v3_cfg_t const hw_code_pads[] = {
 	MX6_PAD_EIM_A19__GPIO_2_19   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
-	MX6_PAD_EIM_A20__GPIO_2_18   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_EIM_A23__GPIO_6_6   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_EIM_A22__GPIO_2_16   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 };
 
 void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
@@ -1238,6 +1239,14 @@ void generate_dh_settings_kernel_args(void)
 			break;
 		  
 		}
+	}
+	else
+	{
+		// Delete ENV variables
+		setenv("parallel_display", NULL);	
+		setenv("lvds_display0", NULL);
+		setenv("lvds_display1", NULL);
+		setenv("pwm_bl.set", NULL);	
 	}	
 }
 
@@ -1524,7 +1533,8 @@ static const struct boot_mode board_boot_modes[] = {
 #endif
 
 #define HW_CODE_BIT_0	IMX_GPIO_NR(2, 19)
-#define HW_CODE_BIT_1	IMX_GPIO_NR(2, 18)
+#define HW_CODE_BIT_1	IMX_GPIO_NR(6, 6)
+#define HW_CODE_BIT_2	IMX_GPIO_NR(2, 16)
 
 int board_late_init(void)
 {
@@ -1538,32 +1548,33 @@ int board_late_init(void)
 	
 	// Set to input
 	gpio_direction_input(HW_CODE_BIT_0);	
-	gpio_direction_input(HW_CODE_BIT_1);		
+	gpio_direction_input(HW_CODE_BIT_1);	
+	gpio_direction_input(HW_CODE_BIT_2);	
 	
-	hw_code = ((gpio_get_value(HW_CODE_BIT_1) << 1) | gpio_get_value(HW_CODE_BIT_0)) + 2; // HW 100 + HW 200 = 00b; HW 300 = 01b
+	hw_code = ((gpio_get_value(HW_CODE_BIT_2) << 2) | (gpio_get_value(HW_CODE_BIT_1) << 1) | gpio_get_value(HW_CODE_BIT_0)) + 2; // HW 100 + HW 200 = 00b; HW 300 = 01b
 	
 	switch (cfg)
 	{
 	case 0x0500: // Solo	
 		sprintf((char *)buf, "imx6s_%d",hw_code);	
-		setenv("MOD_NAME", (char *)buf);		
+		setenv("dhcom", (char *)buf);		
 		break;
 	case 0x0501: // DualLite
 		sprintf((char *)buf, "imx6dl_%d",hw_code);	
-		setenv("MOD_NAME", (char *)buf);
+		setenv("dhcom", (char *)buf);
 		break;
 	case 0x5501: // Dual
 		sprintf((char *)buf, "imx6d_%d",hw_code);	
-		setenv("MOD_NAME", (char *)buf);
+		setenv("dhcom", (char *)buf);
 		break;
 	case 0x5503: // Quad
 		sprintf((char *)buf, "imx6q_%d",hw_code);	
-		setenv("MOD_NAME", (char *)buf);
+		setenv("dhcom", (char *)buf);
 		break;	
 	
 	default:
-		// Delete MOD_NAME
-		setenv("MOD_NAME", NULL);		
+		// Delete dhcom
+		setenv("dhcom", NULL);		
 		break;
 	  
 	}

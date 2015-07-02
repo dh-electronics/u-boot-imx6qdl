@@ -1549,19 +1549,19 @@ int board_late_init(void)
 	switch (cfg)
 	{
 	case 0x0500: // Solo	
-		sprintf((char *)buf, "imx6s_%d",hw_code);	
+		sprintf((char *)buf, "imx6s-dhcom%d",hw_code);	
 		setenv("dhcom", (char *)buf);		
 		break;
 	case 0x0501: // DualLite
-		sprintf((char *)buf, "imx6dl_%d",hw_code);	
+		sprintf((char *)buf, "imx6dl-dhcom%d",hw_code);	
 		setenv("dhcom", (char *)buf);
 		break;
 	case 0x5501: // Dual
-		sprintf((char *)buf, "imx6d_%d",hw_code);	
+		sprintf((char *)buf, "imx6d-dhcom%d",hw_code);	
 		setenv("dhcom", (char *)buf);
 		break;
 	case 0x5503: // Quad
-		sprintf((char *)buf, "imx6q_%d",hw_code);	
+		sprintf((char *)buf, "imx6q-dhcom%d",hw_code);	
 		setenv("dhcom", (char *)buf);
 		break;	
 	

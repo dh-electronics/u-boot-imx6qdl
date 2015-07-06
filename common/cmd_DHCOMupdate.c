@@ -1156,29 +1156,14 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 			}
 			else
 			{
-				if((strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "linux") == 0) ||
-				   (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "rootfs") == 0) ||
-				   (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "splash") == 0) ||
-				   (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "bootloader") == 0) ||
-				   (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "settings") == 0))
-				{
-					iLoadUpdateKernel = 1;
-					cUpdateArgument = LOAD_UPDATE_KERNEL_LATER;
-					p_vUpdateArgument = &cUpdateArgument;
-					
-					if((strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "settings") == 0))
-					{
-						// Set DH settings Filename for refresh command
-						p_cLoadSettingsBinToSDRAM[4] = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
-					}
-				}
+				iLoadUpdateKernel = 1;
+				cUpdateArgument = LOAD_UPDATE_KERNEL_LATER;
+				p_vUpdateArgument = &cUpdateArgument;
 				
-				else
+				if((strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "settings") == 0))
 				{
-					// Wrong argument
-					sprintf (&cErrorString[0], "\n--> Update ERROR: Wrong or no Update Type in DHupdate.ini file\n");
-					ShowUpdateError(p_stDHupdateINI, &cErrorString[0], DHUPDATE_INI_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
-					return 1;
+					// Set DH settings Filename for refresh command
+					p_cLoadSettingsBinToSDRAM[4] = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
 				}
 			}
 		}

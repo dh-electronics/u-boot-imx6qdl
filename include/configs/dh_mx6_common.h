@@ -19,7 +19,7 @@
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "1.0.0.1" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "1.0.0.2" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -247,11 +247,15 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS_BASE \
 		"panel=no_panel\0" \
+		"console=ttymxc0,115200\0" \
 		"splashimage=0x10000002\0" \
 		"splashpos=m,m\0" \
 		"settings_bin_file=default_settings.bin\0" \
 		"splash_file=splash.bmp\0" \
-		"load_update_kernel=dummy\0" \
+		"setupdateargs=setenv bootargs " \
+		        "console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom} " \
+		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} vt.global_cursor_default=0\0" \
+		"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0" \
 		"mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
 		"mmcpart=1\0" \
 		"ethaddr=00:11:22:33:44:55\0" \
@@ -262,7 +266,9 @@
                         " setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt;" \
                         " run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 		"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
-		"linuxargs=setenv bootargs console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} dhcom=${dhcom} ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
+		"linuxargs=setenv bootargs " \
+		        "console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} dhcom=${dhcom} " \
+		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
 		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
 		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \

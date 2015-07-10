@@ -256,8 +256,6 @@
 		        "console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom} " \
 		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} vt.global_cursor_default=0\0" \
 		"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0" \
-		"mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
-		"mmcpart=1\0" \
 		"ethaddr=00:11:22:33:44:55\0" \
 		"ipaddr=10.64.31.252\0" \
 		"bootenv_file=uLinuxEnv.txt\0" \
@@ -269,9 +267,6 @@
 		"linuxargs=setenv bootargs " \
 		        "console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} dhcom=${dhcom} " \
 		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
-		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
-		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
 		"fdt_addr=0x11000000\0" \
 		"fdt_high=0xffffffff\0" \
 		"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
@@ -279,23 +274,36 @@
 		
 #if defined(DH_IMX6_NAND_VERSION)
 	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \
-		"mtdid=" MTDIDS_DEFAULT "\0"					\
-		"mtdparts=" MTDPARTS_DEFAULT "\0"				\
-		"load_settings_bin=ubi part gpmi-nand; ubifsmount ubi0:boot; ubifsload ${loadaddr} ${settings_bin_file}; ubifsumount\0" \
-		"load_splash=dummy\0" \
+		"mtdids=" MTDIDS_DEFAULT "\0" \
+		"mtdparts=" MTDPARTS_DEFAULT "\0" \
+		"load_settings_bin=ubi part gpmi-nand; ubifsmount ubi0:boot; ubifsload ${loadaddr} ${settings_bin_file}\0" \
+		"load_splash=ubifsload ${loadaddr} ${splash_file}\0" \
+		"load_bootenv=echo Loading u-boot env file ${bootenv_file}...; ubifsload ${loadaddr} ${bootenv_file};\0" \
+		"load_fdt=echo Loading device tree ${fdt_file}...; ubifsload ${fdt_addr} ${fdt_file}\0" \
+		"load_zimage=echo Loading linux ${zImage_file}...; ubifsload ${loadaddr} ${zImage_file}\0" \
 		""
 #elif defined(DH_IMX6_EMMC_VERSION)
 	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \
 		"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
 		"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
+		"load_bootenv=echo Loading u-boot environment file ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
+		"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+		"load_zimage=echo Loading linux ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+		"mmcdev=" __stringify(CONFIG_SYS_DEFAULT_MMC_DEV) "\0" \
+		"mmcpart=1\0" \
 		"mmc_rootfs_part=2\0" \
 		""
-#endif		
-		
+#endif	
+	
 #define	CONFIG_EXTRA_ENV_SETTINGS CONFIG_EXTRA_ENV_SETTINGS_BASE CONFIG_EXTRA_ENV_SETTINGS_SELECT
-		
-#define CONFIG_BOOTCOMMAND \
-        "update auto; mmc dev ${mmcdev}; if mmc rescan; then run bootlinux; else echo Linux start failed, because mmc${mmcdev} was not found!;fi;"
+
+#if defined(DH_IMX6_NAND_VERSION)
+        #define CONFIG_BOOTCOMMAND \
+                "update auto; run bootlinux;"
+#elif defined(DH_IMX6_EMMC_VERSION)		
+        #define CONFIG_BOOTCOMMAND \
+                "update auto; mmc dev ${mmcdev}; if mmc rescan; then run bootlinux; else echo Linux start failed, because mmc${mmcdev} was not found!;fi;"
+#endif	
 
 #define CONFIG_ARP_TIMEOUT     200UL
 

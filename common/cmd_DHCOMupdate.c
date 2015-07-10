@@ -102,7 +102,20 @@ extern void DHCOMUpdateLED_SetHigh(void);
 extern void DHCOMUpdateLED_SetLow(void);
 extern void generate_dh_settings_kernel_args(void);
 
-extern void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer); /* dh_imx6.c */
+/* LZ: moved from dh_imx6.c to this file (no further appearence) */
+void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
+{
+    int i,j;
+    for(i = 0, j = 0; i < 8; i++, j++) {
+        // Check if string contains "0x"
+        if(p_cPointer[j] == 'x') {
+            i = 0;
+            j++;
+        }
+        p_cCharArray[i] = p_cPointer[j];
+    }
+    p_cCharArray[i] = '\0';
+}	
 
 //------------------------------------------------------------------------------
 //

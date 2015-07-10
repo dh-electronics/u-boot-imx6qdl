@@ -268,23 +268,6 @@ iomux_v3_cfg_t const hw_code_pads[] = {
 	MX6_PAD_EIM_A22__GPIO_2_16   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 };
 
-void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
-{
-    int i,j;
-    for(i = 0, j = 0; i < 8; i++, j++)
-    {
-        // Check if string contains "0x"
-        if(p_cPointer[j] == 'x')
-        {
-            i = 0;
-            j++;
-        }
-        p_cCharArray[i] = p_cPointer[j];
-    }
-    
-    p_cCharArray[i] = '\0';
-}	
-	
 int dram_init(void)
 {
 	//gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
@@ -554,50 +537,39 @@ static int detect_i2c(struct display_info_t const *dev)
 // Read splashimage from persistant memory
 static int board_get_splashimage(void)
 {
-#ifdef DH_IMX6_EMMC_VERSION
-	char cENVSDRAMBufferAddress[9];
-	char cENVSplashImageAddress[9];
+	char *buffer;
+	char *splashimage;
+        char *command;
 
-	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
-	CopyAddressStringToCharArray(&cENVSplashImageAddress[0], getenv ("splashimage"));
-
-	char cSplashSize[9];
-	char *p_cMemCp[4] = {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""};
-
-	char *command;
+	/* get pointer to buffer and point to splashimage in ram from env */
+	buffer = (char*)simple_strtoul(getenv("loadaddr"), NULL, 16);
+	splashimage = (char*)simple_strtoul(getenv("splashimage"), NULL, 16);
 
 	// Disable console output
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
-	
+
 	/* Load DH settings file from EXT4 Filesystem */
 	if ((command = getenv ("load_splash")) == NULL) {
-		// Enable console output	
-		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		// Enable console output
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 		printf ("Error: \"load_splash\" not defined\n");
 		return -ENOENT;
-	}	
-	
+	}
+
 	if (run_command (command, 0) != 0) {
-		// Enable console output	
-		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		// Enable console output
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 		printf ("Warning: Can't load splash bitmap\n");
 		return -EIO;
-	}	
-	
+	}
+
 	// Copy bitmap to splashscreen addresss
 	// Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2, 
 	//       since the use of a four-byte alignment will cause alignment exceptions at run-time.
-	sprintf (&cSplashSize[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE));  
-	p_cMemCp[3] = &cSplashSize[0];
-	if(do_mem_cp(NULL, 0, 4, p_cMemCp))
-	{
-		return -EIO;
-	}
-	
+	memcpy(splashimage, buffer, SPLASH_MAX_SIZE);
+
 	// Enable console output	
 	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
-#endif /* DH_IMX6_EMMC_VERSION */	
-
 	return 0;
 }
 #endif /* CONFIG_SPLASH_SCREEN */
@@ -718,57 +690,41 @@ int board_video_skip(void)
 	/* Copy Splash-Image to ddr3 ram - DHCOM specific */
 	board_get_splashimage();
 #endif	
-	
 	if (!panel) {
-		for (i = 0; i < ARRAY_SIZE(displays); i++) {
-			struct display_info_t *dev = displays+i;
-			if (dev->detect && dev->detect(dev)) {
-				panel = dev->mode.name;
-				printf("auto-detected panel %s\n", panel);
-				break;
-			}
+		panel = displays[0].mode.name;
+		printf("Using DH settings\n");
+		i = 0;
+
+		/* Setup display settings from DH settings file */
+		displays[0].mode.xres = gd->dh_board_settings.wXResolution;
+		displays[0].mode.yres = gd->dh_board_settings.wYResolution;
+		displays[0].mode.pixclock = gd->dh_board_settings.wPixelClock;
+		displays[0].mode.left_margin = gd->dh_board_settings.wHFrontPorch;
+		displays[0].mode.hsync_len = gd->dh_board_settings.wHPulseWidth;
+		displays[0].mode.right_margin = gd->dh_board_settings.wHBackPorch;
+		displays[0].mode.upper_margin = gd->dh_board_settings.wVFrontPorch;
+		displays[0].mode.vsync_len = gd->dh_board_settings.wVPulseWidth;
+		displays[0].mode.lower_margin = gd->dh_board_settings.wVBackPorch;
+		iClocksPerPicture = ((gd->dh_board_settings.wXResolution + gd->dh_board_settings.wHFrontPorch + gd->dh_board_settings.wHPulseWidth + gd->dh_board_settings.wHBackPorch) *
+					 (gd->dh_board_settings.wYResolution + gd->dh_board_settings.wVFrontPorch + gd->dh_board_settings.wVPulseWidth + gd->dh_board_settings.wVBackPorch));
+		displays[0].mode.refresh = ((gd->dh_board_settings.wPixelClock * 1000) / (iClocksPerPicture));
+		displays[0].mode.sync = 0;
+		if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG)) {
+			displays[0].mode.sync |= FB_SYNC_VERT_HIGH_ACT;
 		}
-		if (!panel) {
-			panel = displays[0].mode.name;
-			printf("No panel detected: default to %s\n", panel);
-			i = 0;
-			
-			/* Setup display settings from DH settings file */
-			displays[0].mode.xres = gd->dh_board_settings.wXResolution;
-			displays[0].mode.yres = gd->dh_board_settings.wYResolution;
-			displays[0].mode.pixclock = gd->dh_board_settings.wPixelClock;
-			displays[0].mode.left_margin = gd->dh_board_settings.wHFrontPorch;
-			displays[0].mode.hsync_len = gd->dh_board_settings.wHPulseWidth;
-			displays[0].mode.right_margin = gd->dh_board_settings.wHBackPorch;
-			displays[0].mode.upper_margin = gd->dh_board_settings.wVFrontPorch;
-			displays[0].mode.vsync_len = gd->dh_board_settings.wVPulseWidth;
-			displays[0].mode.lower_margin = gd->dh_board_settings.wVBackPorch;
-			iClocksPerPicture = ((gd->dh_board_settings.wXResolution + gd->dh_board_settings.wHFrontPorch + gd->dh_board_settings.wHPulseWidth + gd->dh_board_settings.wHBackPorch) *
-								 (gd->dh_board_settings.wYResolution + gd->dh_board_settings.wVFrontPorch + gd->dh_board_settings.wVPulseWidth + gd->dh_board_settings.wVBackPorch));
-			displays[0].mode.refresh = ((gd->dh_board_settings.wPixelClock * 1000) / (iClocksPerPicture));
-			displays[0].mode.sync = 0;
-			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG))
-			{
-				displays[0].mode.sync |= FB_SYNC_VERT_HIGH_ACT;
-			}
-			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG))
-			{
-				displays[0].mode.sync |= FB_SYNC_HOR_HIGH_ACT;
-			}			
-			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG))
-			{
-				displays[0].mode.sync |= FB_SYNC_CLK_LAT_FALL;
-			}
-			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG)
-			{
-				displays[0].mode.sync |= FB_SYNC_OE_LOW_ACT;
-			}
-			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG)
-			{
-				displays[0].mode.sync |= FB_SYNC_DATA_INVERT;
-			}			
-			displays[0].mode.vmode = FB_VMODE_NONINTERLACED;
+		if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG)) {
+			displays[0].mode.sync |= FB_SYNC_HOR_HIGH_ACT;
+		}			
+		if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG)) {
+			displays[0].mode.sync |= FB_SYNC_CLK_LAT_FALL;
 		}
+		if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG) {
+			displays[0].mode.sync |= FB_SYNC_OE_LOW_ACT;
+		}
+		if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG) {
+			displays[0].mode.sync |= FB_SYNC_DATA_INVERT;
+		}			
+		displays[0].mode.vmode = FB_VMODE_NONINTERLACED;
 	} else {
 		for (i = 0; i < ARRAY_SIZE(displays); i++) {
 			if (!strcmp(panel, displays[i].mode.name))

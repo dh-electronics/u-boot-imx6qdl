@@ -552,50 +552,40 @@ static int detect_i2c(struct display_info_t const *dev)
 // Read splashimage from persistant memory
 static int board_get_splashimage(void)
 {
-#ifdef DH_IMX6_EMMC_VERSION
-	char cENVSDRAMBufferAddress[9];
-	char cENVSplashImageAddress[9];
+	char *buffer;
+	char *splashimage;
+        char *command;
 
-	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
-	CopyAddressStringToCharArray(&cENVSplashImageAddress[0], getenv ("splashimage"));
-
-	char cSplashSize[9];
-	char *p_cMemCp[4] = {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""};
-
-	char *command;
-
-	// Disable console output
-	gd->flags |= GD_FLG_DISABLE_CONSOLE;
+	/* get pointer to buffer and point to splashimage in ram from env */
+	buffer = (char*)simple_strtoul(getenv("loadaddr"), NULL, 16);
+	splashimage = (char*)simple_strtoul(getenv("splashimage"), NULL, 16);
 	
-	/* Load DH settings file from EXT4 Filesystem */
+	if ( buffer < (char*)0x10000000 || splashimage < (char*)0x10000000 ) {
+		printf ("Error: invalid \"loadaddr\" and \"splashimage\" env values!\n");
+		return -ENOMEM;
+	}	        
+
+	gd->flags |= GD_FLG_DISABLE_CONSOLE;
+
+	/* load splashimage file from a filesystem */
 	if ((command = getenv ("load_splash")) == NULL) {
-		// Enable console output	
-		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 		printf ("Error: \"load_splash\" not defined\n");
 		return -ENOENT;
-	}	
-	
+	}
+
 	if (run_command (command, 0) != 0) {
-		// Enable console output	
-		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);	
+		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 		printf ("Warning: Can't load splash bitmap\n");
 		return -EIO;
-	}	
-	
+	}
+
 	// Copy bitmap to splashscreen addresss
 	// Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2, 
 	//       since the use of a four-byte alignment will cause alignment exceptions at run-time.
-	sprintf (&cSplashSize[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE));  
-	p_cMemCp[3] = &cSplashSize[0];
-	if(do_mem_cp(NULL, 0, 4, p_cMemCp))
-	{
-		return -EIO;
-	}
-	
-	// Enable console output	
-	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
-#endif /* DH_IMX6_EMMC_VERSION */	
+	memcpy(splashimage, buffer, SPLASH_MAX_SIZE);
 
+	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 	return 0;
 }
 #endif /* CONFIG_SPLASH_SCREEN */
@@ -617,13 +607,9 @@ static void enable_rgb(struct display_info_t const *dev)
 	imx_iomux_v3_setup_multiple_pads(
 		rgb_pads,
 		 ARRAY_SIZE(rgb_pads));
-<<<<<<< HEAD
-	gpio_direction_output(RGB_BACKLIGHT_GP, 1);
-        gpio_direction_output(PWM_BACKLIGHT_GP, 0);
-=======
+
 	//gpio_direction_output(RGB_BACKLIGHT_GP, 1);
 	//gpio_direction_output(PWM_BACKLIGHT_GP, 0);
->>>>>>> e06afbb... Add backlight enable GPIO and PWM support.
 }
 
 static struct display_info_t displays[] = {/*{

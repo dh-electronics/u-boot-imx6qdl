@@ -544,20 +544,22 @@ static int board_get_splashimage(void)
 	/* get pointer to buffer and point to splashimage in ram from env */
 	buffer = (char*)simple_strtoul(getenv("loadaddr"), NULL, 16);
 	splashimage = (char*)simple_strtoul(getenv("splashimage"), NULL, 16);
+	
+	if ( buffer < (char*)0x10000000 || splashimage < (char*)0x10000000 ) {
+		printf ("Error: invalid \"loadaddr\" and \"splashimage\" env values!\n");
+		return -ENOMEM;
+	}	        
 
-	// Disable console output
 	gd->flags |= GD_FLG_DISABLE_CONSOLE;
 
-	/* Load DH settings file from EXT4 Filesystem */
+	/* load splashimage file from a filesystem */
 	if ((command = getenv ("load_splash")) == NULL) {
-		// Enable console output
 		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 		printf ("Error: \"load_splash\" not defined\n");
 		return -ENOENT;
 	}
 
 	if (run_command (command, 0) != 0) {
-		// Enable console output
 		gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 		printf ("Warning: Can't load splash bitmap\n");
 		return -EIO;
@@ -568,7 +570,6 @@ static int board_get_splashimage(void)
 	//       since the use of a four-byte alignment will cause alignment exceptions at run-time.
 	memcpy(splashimage, buffer, SPLASH_MAX_SIZE);
 
-	// Enable console output	
 	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 	return 0;
 }

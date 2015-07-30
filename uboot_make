@@ -7,6 +7,7 @@ if [ "$#" == "0" ]; then
     echo "q_d = Quad or Dual core"
     echo "dl = DualLite core"
     echo "s = Solo core"
+    echo "s_1g = Solo core with 1GByte DDR3"
     exit 1
 fi
 
@@ -38,6 +39,10 @@ elif [ "$1" = "s" ]
 then
     echo "Solo core selected"
     make dh_imx6s_config
+elif [ "$1" = "s_1g" ] 
+then
+    echo "Solo core with 1GByte DDR3 selected"
+    make dh_imx6s1g_config    
 else
     echo "Wrong argument"
 fi

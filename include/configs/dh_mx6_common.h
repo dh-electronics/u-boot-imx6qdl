@@ -265,7 +265,7 @@
                         " run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 		"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
 		"linuxargs=setenv bootargs " \
-		        "console=${console} ${rootfs} fbcon=${fbcon} ${video-args} ${optargs} dhcom=${dhcom} " \
+		        "console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${optargs} dhcom=${dhcom} " \
 		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
 		"fdt_addr=0x11000000\0" \
 		"fdt_high=0xffffffff\0" \

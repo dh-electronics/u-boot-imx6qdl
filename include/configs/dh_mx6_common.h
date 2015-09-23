@@ -14,8 +14,8 @@
 #include "mx6_common.h"
 #include <asm/sizes.h>
 
-#define DH_IMX6_EMMC_VERSION
-//#define DH_IMX6_NAND_VERSION
+//#define DH_IMX6_EMMC_VERSION
+#define DH_IMX6_NAND_VERSION
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 

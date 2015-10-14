@@ -68,6 +68,7 @@ COBJS-$(CONFIG_CMD_SETTINGS_INFO) += cmd_settings_info.o
 COBJS-$(CONFIG_CMD_TESTROUTINES) += cmd_testroutines.o
 COBJS-$(CONFIG_CMD_DHCOM_UPDATE) += updateLED.o
 COBJS-$(CONFIG_CMD_DHCOM_UPDATE) += cmd_DHCOMupdate.o
+COBJS-$(CONFIG_CMD_WINCE) += cmd_wince.o
 COBJS-$(CONFIG_CMD_CFI2BOOT) += cmd_cfi2boot.o
 COBJS-$(CONFIG_CMD_CPLBINFO) += cmd_cplbinfo.o
 COBJS-$(CONFIG_DATAFLASH_MMC_SELECT) += cmd_dataflash_mmc_mux.o

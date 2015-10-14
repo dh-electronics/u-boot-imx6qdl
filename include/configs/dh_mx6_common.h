@@ -96,6 +96,8 @@
 
 #define CONFIG_CMD_SETTINGS_INFO
 #define CONFIG_CMD_DHCOM_UPDATE
+#define CONFIG_CMD_WINCE
+#define BOOTCE_ARGUMENTS_SDRAM_ADDRESS 0x10001044
 
 /* Fuses */
 #define CONFIG_CMD_FUSE
@@ -267,7 +269,8 @@
 		"fdt_addr=0x11000000\0" \
 		"fdt_high=0xffffffff\0" \
 		"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
-		"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0"
+		"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \
+		"wec_image_addr=0x10200000\0"
 		
 #if defined(DH_IMX6_NAND_VERSION)
 	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \

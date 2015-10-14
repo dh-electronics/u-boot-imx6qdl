@@ -77,6 +77,7 @@ obj-$(CONFIG_CMD_SETTINGS_INFO) += cmd_settings_info.o
 obj-$(CONFIG_CMD_TESTROUTINES) += cmd_testroutines.o
 obj-$(CONFIG_CMD_DHCOM_UPDATE) += updateLED.o
 obj-$(CONFIG_CMD_DHCOM_UPDATE) += cmd_DHCOMupdate.o
+obj-$(CONFIG_CMD_WINCE) += cmd_wince.o
 obj-$(CONFIG_CMD_CFI2BOOT) += cmd_cfi2boot.o
 obj-$(CONFIG_CMD_CPLBINFO) += cmd_cplbinfo.o
 obj-$(CONFIG_CMD_CPU) += cmd_cpu.o

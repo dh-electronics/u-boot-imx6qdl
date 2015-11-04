@@ -70,6 +70,7 @@ COBJS-$(CONFIG_CMD_DHCOM_UPDATE) += updateLED.o
 COBJS-$(CONFIG_CMD_DHCOM_UPDATE) += cmd_DHCOMupdate.o
 COBJS-$(CONFIG_CMD_WINCE) += cmd_wince.o
 COBJS-$(CONFIG_CMD_CFI2BOOT) += cmd_cfi2boot.o
+COBJS-$(CONFIG_CMD_CFI2DIP) += cmd_cfi2dip.o
 COBJS-$(CONFIG_CMD_CPLBINFO) += cmd_cplbinfo.o
 COBJS-$(CONFIG_DATAFLASH_MMC_SELECT) += cmd_dataflash_mmc_mux.o
 COBJS-$(CONFIG_CMD_DATE) += cmd_date.o

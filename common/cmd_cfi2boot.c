@@ -35,7 +35,12 @@
 #include <linux/stddef.h>
 
 #include <asm/io.h>
+#include <asm/gpio.h>
 #include <asm/errno.h>
+
+#define HW_CODE_BIT_0	IMX_GPIO_NR(2, 19)
+#define HW_CODE_BIT_1	IMX_GPIO_NR(6, 6)
+#define HW_CODE_BIT_2	IMX_GPIO_NR(2, 16)
 
 #define BOOTCFG_EEPROM_ADDR            0x50
 #define BOOTCFG_EEPROM_SIZE            0x0400 /* 8 kbit */
@@ -82,6 +87,37 @@ struct bootcfg {
 
 #define STR_LEN_TERMINATED(len) len + 1
 
+static unsigned int cfi2_i2cbus = 1;
+
+void
+determine_i2cbus(void)
+{
+        /*
+         * DHCOM I2C ports are swapped between
+         * hardware versions 200 and 300.
+         *
+         * Get hw version an select i2c bus which
+         * is connected to the cfi2 boot eeprom.
+         */
+        u32 hw_code = 0;
+
+	gpio_direction_input(HW_CODE_BIT_0);
+	gpio_direction_input(HW_CODE_BIT_1);
+	gpio_direction_input(HW_CODE_BIT_2);
+
+	// i.MX6: HW 100 + HW 200 = 00b; HW 300 = 01b
+	hw_code = ((gpio_get_value(HW_CODE_BIT_2) << 2) |
+	           (gpio_get_value(HW_CODE_BIT_1) << 1) |
+	            gpio_get_value(HW_CODE_BIT_0)) + 2;
+
+	if (hw_code < 3) {
+	        // HW 100 + HW 200
+	        cfi2_i2cbus = 0;
+	} else {
+	        // HW 300 and further
+	        cfi2_i2cbus = 1;
+	}
+}
 
 int
 read_bootcfg(struct bootcfg * p_cfg, int check_crc)
@@ -92,7 +128,7 @@ read_bootcfg(struct bootcfg * p_cfg, int check_crc)
     uchar block_id = 0;
 
     old_bus = I2C_GET_BUS();
-    I2C_SET_BUS(EEPROM_I2C_BUS_NUM);
+    I2C_SET_BUS(cfi2_i2cbus);
 
     /* read string from eeprom until \0 */
     for (idx = 0; idx < BOOTCFG_EEPROM_SIZE; idx += BOOTCFG_READBLOCK) {
@@ -207,7 +243,7 @@ cfi2_eeprom_write_to_page(uint32_t block, uint32_t offset, uint8_t * data, uint3
     int attempts = 5;
 
     int old_bus = I2C_GET_BUS();
-    I2C_SET_BUS(EEPROM_I2C_BUS_NUM);
+    I2C_SET_BUS(cfi2_i2cbus);
 
     do {
         printf("i2c_write(%i, %i, %i, %p, %i)\n", BOOTCFG_EEPROM_ADDR | block, offset, 1, data, truncated);
@@ -554,6 +590,9 @@ do_cfi2config(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
     /* at least two arguments please */
     if (argc < 2)
         goto usage;
+
+    /* determine i2cbus of boot eeprom, differs on hw version */
+    determine_i2cbus();
 
     /* load boot configuration from i2c eeprom */
     if (strcmp(argv[1], "load") == 0)

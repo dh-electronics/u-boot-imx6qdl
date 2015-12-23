@@ -27,6 +27,9 @@
 #include <i2c.h>
 DECLARE_GLOBAL_DATA_PTR;
 
+extern int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+extern int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
 	PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
@@ -41,6 +44,34 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm  | PAD_CTL_SRE_FAST)
 
+//------------------------------------------------------------------------------
+//
+//  Function:  CopyAddressStringToCharArray
+//
+//  Copy address string content to local char array
+//
+//  Commit values:  - *p_cCharArray = Pointer to the Char Array
+//                  - *p_cPointer = Copy Pointer
+//
+//  Return value:   -
+//
+void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
+{
+    int i,j;
+    for(i = 0, j = 0; i < 8; i++, j++)
+    {
+        // Check if string contains "0x"
+        if(p_cPointer[j] == 'x')
+        {
+            i = 0;
+            j++;
+        }
+        p_cCharArray[i] = p_cPointer[j];
+    }
+    
+    p_cCharArray[i] = '\0';
+}	
+	
 int dram_init(void)
 {
 	gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
@@ -332,6 +363,54 @@ static int detect_i2c(struct display_info_t const *dev)
 		(0 == i2c_probe(dev->addr)));
 }
 
+#ifdef CONFIG_SPLASH_SCREEN
+// Read splashimage from persistant memory
+static int board_get_splashimage(void)
+{
+#ifdef DH_IMX6_EMMC_VERSION
+	struct mmc *mmc;
+	char cENVSDRAMBufferAddress[9];
+	CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
+	char cENVSplashImageFlashAddress[9];
+	CopyAddressStringToCharArray(&cENVSplashImageFlashAddress[0], getenv ("splashimageflashaddr"));
+	char cENVSplashImageAddress[9];
+	CopyAddressStringToCharArray(&cENVSplashImageAddress[0], getenv ("splashimage"));
+	
+	char cBlkCnt[9];
+	char cSplashSize[9];
+	int curr_device = 2;
+	char *p_cMMCSetDevice[3]     	= {"mmc", "dev", "2"}; 
+	char *p_cMMCRead[5]         	= {"mmc", "read", cENVSDRAMBufferAddress, cENVSplashImageFlashAddress, ""}; 	
+	char *p_cMemCp[4]         		= {"cp.b", cENVSDRAMBufferAddress, cENVSplashImageAddress, ""}; 		
+	int ret_value = 0;
+	
+	// Disable console output
+	gd->flags |= GD_FLG_DISABLE_CONSOLE;
+	
+	// Set eMMC as active device
+	ret_value = do_mmcops(NULL, 0, 3, p_cMMCSetDevice);
+
+	// Read splash bitmap from eMMC
+	mmc = find_mmc_device(curr_device);	
+	sprintf (&cBlkCnt[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE / mmc->read_bl_len));   
+	p_cMMCRead[4] = &cBlkCnt[0];
+	ret_value = do_mmcops(NULL, 0, 5, p_cMMCRead);	
+	
+	// Copy bitmap to splashscreen addresss
+	// Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2, 
+	//       since the use of a four-byte alignment will cause alignment exceptions at run-time.
+	sprintf (&cSplashSize[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE));  
+	p_cMemCp[3] = &cSplashSize[0];
+	ret_value = do_mem_cp(NULL, 0, 4, p_cMemCp);	
+	
+	// Enable console output	
+	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
+#endif /* DH_IMX6_EMMC_VERSION */	
+
+	return 0;
+}
+#endif /* CONFIG_SPLASH_SCREEN */
+
 static void enable_lvds(struct display_info_t const *dev)
 {
 	struct iomuxc *iomux = (struct iomuxc *)
@@ -438,6 +517,12 @@ int board_video_skip(void)
 	int i;
 	int ret;
 	char const *panel = getenv("panel");
+
+#ifdef CONFIG_SPLASH_SCREEN
+	/* Copy Splash-Image to ddr3 ram - DHCOM specific */
+	board_get_splashimage();
+#endif	
+
 	if (!panel) {
 		for (i = 0; i < ARRAY_SIZE(displays); i++) {
 			struct display_info_t const *dev = displays+i;
@@ -594,6 +679,7 @@ int board_ehci_hcd_init(int port)
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
+	
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
 #endif

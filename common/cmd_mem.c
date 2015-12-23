@@ -368,7 +368,7 @@ static int do_mem_cmp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	return rcode;
 }
 
-static int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	ulong	addr, dest, count, bytes;
 	int	size;

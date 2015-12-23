@@ -13,6 +13,9 @@
 
 #include "mx6_common.h"
 
+#define DH_IMX6_EMMC_VERSION
+//#define DH_IMX6_NAND_VERSION
+
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
 
@@ -116,6 +119,8 @@
 #define CONFIG_SYS_TEXT_BASE           0x17800000
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
+        "splashimageflashaddr=0x0\0" \
+		"splashimage=0x10000002\0" \
         "script=boot.scr\0" \
         "uimage=uImage\0" \
         "fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
@@ -266,7 +271,7 @@
 /* FLASH and environment organization */
 #define CONFIG_SYS_NO_FLASH
 
-#define CONFIG_ENV_SIZE			(8 * 1024)
+#define CONFIG_ENV_SIZE			(256 * 1024)
 
 #define CONFIG_ENV_IS_IN_SPI_FLASH
 //#define CONFIG_ENV_IS_IN_NVRAM

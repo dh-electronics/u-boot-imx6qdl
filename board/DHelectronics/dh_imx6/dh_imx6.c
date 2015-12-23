@@ -72,6 +72,10 @@ iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_RGMII_RD0__GPIO_6_25            | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+iomux_v3_cfg_t const usb_pads[] = {
+        MX6_PAD_EIM_D31__GPIO_3_31              | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
 static void setup_iomux_enet(void)
 {
 	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
@@ -575,6 +579,18 @@ int board_eth_init(bd_t *bis)
 
 	return ret;
 }
+
+
+#ifdef CONFIG_USB_EHCI_MX6
+int board_ehci_hcd_init(int port)
+{
+        imx_iomux_v3_setup_multiple_pads(usb_pads, ARRAY_SIZE(usb_pads));
+
+        /* Enable USB VBUS */
+        gpio_direction_output(IMX_GPIO_NR(3, 31) , 1);
+        return 0;
+}
+#endif
 
 int board_early_init_f(void)
 {

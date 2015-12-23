@@ -264,7 +264,9 @@ int board_phy_config(struct phy_device *phydev)
 static iomux_v3_cfg_t const backlight_pads[] = {
 	/* Backlight on RGB connector: J15 */
 	MX6_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
-#define RGB_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
+        MX6_PAD_EIM_D27__GPIO_3_27 | MUX_PAD_CTRL(NO_PAD_CTRL),
+#define RGB_BACKLIGHT_GP IMX_GPIO_NR(3, 27)
+#define PWM_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
 
 	/* Backlight on LVDS connector: J6 */
 	MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -346,6 +348,7 @@ static void enable_rgb(struct display_info_t const *dev)
 		rgb_pads,
 		 ARRAY_SIZE(rgb_pads));
 	gpio_direction_output(RGB_BACKLIGHT_GP, 1);
+        gpio_direction_output(PWM_BACKLIGHT_GP, 0);
 }
 
 static struct display_info_t const displays[] = {/*{
@@ -411,7 +414,7 @@ static struct display_info_t const displays[] = {/*{
 } }, */{
 	.bus	= 2,
 	.addr	= 0x48,
-	.pixfmt	= IPU_PIX_FMT_RGB666,
+	.pixfmt	= IPU_PIX_FMT_BGR24,
 	.detect	= detect_i2c,
 	.enable	= enable_rgb,
 	.mode	= {
@@ -419,13 +422,13 @@ static struct display_info_t const displays[] = {/*{
 		.refresh        = 57,
 		.xres           = 800,
 		.yres           = 480,
-		.pixclock       = 37037,
-		.left_margin    = 40,
-		.right_margin   = 60,
+                .pixclock       = 33260,
+                .left_margin    = 42,
+                .right_margin   = 86,
 		.upper_margin   = 10,
-		.lower_margin   = 10,
-		.hsync_len      = 20,
-		.vsync_len      = 10,
+                .lower_margin   = 33,
+                .hsync_len      = 128,
+                .vsync_len      = 2,
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED
 } } };

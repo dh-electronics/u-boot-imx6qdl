@@ -87,8 +87,6 @@ static void setup_iomux_enet(void)
 
         /* Enable VIO */
         gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
-        udelay(500);
-        gpio_set_value(IMX_GPIO_NR(1, 7), 1);
 }
 
 iomux_v3_cfg_t const usdhc2_pads[] = {
@@ -243,7 +241,7 @@ static int setup_fec(void)
         int ret;
 
         /* set gpr1[21] to select anatop clock */
-        clrsetbits_le32(&iomuxc_regs->gpr[1], 0x1 << 21, 1);
+        clrsetbits_le32(&iomuxc_regs->gpr[1], 0x1 << 21, 0x1 << 21);
 
         ret = enable_fec_anatop_clock(ENET_50MHz);
         if (ret)
@@ -255,12 +253,6 @@ static int setup_fec(void)
 
 int board_phy_config(struct phy_device *phydev)
 {
-	//mx6_rgmii_rework(phydev);
-
-#ifdef  CONFIG_FEC_MXC
-        setup_fec();
-#endif
-
 	if (phydev->drv->config)
 		phydev->drv->config(phydev);
 
@@ -572,6 +564,10 @@ int board_eth_init(bd_t *bis)
 	int ret;
 
 	setup_iomux_enet();
+	
+#ifdef  CONFIG_FEC_MXC
+        setup_fec();
+#endif
 
 	ret = cpu_eth_init(bis);
 	if (ret)

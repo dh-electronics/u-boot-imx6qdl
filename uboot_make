@@ -37,7 +37,7 @@ else
 fi
 
 echo -- make u-boot imx6 
-make all > u-boot.txt
+make -j5 all > u-boot.txt
 echo make messages: u-boot.txt
 
 echo ----------------------------

@@ -1,0 +1,28 @@
+echo ============================
+echo -- run u-boot i.mx6 build 
+echo ----------------------------
+echo -- setup toolchain 
+PATH=$PATH:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin/armv7a-vfp-neon-linux-gnueabi
+export PATH
+CROSS_COMPILE=armv7a-
+export CROSS_COMPILE
+
+echo ----------------------------
+echo --> make distclean
+make distclean
+
+echo ----------------------------
+echo --> delete old u-boot* files
+rm -v u-boot*
+
+echo ----------------------------
+make dh_imx6dl_config
+#make mx6qsabresd_config
+
+echo -- make u-boot imx6 
+make all > u-boot.txt
+echo make messages: u-boot.txt
+
+echo ----------------------------
+echo -- make u-boot imx6 done 
+echo ============================

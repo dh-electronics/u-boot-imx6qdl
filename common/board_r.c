@@ -759,9 +759,6 @@ init_fnc_t init_sequence_r[] = {
 	 */
 	initr_pci,
 #endif
-#ifdef CONFIG_DHCOM
-        dhcom_init,
-#endif
 #ifdef CONFIG_WINBOND_83C553
 	initr_w83c553f,
 #endif
@@ -800,6 +797,9 @@ init_fnc_t init_sequence_r[] = {
 	initr_secondary_cpu,
 #if defined(CONFIG_ID_EEPROM) || defined(CONFIG_SYS_I2C_MAC_OFFSET)
 	mac_read_from_eeprom,
+#endif
+#ifdef CONFIG_DHCOM
+        dhcom_init,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
 #if defined(CONFIG_PCI) && !defined(CONFIG_SYS_EARLY_PCI_INIT)

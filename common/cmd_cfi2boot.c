@@ -238,7 +238,7 @@ cfi2_eeprom_write_to_page(uint32_t block, uint32_t offset, uint8_t * data, uint3
 
     uint32_t page = offset / BOOTCFG_EEPROM_PAGE_SIZE; /* The number of the page to write to. */
     uint32_t space = (page + 1) * BOOTCFG_EEPROM_PAGE_SIZE - offset; /* Space to the end of the page. */
-    uint32_t truncated = MIN(length, space); /* Limit either to data length or page space. */
+    uint32_t truncated = min(length, space); /* Limit either to data length or page space. */
     uint8_t buffer[truncated];
     int attempts = 5;
 

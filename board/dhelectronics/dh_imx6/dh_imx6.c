@@ -147,7 +147,7 @@ unsigned DHCOM_gpios[] = {
 
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX6_PAD_SD3_DAT7__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
 iomux_v3_cfg_t const enet_pads[] = {
@@ -873,8 +873,7 @@ void load_dh_settings_file(void)
 	char *command;
 	uchar ucBuffer[DHCOM_DISPLAY_SETTINGS_SIZE];
 	int ret_value = 0;
-
-
+	unsigned int old_bus = 1;
 
 	//env = getenv ("loadaddr");
 	addr = simple_strtoul(getenv ("loadaddr"), NULL, 16);
@@ -1000,17 +999,13 @@ void load_dh_settings_file(void)
 	if((gd->dh_board_settings.wHWConfigFlags & SETTINGS_HW_EN_DISP_ADPT_EE_CHK) != 0)
 	{
 		/* Set i2c driver to use i2c bus 0  */
-		DISABLE_PRINTF()
-		run_command ("i2c dev 0", 0);
-		ENABLE_PRINTF()
+                old_bus = I2C_GET_BUS();
+                I2C_SET_BUS(0);
 
 		i2c_init (CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 		ret_value = i2c_read(DISPLAY_ADAPTER_EEPROM_ADDR, 0, 1, &ucBuffer[0], DHCOM_DISPLAY_SETTINGS_SIZE);
 
-		/* Set i2c driver back to use i2c bus 2 */
-		DISABLE_PRINTF()
-		run_command ("i2c dev 2", 0);
-		ENABLE_PRINTF()
+		I2C_SET_BUS(old_bus);
 
 		if((ret_value == 0) && (ucBuffer[2] == 'D') && (ucBuffer[3] == 'H'))
 		{
@@ -1421,9 +1416,7 @@ void init_MAC_address(void)
 			mac[i] = (u8)linebuf[i];
 		}
 		if (is_valid_ethaddr(mac))
-		{
 			eth_setenv_enetaddr("ethaddr", mac);	
-		}
 		saveenv();
 	}
 }
@@ -1438,6 +1431,13 @@ int board_early_init_f(void)
 
 	return 0;
 }
+
+#ifdef CONFIG_MXC_SPI
+int board_spi_cs_gpio(unsigned bus, unsigned cs)
+{
+	return (bus == 0 && cs == 0) ? (IMX_GPIO_NR(2, 30)) : -1;
+}
+#endif
 
 int dhcom_init(void)
 {
@@ -1463,7 +1463,7 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 	
-#ifdef CONFIG_I2C_MXC	
+#ifdef CONFIG_SYS_I2C_MXC
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info0);
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);	
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);

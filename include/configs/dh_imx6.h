@@ -9,8 +9,6 @@
 #ifndef __DH_IMX6_CONFIG_H
 #define __DH_IMX6_CONFIG_H
 
-//#define DEBUG
-
 #include <asm/arch/imx-regs.h>
 #include <asm/imx-common/gpio.h>
 
@@ -23,7 +21,6 @@
 #elif defined(CONFIG_MX6DL)
 #define CONFIG_DEFAULT_FDT_FILE	"imx6dl-dheva01.dtb"
 #endif
-//#define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)
 
 #include "dh_mx6_common.h"
 
@@ -51,7 +48,6 @@
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_VIDEO_BMP_LOGO
 #define CONFIG_IPUV3_CLK 198000000//260000000
-//#define CONFIG_IMX_HDMI
 #define CONFIG_CONSOLE_MUX
 #define CONFIG_CMD_BMP
 #define SPLASH_MAX_SIZE 0x200000

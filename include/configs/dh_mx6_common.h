@@ -9,12 +9,10 @@
 #ifndef __MX6QSABRE_COMMON_CONFIG_H
 #define __MX6QSABRE_COMMON_CONFIG_H
 
-#define CONFIG_MX6
-
 #include "mx6_common.h"
 
 #define DH_IMX6_EMMC_VERSION
-//#define DH_IMX6_NAND_VERSION
+/* #define DH_IMX6_NAND_VERSION */
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
@@ -108,7 +106,6 @@
 /* SPI Flash Configs */
 #define CONFIG_CMD_SF
 #ifdef CONFIG_CMD_SF
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_SPANSION
 #define CONFIG_MXC_SPI
 #define CONFIG_SF_DEFAULT_BUS  0
@@ -120,9 +117,12 @@
 
 /* I2C Configs */
 #define CONFIG_CMD_I2C
-#define CONFIG_I2C_MULTI_BUS
-#define CONFIG_I2C_MXC
-#define CONFIG_SYS_I2C_SPEED		100000
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
+#define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
+#define CONFIG_SYS_I2C_SPEED		  100000
 
 #ifdef BOOT_CFI2
 #define CONFIG_SYS_I2C_EEPROM_ADDR 0x50
@@ -159,7 +159,6 @@
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #define CONFIG_FEC_MXC
 #define CONFIG_MII
 #define IMX_FEC_BASE                    ENET_BASE_ADDR
@@ -221,19 +220,17 @@
 /* Command definition */
 #define CONFIG_CMD_BMODE
 #define CONFIG_CMD_BOOTZ
-#define CONFIG_CMD_SETEXPR
 #undef CONFIG_CMD_IMLS
 
  /* Only interrupt autoboot if <del> is pressed. Otherwise, garbage
   * data on the serial line may interrupt the boot sequence.
   */
-#define CONFIG_BOOTDELAY		0
+#ifdef CONFIG_BOOTDELAY
+#undef CONFIG_BOOTDELAY
+#endif
+#define CONFIG_BOOTDELAY 0
 #define CONFIG_ZERO_BOOTDELAY_CHECK
 #define CONFIG_AUTOBOOT
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_PROMPT		\
-	"Press DEL to abort autoboot\n"
-#define CONFIG_AUTOBOOT_STOP_STR	"\x7f"
 
 #define CONFIG_LOADADDR                0x12000000
 #define CONFIG_SYS_TEXT_BASE           0x17800000
@@ -316,14 +313,7 @@
 #define CONFIG_SYS_LONGHELP
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_PROMPT_HUSH_PS2     "> "
-#define CONFIG_SYS_PROMPT              "U-Boot > "
 #define CONFIG_AUTO_COMPLETE
-#define CONFIG_SYS_CBSIZE              256
-
-/* Print Buffer Size */
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_SYS_MAXARGS             16
-#define CONFIG_SYS_BARGSIZE CONFIG_SYS_CBSIZE
 
 #define CONFIG_SYS_MEMTEST_START       0x10000000
 #define CONFIG_SYS_MEMTEST_END         0x20000000
@@ -353,12 +343,7 @@
 #define CONFIG_SYS_NO_FLASH
 
 #define CONFIG_ENV_SIZE			(256 * 1024)
-
 #define CONFIG_ENV_IS_IN_SPI_FLASH
-//#define CONFIG_ENV_IS_IN_NVRAM
-//#define CONFIG_ENV_ADDR 0x30000000
-//#define CONFIG_SYS_ICACHE_OFF
-
 
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_ENV_OFFSET		(6 * 64 * 1024)

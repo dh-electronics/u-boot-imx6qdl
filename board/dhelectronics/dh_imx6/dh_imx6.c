@@ -35,6 +35,8 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define BOOT_CFG       0x020D8004
 
+int board_get_hwcode(void);
+
 extern int fuse_read(u32 bank, u32 word, u32 *val);
 extern int fuse_prog(u32 bank, u32 word, u32 val);
 
@@ -1088,7 +1090,10 @@ void load_dh_settings_file(void)
 	{
 		/* Set i2c driver to use i2c bus 0  */
                 old_bus = I2C_GET_BUS();
-                I2C_SET_BUS(0);
+                if (board_get_hwcode() < 3)
+                        I2C_SET_BUS(0);
+                else
+                        I2C_SET_BUS(1);
 
 		i2c_init (CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 		ret_value = i2c_read(DISPLAY_ADAPTER_EEPROM_ADDR, 0, 1, &ucBuffer[0], DHCOM_DISPLAY_SETTINGS_SIZE);
@@ -1547,22 +1552,33 @@ static const struct boot_mode board_boot_modes[] = {
 #define HW_CODE_BIT_1	IMX_GPIO_NR(6, 6)
 #define HW_CODE_BIT_2	IMX_GPIO_NR(2, 16)
 
+int board_get_hwcode(void)
+{
+        int hw_code;
+
+	/* HW code pins: Setup alternate function and configure pads */
+	imx_iomux_v3_setup_multiple_pads(hw_code_pads, ARRAY_SIZE(hw_code_pads));
+
+	gpio_direction_input(HW_CODE_BIT_0);
+	gpio_direction_input(HW_CODE_BIT_1);
+	gpio_direction_input(HW_CODE_BIT_2);
+
+	/* HW 100 + HW 200 = 00b; HW 300 = 01b */
+	hw_code = ((gpio_get_value(HW_CODE_BIT_2) << 2) |
+	           (gpio_get_value(HW_CODE_BIT_1) << 1) |
+	            gpio_get_value(HW_CODE_BIT_0)) + 2;
+
+        return hw_code;
+}
+
 int board_late_init(void)
 {
 	struct scu_regs *scu = (struct scu_regs *)SCU_BASE_ADDR;
 	u32 cfg = readl(&scu->config) & 0xFFFF;
-	u32 hw_code = 0;
+	int hw_code;
 	uchar buf[128];
 	
-	// HW coed pins: Setup alternate function and configure pads
-	imx_iomux_v3_setup_multiple_pads(hw_code_pads, ARRAY_SIZE(hw_code_pads));	
-	
-	// Set to input
-	gpio_direction_input(HW_CODE_BIT_0);	
-	gpio_direction_input(HW_CODE_BIT_1);	
-	gpio_direction_input(HW_CODE_BIT_2);	
-	
-	hw_code = ((gpio_get_value(HW_CODE_BIT_2) << 2) | (gpio_get_value(HW_CODE_BIT_1) << 1) | gpio_get_value(HW_CODE_BIT_0)) + 2; // HW 100 + HW 200 = 00b; HW 300 = 01b
+	hw_code = board_get_hwcode();
 	
 	switch (cfg)
 	{

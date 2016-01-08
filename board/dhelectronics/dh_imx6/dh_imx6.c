@@ -840,19 +840,12 @@ int overwrite_console(void)
 
 int board_eth_init(bd_t *bis)
 {
-	int ret;
-
 	setup_iomux_enet();
 	
 #ifdef  CONFIG_FEC_MXC
         setup_fec();
 #endif
-
-	ret = cpu_eth_init(bis);
-	if (ret)
-		printf("FEC MXC: %s:failed\n", __func__);
-
-	return ret;
+	return cpu_eth_init(bis);
 }
 
 

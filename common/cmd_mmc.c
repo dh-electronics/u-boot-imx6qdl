@@ -813,7 +813,7 @@ static cmd_tbl_t cmd_mmc[] = {
 	U_BOOT_CMD_MKENT(setdsr, 2, 0, do_mmc_setdsr, "", ""),
 };
 
-static int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	cmd_tbl_t *cp;
 

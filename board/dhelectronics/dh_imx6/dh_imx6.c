@@ -28,6 +28,8 @@
 #include <i2c.h>
 #include <asm/imx-common/mxc_i2c.h>
 #include <asm/arch/mx6-ddr.h>
+#include <usb.h>
+#include <usb/ehci-fsl.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -170,10 +172,6 @@ static iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_GPIO_7__GPIO1_IO07              | MUX_PAD_CTRL(NO_PAD_CTRL),
         /* ENET_Interrupt - (not used) */
 	MX6_PAD_RGMII_RD0__GPIO6_IO25           | MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
-static iomux_v3_cfg_t const usb_pads[] = {
-        MX6_PAD_EIM_D31__GPIO3_IO31              | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 /* SD interface */
@@ -889,14 +887,72 @@ int board_eth_init(bd_t *bis)
 	return cpu_eth_init(bis);
 }
 
-
 #ifdef CONFIG_USB_EHCI_MX6
+#define USB_OTHERREGS_OFFSET   0x800
+#define UCTRL_PWR_POL          (1 << 9)
+
+static iomux_v3_cfg_t const usb_otg_pads[] = {
+        MX6_PAD_GPIO_1__USB_OTG_ID | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+static iomux_v3_cfg_t const usb_hc1_pads[] = {
+        MX6_PAD_EIM_D31__GPIO3_IO31 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+static void setup_usb(void)
+{
+        imx_iomux_v3_setup_multiple_pads(usb_otg_pads,
+                                         ARRAY_SIZE(usb_otg_pads));
+
+        /*
+         * set daisy chain for otg_pin_id on 6q.
+         * for 6dl, this bit is reserved
+         */
+        imx_iomux_set_gpr_register(1, 13, 1, 0);
+ 
+        imx_iomux_v3_setup_multiple_pads(usb_hc1_pads,
+                                         ARRAY_SIZE(usb_hc1_pads));
+}
+
+int board_usb_phy_mode(int port)
+{
+	if (port == 1)
+		return USB_INIT_HOST;
+	else
+		return usb_phy_mode(port);
+}
+
 int board_ehci_hcd_init(int port)
 {
-        imx_iomux_v3_setup_multiple_pads(usb_pads, ARRAY_SIZE(usb_pads));
+        u32 *usbnc_usb_ctrl;
 
-        /* Enable USB VBUS */
-        gpio_direction_output(IMX_GPIO_NR(3, 31) , 1);
+        if (port > 1)
+                return -EINVAL;
+
+        usbnc_usb_ctrl = (u32 *)(USB_BASE_ADDR + USB_OTHERREGS_OFFSET +
+                                 port * 4);
+
+        setbits_le32(usbnc_usb_ctrl, UCTRL_PWR_POL);
+
+        return 0;
+}
+
+int board_ehci_power(int port, int on)
+{
+        switch (port) {
+        case 0:
+                break;
+        case 1:
+                if (on)
+                        gpio_direction_output(IMX_GPIO_NR(3, 31), 1);
+                else
+                        gpio_direction_output(IMX_GPIO_NR(3, 31), 0);
+                break;
+        default:
+                printf("MXC USB port %d not yet supported\n", port);
+                return -EINVAL;
+        }
+ 
         return 0;
 }
 #endif
@@ -1461,6 +1517,10 @@ int board_early_init_f(void)
 	
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
+#endif
+
+#ifdef CONFIG_USB_EHCI_MX6
+        setup_usb();
 #endif
 
 	return 0;

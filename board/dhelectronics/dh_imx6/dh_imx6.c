@@ -148,12 +148,12 @@ unsigned DHCOM_gpios[] = {
 	DHCOM_GPIO_W,
 };
 
-iomux_v3_cfg_t const uart1_pads[] = {
+static iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
-iomux_v3_cfg_t const enet_pads[] = {
+static iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_TX_EN__ENET_TX_EN	        | MUX_PAD_CTRL(ENET_PAD_CTRL),
@@ -172,12 +172,12 @@ iomux_v3_cfg_t const enet_pads[] = {
 	MX6_PAD_RGMII_RD0__GPIO6_IO25           | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-iomux_v3_cfg_t const usb_pads[] = {
+static iomux_v3_cfg_t const usb_pads[] = {
         MX6_PAD_EIM_D31__GPIO3_IO31              | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 /* SD interface */
-iomux_v3_cfg_t const usdhc2_pads[] = {
+static iomux_v3_cfg_t const usdhc2_pads[] = {
 	MX6_PAD_SD2_CLK__SD2_CLK	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD2_CMD__SD2_CMD	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
         MX6_PAD_SD2_DAT0__SD2_DATA0     | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -188,7 +188,7 @@ iomux_v3_cfg_t const usdhc2_pads[] = {
 };
 
 /* onboard microSD */
-iomux_v3_cfg_t const usdhc3_pads[] = {
+static iomux_v3_cfg_t const usdhc3_pads[] = {
 	MX6_PAD_SD3_CLK__SD3_CLK        | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD3_CMD__SD3_CMD        | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD3_DAT0__SD3_DATA0     | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -199,7 +199,7 @@ iomux_v3_cfg_t const usdhc3_pads[] = {
 };
 
 /* eMMC */
-iomux_v3_cfg_t const usdhc4_pads[] = {
+static iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_CLK__SD4_CLK        | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD4_CMD__SD4_CMD        | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD4_DAT0__SD4_DATA0     | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -212,7 +212,7 @@ iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_DAT7__SD4_DATA7     | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
-iomux_v3_cfg_t nfc_pads[] = {
+static iomux_v3_cfg_t nfc_pads[] = {
 	MX6_PAD_NANDF_CLE__NAND_CLE		| MUX_PAD_CTRL(NO_PAD_CTRL),
 	MX6_PAD_NANDF_ALE__NAND_ALE		| MUX_PAD_CTRL(NO_PAD_CTRL),
 	MX6_PAD_NANDF_WP_B__NAND_WP_B	        | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -234,7 +234,7 @@ iomux_v3_cfg_t nfc_pads[] = {
 	/*MX6_PAD_SD4_DAT0__NAND_DQS 	        | MUX_PAD_CTRL(NO_PAD_CTRL),*/
 };
 
-iomux_v3_cfg_t const gpio_pads[] = {
+static iomux_v3_cfg_t const gpio_pads[] = {
 	MX6_PAD_GPIO_2__GPIO1_IO02      | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 	MX6_PAD_GPIO_4__GPIO1_IO04      | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 	MX6_PAD_GPIO_5__GPIO1_IO05      | MUX_PAD_CTRL(GPIO_PAD_CTRL),
@@ -260,7 +260,7 @@ iomux_v3_cfg_t const gpio_pads[] = {
 	MX6_PAD_CSI0_MCLK__GPIO5_IO19   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 };
 
-iomux_v3_cfg_t const hw_code_pads[] = {
+static iomux_v3_cfg_t const hw_code_pads[] = {
 	MX6_PAD_EIM_A19__GPIO2_IO19   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 	MX6_PAD_EIM_A23__GPIO6_IO06   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
 	MX6_PAD_EIM_A22__GPIO2_IO16   | MUX_PAD_CTRL(GPIO_PAD_CTRL),
@@ -854,7 +854,7 @@ static void setup_display(void)
 #endif /* CONFIG_VIDEO_IPUV3 */
 
 #ifdef CONFIG_MXC_SPI
-iomux_v3_cfg_t const ecspi1_pads[] = {
+static iomux_v3_cfg_t const ecspi1_pads[] = {
 	/* SS0 */
 	MX6_PAD_EIM_EB2__GPIO2_IO30  | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D17__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),

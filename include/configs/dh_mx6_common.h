@@ -19,7 +19,7 @@
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "1.0.0.5" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "1.0.0.6" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*

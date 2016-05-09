@@ -782,6 +782,123 @@ int nand_read_skip_bad(nand_info_t *nand, loff_t offset, size_t *length,
 	return 0;
 }
 
+/**
+ * dh_nand_read_skip_bad:
+ *
+ * Read image from NAND flash.
+ * Blocks that are marked bad are skipped and the next block is read
+ * instead as long as the image is short enough to fit even after
+ * skipping the bad blocks.  Due to bad blocks we may not be able to
+ * perform the requested read.  In the case where the read would extend
+ * beyond the end of the NAND device, both length and actual (if not
+ * NULL) are set to 0.  In the case where the read would extend beyond
+ * the limit we are passed, length is set to 0 and actual is set to the
+ * required length.
+ *
+ * @param nand NAND device
+ * @param offset offset in flash
+ * @param length buffer length, on return holds number of read bytes
+ * @param actual set to size required to read length worth of buffer or 0
+ * on error, if not NULL
+ * @param lim maximum size that actual may be in order to not exceed the
+ * buffer
+ * @param buffer buffer to write to
+ * @return 0 in case of success
+ */
+int dh_nand_read_skip_bad(nand_info_t *nand, loff_t offset, size_t *length,
+		size_t *actual, loff_t lim, u_char *buffer)
+{
+	int rval;
+	size_t left_to_read = *length;
+	size_t used_for_read = 0;
+	u_char *p_buffer = buffer;
+	int need_skip;
+
+	if ((offset & (nand->writesize - 1)) != 0) {
+		printf("Attempt to read non page-aligned data\n");
+		*length = 0;
+		if (actual)
+			*actual = 0;
+		return -EINVAL;
+	}
+
+	need_skip = check_skip_len(nand, offset, *length, &used_for_read);
+
+	if (actual)
+		*actual = used_for_read;
+
+	if (need_skip < 0) {
+		printf("Attempt to read outside the flash area\n");
+		*length = 0;
+		return -EINVAL;
+	}
+
+	if (used_for_read > lim) {
+		puts("Size of read exceeds partition or device limit\n");
+		*length = 0;
+		return -EFBIG;
+	}
+
+	if (!need_skip) {
+		rval = nand_read(nand, offset, length, buffer);
+		if (rval && rval /*!= -EUCLEAN*/)
+		{
+			if (rval && rval != -EUCLEAN)
+			{
+				printf ("NAND read from offset %llx failed %d\n",offset, rval);
+			}
+			else
+			{
+				printf ("NAND read requires ECC at offset %llx (return value %d) --> block refresh is neccessary\n",offset, rval);	
+			}
+			*length -= left_to_read;
+			return rval; /* quit read after error */
+		}
+	}
+
+	while (left_to_read > 0) {
+		size_t block_offset = offset & (nand->erasesize - 1);
+		size_t read_length;
+
+		WATCHDOG_RESET();
+
+		if (nand_block_isbad(nand, offset & ~(nand->erasesize - 1))) {
+			printf("Skipping bad block 0x%08llx\n",
+				offset & ~(nand->erasesize - 1));
+			offset += nand->erasesize - block_offset;
+			continue;
+		}
+
+		if (left_to_read < (nand->erasesize - block_offset))
+			read_length = left_to_read;
+		else
+			read_length = nand->erasesize - block_offset;
+
+		rval = nand_read(nand, offset, &read_length, p_buffer);
+		// nand_read() returns EUCLEAN, if ECC was neccessary.
+		// In DH electronics case, stop reading also on EUCLEAN, because in ECC case the flash block needs to be updated
+		if (rval && rval /*!= -EUCLEAN*/)
+		{
+			if (rval && rval != -EUCLEAN)
+			{
+				printf ("NAND read from offset %llx failed %d\n",offset, rval);
+			}
+			else
+			{
+				printf ("NAND read requires ECC at offset %llx (return value %d) --> block refresh is neccessary\n",offset, rval);	
+			}
+			*length -= left_to_read;
+			return rval;
+		}
+
+		left_to_read -= read_length;
+		offset       += read_length;
+		p_buffer     += read_length;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_CMD_NAND_TORTURE
 
 /**

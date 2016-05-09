@@ -1058,18 +1058,17 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
     unsigned long ulFilesize;
     unsigned long ulBlocks;    
     unsigned long ulFlashBlockSize = CONFIG_ENV_SECT_SIZE;	
+    unsigned long ulNANDFlashBlockSize = CONFIG_ENV_SECT_SIZE;
 #ifdef DH_IMX6_NAND_VERSION   
     nand_info_t *nand;
     nand = &nand_info[nand_curr_device];		/* Get nand-info structure from current device */
- 
-    unsigned long ulNANDFlashBlockSize = CONFIG_ENV_SECT_SIZE;  
 
     // Determine NAND Flash block size
     ulNANDFlashBlockSize = nand->erasesize;
-    
+#endif     
+
     // Set WEC Image flash address
     unsigned long ulOSImageFlashAddress = WEC_IMAGE_FLASH_ADDRESS;
-#endif    
 
     char cUpdateArgument = 0;	
     char cErrorString[100];
@@ -1625,7 +1624,9 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 					printf ("    d = Done\n");
 					printf ("    Write File to Flash:[");
 
+					#ifdef DH_IMX6_NAND_VERSION  
 					ret_value = update_nand_flash_content (ulOSImageFlashAddress, ulSDRAMBufferAddress, ulBlocks, ulNANDFlashBlockSize, WEC_PARTITION_SIZE);
+					#endif /* DH_IMX6_NAND_VERSION  */	
 
 					if((ret_value & 0x3) == 1)
 					{

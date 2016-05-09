@@ -4,7 +4,9 @@
 #include <net.h>
 #include <dh_settings.h>
 #include <wince_args.h>
+#ifdef DH_IMX6_NAND_VERSION
 #include <nand.h>
+#endif /* DH_IMX6_NAND_VERSION  */	
 
 #define DEFAULT_MAC_ADDRESS	{0x1020,0x3040,0x5060}
 
@@ -25,6 +27,7 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	u16 EthMacAddress[] = DEFAULT_MAC_ADDRESS;
 	char *command;
 
+#ifdef DH_IMX6_NAND_VERSION
 	nand_info_t *nand;
 	size_t read_size = 0;
 	size_t write_size = 0;
@@ -32,15 +35,15 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	loff_t redundant_flash_off = 0;
 	nand_erase_options_t opts;	
 	int i = 0;
-
 	char *p_WEC_NAND_flash_address          = getenv ("wec_nand_flash_address");
 	char *p_WEC_partition_size              = getenv ("wec_nand_partition_size");
 	char *p_eboot_RAM_address		= getenv ("eboot_image_addr");
 	char *p_WEC_RAM_buffer			= getenv ("wec_ram_buffer");
-	char *p_RAMBufferAddress          	= getenv ("loadaddr");
-	char *p_WEC_image_size          	= getenv ("wec_image_size");	
+	char *p_RAMBufferAddress          	= getenv ("loadaddr");	
+	char *p_WEC_image_size          	= getenv ("wec_image_size");		
 	char *p_WEC_image_type_nb0		= getenv ("wec_image_type_nb0"); 
-	char *p_WEC_image_type_gz		= getenv ("wec_image_type_gz"); 	
+	char *p_WEC_image_type_gz		= getenv ("wec_image_type_gz"); 
+#endif /* DH_IMX6_NAND_VERSION  */		
 	
 	// ***************** NAND Flash Layout *************************
 	// Address		Description		Partition Size	
@@ -70,7 +73,7 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	// ...
 	// 0x1DDF_FFFF
 	
-  
+#ifdef DH_IMX6_NAND_VERSION  
 	unsigned long uleboot_RAM_address	= simple_strtoul (p_eboot_RAM_address, NULL, 16);
 	unsigned long ulWEC_RAM_buffer		= simple_strtoul (p_WEC_RAM_buffer, NULL, 16);	
 	unsigned long ulRAMBufferAddress	= simple_strtoul (p_RAMBufferAddress, NULL, 16);	
@@ -78,7 +81,7 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	unsigned long ulRedundantImageOffset = 0;
 	unsigned long WinCEPartitionSize = 0;	
 	unsigned long ulFilesize		= simple_strtoul (p_WEC_image_size, NULL, 16);
-	
+#endif /* DH_IMX6_NAND_VERSION  */
 	
 	// Initialize the BSP args structure.
 	//
@@ -93,6 +96,7 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	g_pBSPArgs->RamNandLaunchAddress = simple_strtoul(getenv ("wec_image_addr"), NULL, 16);
 	
 
+#ifdef DH_IMX6_NAND_VERSION  
 	/* run WEC image from nand */
 	if ((argc == 2) && (strcmp (argv[1], "nand") == 0))  {	
 		printf ("\n--> BootWinCE: WinEC 7 Image is in NAND Flash memory");  
@@ -316,6 +320,7 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	// run WEC image via ENV variable "load_wec_image"
 	else 
 	{
+#endif /* DH_IMX6_NAND_VERSION  */	
 		// Run WEC Start Command
 		if ((command = getenv ("load_wec_image")) == NULL) 
 		{
@@ -328,7 +333,9 @@ int do_bootwince(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf ("Error: Command \"load_wec_image\" faild\n");
 			return 1;
 		}
+#ifdef DH_IMX6_NAND_VERSION  		
 	}
+#endif /* DH_IMX6_NAND_VERSION  */	
 	
 	return 0;
 }

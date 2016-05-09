@@ -43,17 +43,17 @@
 /*
  * Flash Update defines (Command do_update())
  */
-#define NO_SPECIAL_FILE_TYPE                        '0'
-#define UPDATE_FILE_TYPE_BIN                        '1'
+#define UPDATE_FILE_TYPE_NB0                        '1'
 #define UPDATE_FILE_TYPE_GZ                         '2'
-#define UPDATE_FILE_TYPE_ENV                        '3'
 
 #define LOAD_UPDATE_KERNEL_LATER                    '0'
 #define BOOTLOADER_FLASH_UPDATE                     '1'
 #define REFRESH_DH_SETTINGS                         '2'
 #define EEPROM_SETTINGS_UPDATE                      '3'
-#define EXECUTE_RESET               		        '4'
-#define EXECUTE_BOOTLOADER_SCRIPT               	'5'
+#define EXECUTE_RESET				    '4'
+#define EXECUTE_BOOTLOADER_SCRIPT                   '5'
+#define WINCE_IMAGE_UPDATE                          '6'
+#define EBOOT_IMAGE_UPDATE                          '7'
 
 typedef struct {
     char *p_cUpdateType;

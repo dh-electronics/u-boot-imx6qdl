@@ -760,12 +760,12 @@ int board_video_skip(void)
 		displays[0].mode.xres = gd->dh_board_settings.wXResolution;
 		displays[0].mode.yres = gd->dh_board_settings.wYResolution;
 		displays[0].mode.pixclock = KHZ2PICOS(gd->dh_board_settings.wPixelClock);
-		displays[0].mode.left_margin = gd->dh_board_settings.wHFrontPorch;
+		displays[0].mode.left_margin = gd->dh_board_settings.wHBackPorch;
 		displays[0].mode.hsync_len = gd->dh_board_settings.wHPulseWidth;
-		displays[0].mode.right_margin = gd->dh_board_settings.wHBackPorch;
-		displays[0].mode.upper_margin = gd->dh_board_settings.wVFrontPorch;
+		displays[0].mode.right_margin = gd->dh_board_settings.wHFrontPorch;
+		displays[0].mode.upper_margin = gd->dh_board_settings.wVBackPorch;
 		displays[0].mode.vsync_len = gd->dh_board_settings.wVPulseWidth;
-		displays[0].mode.lower_margin = gd->dh_board_settings.wVBackPorch;
+		displays[0].mode.lower_margin = gd->dh_board_settings.wVFrontPorch;
 		iClocksPerPicture = ((gd->dh_board_settings.wXResolution + gd->dh_board_settings.wHFrontPorch + gd->dh_board_settings.wHPulseWidth + gd->dh_board_settings.wHBackPorch) *
 					 (gd->dh_board_settings.wYResolution + gd->dh_board_settings.wVFrontPorch + gd->dh_board_settings.wVPulseWidth + gd->dh_board_settings.wVBackPorch));
 		displays[0].mode.refresh = ((gd->dh_board_settings.wPixelClock * 1000) / (iClocksPerPicture));

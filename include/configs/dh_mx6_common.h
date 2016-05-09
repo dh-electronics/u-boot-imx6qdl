@@ -19,7 +19,7 @@
 #define CONFIG_DHCOM
 #define BOOT_CFI2
 
-#define UBOOT_DH_VERSION "1.0.0.6" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
+#define UBOOT_DH_VERSION "1.1.0.0" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
 /*
@@ -97,8 +97,13 @@
 
 #define CONFIG_CMD_SETTINGS_INFO
 #define CONFIG_CMD_DHCOM_UPDATE
+
+/* WEC Support */
 #define CONFIG_CMD_WINCE
-#define BOOTCE_ARGUMENTS_SDRAM_ADDRESS 0x10001044
+#define WEC_PARTITION_SIZE		0x6400000 /* (100MB) */
+#define EBOOT_PARTITION_SIZE		0x100000 /* (1MB) */ 
+#define WEC_IMAGE_FLASH_ADDRESS		0
+#define BOOTCE_ARGUMENTS_SDRAM_ADDRESS	0x10001044
 
 /* Fuses */
 #define CONFIG_CMD_FUSE
@@ -271,11 +276,13 @@
 		"linuxargs=setenv bootargs " \
 		        "console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${optargs} dhcom=${dhcom} " \
 		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
-		"fdt_addr=0x11000000\0" \
+		"fdt_addr=0x18000000\0" \
 		"fdt_high=0xffffffff\0" \
 		"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 		"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \
-		"wec_image_addr=0x10200000\0"
+		"wec_image_addr=0x10200000\0" \
+		"eboot_flash_offset=0x100000\0" \
+		"eboot_image_addr=0x10041000\0"
 		
 #if defined(DH_IMX6_NAND_VERSION)
 	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \
@@ -286,6 +293,28 @@
 		"load_bootenv=echo Loading u-boot env file ${bootenv_file}...; ubifsload ${loadaddr} ${bootenv_file};\0" \
 		"load_fdt=echo Loading device tree ${fdt_file}...; ubifsload ${fdt_addr} ${fdt_file}\0" \
 		"load_zimage=echo Loading linux ${zImage_file}...; ubifsload ${loadaddr} ${zImage_file}\0" \
+		"wec_nand_flash_address=0x0\0" \
+		"wec_nand_partition_size=0x6400000\0" \
+		"wec_ram_buffer=0x18000000\0" \
+		"wec_image_size=0x5E00000\0" \
+		"wec_unzip_nk_gz=unzip ${wec_ram_buffer} ${wec_image_addr}\0" \
+		"copy_wec_image= " \
+			"if test -n ${wec_image_type_gz}; then " \
+				"echo --> BootWinCE INFO: Unzip WEC image (nk.gz) file;" \
+				"unzip ${wec_ram_buffer} ${wec_image_addr};" \
+			"elif test -n ${wec_image_type_nb0}; then " \
+				"echo --> BootWinCE INFO: Copy WEC image (nk.nb0) file;" \
+				"cp.b ${wec_ram_buffer} ${wec_image_addr} ${wec_image_size};" \
+			"else " \
+				"echo --> BootWinCE ERROR: No WEC image type defined;" \
+			"fi;\0" \
+		"copy_and_start_eboot_image= " \
+			"if test -n ${eboot_image}; then " \
+				"echo --> BootWinCE INFO: Copy eboot image;" \
+				"sf probe; sf read ${eboot_image_addr} ${eboot_flash_offset} 80000; go 10041000;" \
+			"else " \
+				"echo --> BootWinCE ERROR: No eboot image stored in flash;" \
+			"fi;\0" \
 		""
 #elif defined(DH_IMX6_EMMC_VERSION)
 	#define CONFIG_EXTRA_ENV_SETTINGS_SELECT \

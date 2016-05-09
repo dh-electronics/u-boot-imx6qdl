@@ -50,16 +50,6 @@
  *        allows only one update and the update mechanism is searching on every available storage device for
  *        the update files. With the <type> parameter you have to specify the update type.
  *
- *     Possible Updates:
- *     Argument = '1' ==> Update only WinCE Flash Image (nk.bin or nk.gz)
- *     Argument = '2' ==> Update only Linux Flash Image
- *     Argument = '3' ==> Update Bootloader Flash Image
- *     Argument = '4' ==> Update splash.bmp (Start Screen Picture)
- *     Argument = '5' ==> Update settings.bin file
- * 	   Argument = '6' ==> Refresh DH settings and LCD controller
- *     Argument = '7' ==> Display adapter EEPROM settings update
- * 	   Argument = '8' ==> Reset Board
- * 	   Argument = '9' ==> Update rootfs in NAND-Flash
  */
 
 #include <config.h>
@@ -70,6 +60,9 @@
 #include <asm/io.h>
 #include <dh_settings.h>
 #include <dh_update.h>
+#ifdef DH_IMX6_NAND_VERSION 
+#include <nand.h>
+#endif
 
 #if defined(CONFIG_CMD_DHCOM_UPDATE)
 
@@ -146,9 +139,9 @@ int update_flash_content (unsigned long ulOffset, unsigned long ulSDRAMBufferAdd
     sprintf (p_cEraseFlashBlock[3], "%08x", (unsigned int)ulFlashBlockSize);
     sprintf (p_cWriteFlashBlock[4], "%08x", (unsigned int)ulFlashBlockSize);     
     
-	DISABLE_PRINTF()
-	do_spi_flash(NULL, 0, 2, p_cSFProbe);
-	ENABLE_PRINTF()
+    DISABLE_PRINTF()
+    do_spi_flash(NULL, 0, 2, p_cSFProbe);
+    ENABLE_PRINTF()
 	
     // Set SDRAM Buffer address
     sprintf (p_cWriteFlashBlock[2], "%08x", (unsigned int)(ulSDRAMBufferAddress));	
@@ -162,7 +155,8 @@ int update_flash_content (unsigned long ulOffset, unsigned long ulSDRAMBufferAdd
         }
         
         // Set block address
-        sprintf (p_cEraseFlashBlock[2], "%08x", (unsigned int)((ulOffset/ulFlashBlockSize) + i * ulFlashBlockSize));
+        //sprintf (p_cEraseFlashBlock[2], "%08x", (unsigned int)(ulOffset + i * ulFlashBlockSize));
+	sprintf (p_cEraseFlashBlock[2], "%08x", (unsigned int)(((ulOffset/ulFlashBlockSize)*ulFlashBlockSize) + i * ulFlashBlockSize));
 		
 		if((ulOffset < ulFlashBlockSize) && (i == 0))
 		{
@@ -172,7 +166,8 @@ int update_flash_content (unsigned long ulOffset, unsigned long ulSDRAMBufferAdd
 		}
 		else
 		{
-		    sprintf (p_cWriteFlashBlock[3], "%08x", (unsigned int)((ulOffset/ulFlashBlockSize) + i * ulFlashBlockSize));
+			//sprintf (p_cWriteFlashBlock[3], "%08x", (unsigned int)(ulOffset + i * ulFlashBlockSize));
+			sprintf (p_cWriteFlashBlock[3], "%08x", (unsigned int)(((ulOffset/ulFlashBlockSize)*ulFlashBlockSize) + i * ulFlashBlockSize));
 			sprintf (p_cWriteFlashBlock[4], "%08x", (unsigned int)ulFlashBlockSize);  
 			ulWrittenBytes = ulFlashBlockSize;
 		}
@@ -214,6 +209,105 @@ int update_flash_content (unsigned long ulOffset, unsigned long ulSDRAMBufferAdd
     printf ("]");      
     return 0;
 }
+
+//------------------------------------------------------------------------------
+//
+//  Function:  update_nand_flash_content
+//
+//  Update Flash content on the specified address.
+//
+//  Commit values:  - ulFlashAddress    = FLash Block address
+//                  - ulSDRAMBufferAddress  = SDRAM Buffer address
+//                  - ulBlocks              = Number of block that should be updated
+//                  - ulFlashBlockSize      = Flash block size
+//                  - maxsize = max. Partition size
+//
+//  Return value:   0 = No error
+//                  1 = Flash erase error (the error block number is specified from bit 3 to bit 31)
+//                  2 = Flash write error (the error block number is specified from bit 3 to bit 31)
+//
+#ifdef DH_IMX6_NAND_VERSION
+int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBlocks, unsigned long ulFlashBlockSize, loff_t maxsize)
+{	
+    nand_info_t *nand;
+    nand_erase_options_t opts;    
+    ulong ulBlockOffset = ulFlashAddress;
+    size_t write_size = 0;
+    
+    unsigned long i,j;
+    int ret_value = 0;
+
+    // Get nand-info structure from current device   
+    nand = &nand_info[nand_curr_device];			
+    
+    //Initialize erase settings
+    memset(&opts, 0, sizeof(opts));
+    opts.length = ulFlashBlockSize;
+    opts.scrub = 0; 
+    opts.jffs2  = 1;
+    opts.quiet  = 0;
+    opts.spread = 0;    
+    
+    
+    for(j = 1, i = 0; i < ulBlocks; j++, i++)
+    {
+        if(j == 51)
+        {
+            printf ("\n                         ");
+            j = 1;
+        }
+		
+	// Check if current block is bad?
+	while (nand_block_isbad(nand, ulBlockOffset))
+	{
+	     ulBlockOffset = ulBlockOffset + ulFlashBlockSize;
+	}
+	
+	// Set block address for erase
+	opts.offset = ulBlockOffset;
+	
+	// Erase flash block
+	printf ("e");
+	
+	DISABLE_PRINTF()
+	ret_value = nand_erase_opts(nand, &opts);
+	ENABLE_PRINTF()
+        // Exit on Erase ERROR
+        if(ret_value != 0)
+	{
+	    // Exit on Erase ERROR
+	    ret_value = (i << 2) | 1;
+	    return ret_value;   	
+	}  
+	
+	// Write flash block
+	printf ("\bw");
+	
+	DISABLE_PRINTF()
+	// Copy content of SDRAM to current block
+	write_size = ulFlashBlockSize;
+	ret_value = nand_write_skip_bad(nand, ulBlockOffset, &write_size, NULL, maxsize,(u_char *)(ulSDRAMBufferAddress + i * ulFlashBlockSize), 0);
+	ENABLE_PRINTF()
+	
+        // Exit on Erase ERROR
+        if(ret_value != 0)
+	{
+	    // Exit on Write ERROR
+	    ret_value = (i << 2) | 2;
+	    return ret_value;    
+	}	
+	
+        
+        printf ("\bd");
+	
+	// Increment the block offset
+	ulBlockOffset = ulBlockOffset + ulFlashBlockSize;
+    }
+    
+    printf ("]");      
+    return 0;
+}
+#endif /* DH_IMX6_NAND_VERSION  */
 
 //------------------------------------------------------------------------------
 //
@@ -433,6 +527,9 @@ int check_imagesize (unsigned long ulFilesize, unsigned long ulFlashPartitionSiz
 			case EEPROM_SETTINGS_UPDATE:
 				sprintf (pcErrorString, "\n==> Update ERROR: Eeprom.bin to large: max %li bytes\n", ulFlashPartitionSize);
 			break;
+			case WINCE_IMAGE_UPDATE:
+				sprintf (pcErrorString, "\n==> Update ERROR: WinCE image to large: max %li bytes\n", ulFlashPartitionSize);
+			break;			
 			default:
 				sprintf (pcErrorString, "\n==> Update ERROR: Image to large: max %li bytes\n", ulFlashPartitionSize);
 		}
@@ -941,7 +1038,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
     char cENVSDRAMBufferAddress[9];
     CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
 
-	char cDHUpdateIniSDRAMAddress[9]        = {UPDATE_DHUPDATE_INI_SDRAM_ADDRESS};	
+    char cDHUpdateIniSDRAMAddress[9]        = {UPDATE_DHUPDATE_INI_SDRAM_ADDRESS};	
 	
     /* get address of copy-buffer */
     unsigned long ulSDRAMBufferAddress      = simple_strtoul (cENVSDRAMBufferAddress, NULL, 16);	
@@ -950,32 +1047,53 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                             // 1 = DHupdate.ini file Update (autostart or command line call "update")
                                             // 2 = error
 											
-	/* get u-boot flash offset and partition size */
+    /* get u-boot flash offset and partition size */
+    char *p_eboot_offset = getenv ("eboot_flash_offset");	
+	
     unsigned long ulBootloaderOffset = BOOTLOADER_FLASH_OFFSET;
-    unsigned long ulBootloaderFlashPartitionSize = CONFIG_ENV_OFFSET;											
+    unsigned long ulEbootOffset = simple_strtoul (p_eboot_offset, NULL, 16);
+    unsigned long ulBootloaderFlashPartitionSize = CONFIG_ENV_OFFSET;	
+    unsigned long ulEbootFlashPartitionSize = EBOOT_PARTITION_SIZE;	
+    unsigned long ulWinCEFlashPartitionSize = WEC_PARTITION_SIZE;								
     unsigned long ulFilesize;
     unsigned long ulBlocks;    
     unsigned long ulFlashBlockSize = CONFIG_ENV_SECT_SIZE;	
+#ifdef DH_IMX6_NAND_VERSION   
+    nand_info_t *nand;
+    nand = &nand_info[nand_curr_device];		/* Get nand-info structure from current device */
+ 
+    unsigned long ulNANDFlashBlockSize = CONFIG_ENV_SECT_SIZE;  
 
-	char cUpdateArgument = 0;	
+    // Determine NAND Flash block size
+    ulNANDFlashBlockSize = nand->erasesize;
+    
+    // Set WEC Image flash address
+    unsigned long ulOSImageFlashAddress = WEC_IMAGE_FLASH_ADDRESS;
+#endif    
+
+    char cUpdateArgument = 0;	
     char cErrorString[100];
-	int iRefreshStringFound = 0;
-	int iUpdateLoopCounter = 0;
-	int iLoadUpdateKernel = 0;
+    char cImageFileSize[9] = {"12345677\0"};   
+    char cOSFileType = UPDATE_FILE_TYPE_GZ;     
+    int iRefreshStringFound = 0;
+    int iUpdateLoopCounter = 0;
+    int iLoadUpdateKernel = 0;
     int i = 0;	
     uchar buf[128];
 
-	void *p_vUpdateArgument; 
-	char *cmd, *file_name; 	
-	char *p_cCompareString[1]               = {"##DHCOMupdate##\0"};
-	char *p_cLoadDHUpdateIniToSDRAM[5]      = {"load","","",cDHUpdateIniSDRAMAddress,"DHupdate.ini"};
-	char *p_cLoadUBootBinToSDRAM[5]         = {"load","","",cENVSDRAMBufferAddress,"u-boot.imx"};
-	char *p_cLoadEepromBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"eeprom.bin"};
-	char *p_cLoadScriptBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"script.bin"};	
-	char *p_cLoadSettingsBinToSDRAM[5]      = {"load","","",cENVSDRAMBufferAddress,"settings.bin"};
-	char *p_cRunScript[2]                	= {"source",cENVSDRAMBufferAddress};
+    void *p_vUpdateArgument; 
+    char *cmd, *file_name, *file_type;	
+    char *p_cCompareString[1]               = {"##DHCOMupdate##\0"};
+    char *p_cLoadDHUpdateIniToSDRAM[5]      = {"load","","",cDHUpdateIniSDRAMAddress,"DHupdate.ini"};
+    char *p_cLoadUBootBinToSDRAM[5]         = {"load","","",cENVSDRAMBufferAddress,"u-boot.imx"};
+    char *p_cLoadEepromBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"eeprom.bin"};
+    char *p_cLoadScriptBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"script.bin"};	
+    char *p_cLoadSettingsBinToSDRAM[5]      = {"load","","",cENVSDRAMBufferAddress,"settings.bin"};
+    char *p_cRunScript[2]                   = {"source",cENVSDRAMBufferAddress};
+    char *p_cLoadNkNB0ToSDRAM[5]            = {"load","","",cENVSDRAMBufferAddress,"nk.gz"};
+    char *p_cLoadEbootNB0ToSDRAM[5]         = {"load","","",cENVSDRAMBufferAddress,"eboot.nb0"};    
 
-	int ret_value = 0;
+    int ret_value = 0;
 	
     // Set current device (mmc or usb)
     p_cLoadDHUpdateIniToSDRAM[1] = p_cStorageDevice;
@@ -983,6 +1101,8 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
     p_cLoadEepromBinToSDRAM[1] = p_cStorageDevice;
     p_cLoadScriptBinToSDRAM[1] = p_cStorageDevice;
     p_cLoadSettingsBinToSDRAM[1] = p_cStorageDevice; 
+    p_cLoadNkNB0ToSDRAM[1] = p_cStorageDevice; 
+    p_cLoadEbootNB0ToSDRAM[1] = p_cStorageDevice; 
 
     // Set current device number and partition
     p_cLoadDHUpdateIniToSDRAM[2] = p_cDevicePartitionNumber;   
@@ -990,6 +1110,8 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
     p_cLoadEepromBinToSDRAM[2] = p_cDevicePartitionNumber;
     p_cLoadScriptBinToSDRAM[2] = p_cDevicePartitionNumber;
     p_cLoadSettingsBinToSDRAM[2] = p_cDevicePartitionNumber;
+    p_cLoadNkNB0ToSDRAM[2] = p_cDevicePartitionNumber;
+    p_cLoadEbootNB0ToSDRAM[2] = p_cDevicePartitionNumber;
 	
     // Update without DHupdate.ini file --> Command line update
     if(argc > 1)
@@ -1038,7 +1160,31 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                 file_name = argv[2];
                 p_cLoadScriptBinToSDRAM[4] = file_name;
             }
-        }		
+        }
+        else if (strcmp(cmd, "wince") == 0) 
+        {
+            cUpdateArgument = WINCE_IMAGE_UPDATE;
+            p_vUpdateArgument = &cUpdateArgument;
+            iUpdateViaDHupdateIniFile = 0;
+            // Load File name from command line
+            if(argc > 2)
+            {
+                file_name = argv[2];
+                p_cLoadNkNB0ToSDRAM[4] = file_name;
+            }
+        }
+        else if (strcmp(cmd, "eboot") == 0) 
+        {
+            cUpdateArgument = EBOOT_IMAGE_UPDATE;
+            p_vUpdateArgument = &cUpdateArgument;
+            iUpdateViaDHupdateIniFile = 0;
+            // Load File name from command line
+            if(argc > 2)
+            {
+                file_name = argv[2];
+                p_cLoadEbootNB0ToSDRAM[4] = file_name;
+            }
+        }					
         else
         {
             // Wrong argument
@@ -1167,6 +1313,51 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 					cUpdateArgument = EXECUTE_RESET;
 					p_vUpdateArgument = &cUpdateArgument;
 			}
+			else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "wince") == 0)
+			{
+				cUpdateArgument = WINCE_IMAGE_UPDATE;
+				p_vUpdateArgument = &cUpdateArgument;
+				
+				// Check if filename is specified in DHupdate.ini file
+				if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL)
+				{	
+					file_name = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
+					
+					// Search for image type (*.gz or *.bin)
+					for(i = 0; *(file_name+i) != '.'; i++);
+
+					file_type = file_name + i + 1;
+                         
+					if (strcmp(file_type, "nb0") == 0)
+					{
+						cOSFileType = UPDATE_FILE_TYPE_NB0;
+						p_cLoadNkNB0ToSDRAM[4] = file_name;
+					}
+					else if (strcmp(file_type, "gz") == 0)
+					{
+						cOSFileType = UPDATE_FILE_TYPE_GZ;
+						p_cLoadNkNB0ToSDRAM[4] = file_name;
+					}
+					else
+					{
+						sprintf (&cErrorString[0], "\n--> Update ERROR: Wrong WinCE image type (Filename must end with .gz or .nb0) \n");
+						ShowUpdateError(p_stDHupdateINI, &cErrorString[0], IMAGE_TYPE_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}					
+					
+				}					
+			}
+			else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "eboot") == 0)
+			{
+				cUpdateArgument = EBOOT_IMAGE_UPDATE;
+				p_vUpdateArgument = &cUpdateArgument;
+				
+				// Check if filename is specified in DHupdate.ini file
+				if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL)
+				{
+					p_cLoadEbootNB0ToSDRAM[4] = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
+				}					
+			}
 			else
 			{
 				iLoadUpdateKernel = 1;
@@ -1191,6 +1382,9 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 		// Argument = '2' ==> Refresh DH settings and LCD controller
 		// Argument = '3' ==> Display adapter EEPROM settings update
 		// Argument = '4' ==> Reset Board
+		// Argument = '5' ==> Bootloader Script
+		// Argument = '6' ==> WEC7 Update
+		// Argument = '7' ==> eboot Update
 		switch (*(char*)p_vUpdateArgument)
 		{	
 			case LOAD_UPDATE_KERNEL_LATER:
@@ -1383,7 +1577,172 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 					run_command("reset",0);
 				}
 
-			break;			
+			break;	
+			// ***************************************************************************************
+			// **************************** Update WEC Image File *********************************
+			// ***************************************************************************************
+			case WINCE_IMAGE_UPDATE:
+				printf ("\n==> Update: Start to Update WEC Image content\n");
+				 
+			#ifndef DH_IMX6_NAND_VERSION   	
+				sprintf (&cErrorString[0], "\n==> Update ERROR: eMMC Flash is not supported for WEC image!!!\n");
+				// ERROR: eMMC is not supported by WEC
+				ShowUpdateError(p_stDHupdateINI, cErrorString, FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+				return 1;				
+			#endif /* DH_IMX6_NAND_VERSION  */	
+			 
+				// Load eeprom file from Storage Device to SDRAM.
+				////DISABLE_PRINTF()
+				ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadNkNB0ToSDRAM);
+				////SESSION_DEPENDED_PRINTF_ENABLE()
+
+				if(ret_value == 0)
+				{
+					printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadNkNB0ToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+
+					// Get nk.nb0 filesize
+					ulFilesize = simple_strtoul (getenv("filesize"), NULL, 16);
+					ulBlocks = ulFilesize / ulNANDFlashBlockSize + 0x1;
+
+					// Check if the file fits into to the WEC-Image-partition
+					if (check_imagesize (ulFilesize, ulWinCEFlashPartitionSize, WINCE_IMAGE_UPDATE, cErrorString ))
+					{
+						// ERROR: file is to large for the specified partition
+						ShowUpdateError(p_stDHupdateINI, cErrorString, IMAGE_SIZE_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}
+					setenv("redundant_wince_image", "");
+					setenv("wec_image_size", "");
+					setenv("wec_image_type_gz", "");
+					setenv("wec_image_type_nb0", "");
+					DISABLE_PRINTF()
+					saveenv();
+					ENABLE_PRINTF()
+
+					printf ("\n--> Update: The new WinCE image File needs %lu Flash blocks\n", ulBlocks);
+					printf ("    e = Erase Block\n");
+					printf ("    w = Write to Block\n");
+					printf ("    d = Done\n");
+					printf ("    Write File to Flash:[");
+
+					ret_value = update_nand_flash_content (ulOSImageFlashAddress, ulSDRAMBufferAddress, ulBlocks, ulNANDFlashBlockSize, WEC_PARTITION_SIZE);
+
+					if((ret_value & 0x3) == 1)
+					{
+						sprintf (&cErrorString[0], "\n--> Update ERROR: NAND erase error on block 0x%08x\n", (unsigned int)(ulOSImageFlashAddress + (ret_value >> 2) * ulNANDFlashBlockSize));
+						ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}
+					else if((ret_value & 0x3) == 2)
+					{
+						sprintf (&cErrorString[0], "\n--> Update ERROR: NAND write error on block 0x%08x\n", (unsigned int)(ulOSImageFlashAddress + (ret_value >> 2) * ulNANDFlashBlockSize));
+						ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}
+					
+					sprintf (&cImageFileSize[0], "%08x", (unsigned int)ulFilesize);
+					setenv("wec_image_size", &cImageFileSize[0]);
+						
+					if (cOSFileType == UPDATE_FILE_TYPE_GZ)
+					{
+						setenv("wec_image_type_gz", "1");
+					}
+					else
+					{
+						setenv("wec_image_type_nb0", "1");
+					}
+
+					DISABLE_PRINTF()
+					saveenv();
+					ENABLE_PRINTF()					
+
+					// Windows Embedded CE Flash Update done.
+					printf ("\n--> Update: WinCE Update done");
+				}
+				else
+				{
+					// Can't load WEC Image file from Storage Device to SDRAM.
+					sprintf (&cErrorString[0], "\n--> Update ERROR: No %s file found on Storage Device\n", (char*)p_cLoadNkNB0ToSDRAM[4]);
+					ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FILE_NOT_FOUND_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+					return 1;
+				}
+			break;	
+			// ***************************************************************************************
+			// **************************** Update eboot Image File *********************************
+			// ***************************************************************************************
+			case EBOOT_IMAGE_UPDATE:
+				printf ("\n==> Update: Start to Update eboot Image content\n");
+				 
+			#ifndef DH_IMX6_NAND_VERSION   	
+				sprintf (&cErrorString[0], "\n==> Update ERROR: eMMC Flash is not supported for WEC image!!!\n");
+				// ERROR: eMMC is not supported by WEC
+				ShowUpdateError(p_stDHupdateINI, cErrorString, FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+				return 1;				
+			#endif /* DH_IMX6_NAND_VERSION  */	
+			 
+				// Load eeprom file from Storage Device to SDRAM.
+				////DISABLE_PRINTF()
+				ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadEbootNB0ToSDRAM);
+				////SESSION_DEPENDED_PRINTF_ENABLE()
+
+				if(ret_value == 0)
+				{
+					printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadEbootNB0ToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+
+					// Calculate necessary sectors in flash for the eboot image file.
+					ulFilesize = simple_strtoul (getenv("filesize"), NULL, 16);
+					ulBlocks = (ulFilesize / ulFlashBlockSize) + 0x1;
+
+					// Check if the file fits into to the flash-partition
+					if (check_imagesize (ulFilesize, ulEbootFlashPartitionSize, EBOOT_IMAGE_UPDATE, cErrorString ))
+					{
+						// ERROR: file is to large for the specified partition
+						ShowUpdateError(p_stDHupdateINI, cErrorString, IMAGE_SIZE_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}
+					
+					setenv("eboot_image", "");
+					DISABLE_PRINTF()
+					saveenv();
+					ENABLE_PRINTF()				
+
+					printf ("\n--> Update: The new eboot image File needs %lu Flash blocks\n", ulBlocks);
+					printf ("    e = Erase Block\n");
+					printf ("    w = Write to Block\n");
+					printf ("    d = Done\n");
+					printf ("    Write File to Flash:[");
+
+					ret_value = update_flash_content (ulEbootOffset, ulSDRAMBufferAddress, ulBlocks, ulFlashBlockSize);
+
+					if((ret_value & 0x3) == 1)
+					{
+						sprintf (&cErrorString[0], "\n--> Update ERROR: Erase error on block 0x%08x\n", (unsigned int)((ulEbootOffset/ulFlashBlockSize) + (ret_value >> 2) * ulFlashBlockSize));
+						ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}
+					else if((ret_value & 0x3) == 2)
+					{
+						sprintf (&cErrorString[0], "\n--> Update ERROR: Write error on block 0x%08x\n", (unsigned int)((ulEbootOffset/ulFlashBlockSize) + (ret_value >> 2) * ulFlashBlockSize));
+						ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+						return 1;
+					}
+
+					setenv("eboot_image", "1");
+					DISABLE_PRINTF()
+					saveenv();
+					ENABLE_PRINTF()							
+
+					// eboot Flash Update done.
+					printf ("\n--> Update: eboot Update done\n");
+				}
+				else
+				{
+					// Can't load eboot image file from Storage Device to SDRAM.
+					sprintf (&cErrorString[0], "\n--> Update ERROR: No %s file found on Storage Device\n", (char*)p_cLoadEbootNB0ToSDRAM[4]);
+					ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FILE_NOT_FOUND_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
+					return 1;
+				}
+			break;							
 			// ***************************************************************************************
 			// *** No Update Event is defined for the Update Argument in the DHupdate.ini file ***
 			// ***************************************************************************************
@@ -1449,6 +1808,15 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 			printf ("\n--> Update INFO: End bitmap %s not found\n", p_stDHupdateINI->p_cFileNameOkBmp);
 		}
 	}
+	
+	// Check if DHupdate.ini contains [led] section
+	// If so, init. update led
+	if(p_stDHupdateINI->iLedInfo == 1)
+	{
+		// Activate Update GPIO
+		DeacitvateUpdateGPIO(p_stDHupdateINI);
+	}
+
 
 	printf ("\n");	
 	
@@ -1685,5 +2053,9 @@ U_BOOT_CMD(
   "           - eeprom = Display adpater EEPROM update (default file name eeprom.bin)\n"
   "           - script = Run bootloader script (default file name script.bin)\n"
   "           - auto = Run DHupdate.ini update from command line\n"  
+#ifdef DH_IMX6_NAND_VERSION  
+  "           - wince = WinCE image update (default file name nk.nb0)\n"    
+  "           - eboot = eboot image update (default file name eboot.nb0)\n"
+#endif
 );
 #endif/* CONFIG_CMD_UPDATECE */

@@ -12,10 +12,10 @@ if [ "$#" == "0" ]; then
 fi
 
 echo -- setup toolchain 
-#PATH=$PATH:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin/armv7a-vfp-neon-linux-gnueabi
-#export PATH
-#CROSS_COMPILE=armv7a-
-CROSS_COMPILE="/opt/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-"
+PATH=$PATH:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin:/opt/eldk-5.4/armv7a/sysroots/i686-eldk-linux/usr/bin/armv7a-vfp-neon-linux-gnueabi
+export PATH
+CROSS_COMPILE=armv7a-
+#CROSS_COMPILE="/opt/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-"
 export CROSS_COMPILE
 
 echo ----------------------------

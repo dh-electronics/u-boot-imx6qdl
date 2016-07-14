@@ -25,6 +25,8 @@
 #include "mxcfb.h"
 #include "ipu_regs.h"
 
+extern struct clk *g_ldb_clk;
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static int mxcfb_map_video_memory(struct fb_info *fbi);
@@ -258,10 +260,13 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	if (fbi->var.sync & FB_SYNC_CLK_IDLE_EN)
 		sig_cfg.clkidle_en = 1;
 
-	debug("pixclock = %ul Hz\n", (u32) (fbi->var.pixclock * 1000UL));
+	debug("pixclock = %ul Hz\n", 
+	        (u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
+
+	g_ldb_clk->rate = PICOS2KHZ(fbi->var.pixclock) * 1000;
 
 	if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-				(fbi->var.pixclock) * 1000UL,
+				(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
 				fbi->var.xres, fbi->var.yres,
 				out_pixel_fmt,
 				fbi->var.left_margin,

@@ -551,14 +551,14 @@ static void enable_hdmi(struct display_info_t const *dev)
 {
 	imx_enable_hdmi_phy();
 }
-*/
+
 static int detect_i2c(struct display_info_t const *dev)
 {
 	return ((0 == i2c_set_bus_num(dev->bus))
 		&&
 		(0 == i2c_probe(dev->addr)));
 }
-
+*/
 #ifdef CONFIG_SPLASH_SCREEN
 // Read splashimage from persistant memory
 static int board_get_splashimage(void)
@@ -601,17 +601,55 @@ static int board_get_splashimage(void)
 }
 #endif /* CONFIG_SPLASH_SCREEN */
 
-/* LZ: not used yet
+
 static void enable_lvds(struct display_info_t const *dev)
 {
-	struct iomuxc *iomux = (struct iomuxc *)
-				IOMUXC_BASE_ADDR;
+	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
+	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	u32 dividor = 0x1b; // 0x1b = 23,5MHz
+	u32 pixclock_Hz = 0;
+	u32 i = 0;
+
 	u32 reg = readl(&iomux->gpr[2]);
 	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
-	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
+
+	pixclock_Hz = PICOS2KHZ(dev->mode.pixclock) * 1000; 
+
+	if(pixclock_Hz < 56500000) {
+		/* set LDB0, LDB1 clk select to 011/011 */
+		reg = readl(&mxc_ccm->cs2cdr);
+		reg &= ~(MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK
+			 | MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK);
+		reg |= (0 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET)
+		      | (0 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET);
+		writel(reg, &mxc_ccm->cs2cdr);
+
+		for (i = 0; (23500000 + (i*850000)) <= pixclock_Hz; i++) {
+			dividor++;
+			if (dividor >= 54)
+				break;
+
+		        // Dividor:
+		        // 0x1b = 27 --> 23,5MHz
+		        // ...
+		        // 0x36 = 54 --> 46,45MHz
+		}
+
+		reg = readl(&anatop->pll_video_clr);
+		reg |= 0x2000;
+		writel(reg, &anatop->pll_video_clr);
+		reg = readl(&anatop->pll_video_set);
+		reg &= 0xffffff80;
+		reg |= dividor;
+		writel(reg, &anatop->pll_video_set);
+		reg = readl(&anatop->pll_video_set);
+		reg |= 0x2000;
+		writel(reg, &anatop->pll_video_set);
+	}
 }
-*/
+
 
 static void enable_rgb(struct display_info_t const *dev)
 {
@@ -663,31 +701,31 @@ static struct display_info_t displays[] = {/*{
 		.vsync_len      = 10,
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	.bus	= 2,
-	.addr	= 0x38,
-	.pixfmt	= IPU_PIX_FMT_LVDS666,
-	.detect	= detect_i2c,
+} }, */{
+	.bus	= 0,
+	.addr	= 0,
+	.pixfmt	= IPU_PIX_FMT_BGR24,
+	.detect	= NULL,
 	.enable	= enable_lvds,
 	.mode	= {
-		.name           = "wsvga-lvds",
-		.refresh        = 60,
-		.xres           = 1024,
-		.yres           = 600,
-		.pixclock       = 15385,
-		.left_margin    = 220,
-		.right_margin   = 40,
-		.upper_margin   = 21,
-		.lower_margin   = 7,
-		.hsync_len      = 60,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
+		.name           = "lvds_24bit",
+		.refresh        = 60,//78,
+		.xres           = 800,
+		.yres           = 480,
+		.pixclock       = 40000,//32258,
+		.left_margin    = 42,//40,
+		.right_margin   = 86,//40,
+		.upper_margin   = 10,//3,
+		.lower_margin   = 33,//3,
+		.hsync_len      = 128,//10,
+		.vsync_len      = 2,
+		.sync           = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT /*| FB_SYNC_CLK_LAT_FALL*/| FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
-} }, */{
-	.bus	= 2,
-	.addr	= 0x48,
+} }, {
+	.bus	= 0,
+	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_BGR24,
-	.detect	= detect_i2c,
+	.detect	= NULL,
 	.enable	= enable_rgb,
 	.mode	= {
 		.name           = "RGB",
@@ -701,7 +739,7 @@ static struct display_info_t displays[] = {/*{
                 .lower_margin   = 33,
                 .hsync_len      = 128,
                 .vsync_len      = 2,
-		.sync           = 0,
+		.sync           = FB_SYNC_CLK_LAT_FALL,
 		.vmode          = FB_VMODE_NONINTERLACED
 } } };
 
@@ -711,6 +749,9 @@ int board_video_skip(void)
 	int ret;
 	char const *panel = getenv("panel");
 	int clksonframe = 0;
+
+	int iDI_TYPE = 0;
+	int iDHSettingsInitialization = 0;
 
 #ifdef CONFIG_SPLASH_SCREEN
 	/* Copy Splash-Image to ddr3 ram - DHCOM specific */
@@ -727,14 +768,32 @@ int board_video_skip(void)
 			}
 		}
 		if (!panel) {
+		        iDHSettingsInitialization = 1;
 			panel = displays[0].mode.name;
 			printf("No panel detected: default to %s\n", panel);
 			i = 0;
 			
+        		iDI_TYPE = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13);
+        		displays[0].mode.sync = 0;
+
+			switch (iDI_TYPE)
+			{
+				case 2: // RGB
+					displays[0].enable = enable_rgb;
+					break;
+				case 3: // LVDS0
+					displays[0].enable = enable_lvds;
+					displays[0].mode.sync |= FB_SYNC_EXT;
+					break;
+				default:
+					displays[0].enable = enable_rgb;
+					break;
+			}
+
 			/* Setup display settings from DH settings file */
 			displays[0].mode.xres = gd->dh_board_settings.wXResolution;
 			displays[0].mode.yres = gd->dh_board_settings.wYResolution;
-			displays[0].mode.pixclock = gd->dh_board_settings.wPixelClock;
+			displays[0].mode.pixclock = KHZ2PICOS(gd->dh_board_settings.wPixelClock);
 			displays[0].mode.left_margin = gd->dh_board_settings.wHFrontPorch;
 			displays[0].mode.hsync_len = gd->dh_board_settings.wHPulseWidth;
 			displays[0].mode.right_margin = gd->dh_board_settings.wHBackPorch;
@@ -744,25 +803,19 @@ int board_video_skip(void)
 			clksonframe = ((gd->dh_board_settings.wXResolution + gd->dh_board_settings.wHFrontPorch + gd->dh_board_settings.wHPulseWidth + gd->dh_board_settings.wHBackPorch) *
 								 (gd->dh_board_settings.wYResolution + gd->dh_board_settings.wVFrontPorch + gd->dh_board_settings.wVPulseWidth + gd->dh_board_settings.wVBackPorch));
 			displays[0].mode.refresh = ((gd->dh_board_settings.wPixelClock * 1000) / (clksonframe));
-			displays[0].mode.sync = 0;
-			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG))
-			{
+			if((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG)) {
 				displays[0].mode.sync |= FB_SYNC_VERT_HIGH_ACT;
 			}
-			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG))
-			{
+			if((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG)) {
 				displays[0].mode.sync |= FB_SYNC_HOR_HIGH_ACT;
 			}			
-			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG))
-			{
+			if((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG)) {
 				displays[0].mode.sync |= FB_SYNC_CLK_LAT_FALL;
 			}
-			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG)
-			{
+			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG) {
 				displays[0].mode.sync |= FB_SYNC_OE_LOW_ACT;
 			}
-			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG)
-			{
+			if(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG) {
 				displays[0].mode.sync |= FB_SYNC_DATA_INVERT;
 			}			
 			displays[0].mode.vmode = FB_VMODE_NONINTERLACED;
@@ -778,10 +831,16 @@ int board_video_skip(void)
 				    displays[i].pixfmt);
 		if (!ret) {
 			displays[i].enable(displays+i);
-			printf("Display: %s (%ux%u)\n",
-			       displays[i].mode.name,
-			       displays[i].mode.xres,
-			       displays[i].mode.yres);
+			if(iDHSettingsInitialization) {
+				printf("Display: DHCOM settings (%ux%u)\n",
+				       displays[i].mode.xres,
+				       displays[i].mode.yres);
+			} else {
+				printf("Display: %s (%ux%u)\n",
+				       displays[i].mode.name,
+				       displays[i].mode.xres,
+				       displays[i].mode.yres);
+			}
 		} else
 			printf("LCD %s cannot be configured: %d\n",
 			       displays[i].mode.name, ret);

@@ -275,7 +275,7 @@
 		"linuxargs=setenv bootargs " \
 		        "console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${optargs} dhcom=${dhcom} " \
 		        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN}\0" \
-		"fdt_addr=0x11000000\0" \
+		"fdt_addr=0x18000000\0" \
 		"fdt_high=0xffffffff\0" \
 		"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 		"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \

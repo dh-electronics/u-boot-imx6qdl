@@ -19,6 +19,12 @@
 #define UBOOT_DH_VERSION "1.0.0.2" 	/* DH - Version of U-Boot e.g. 1.4.0.1 */
 
 #define BOOTLOADER_FLASH_OFFSET				0x400
+
+/* Silent Mode */
+#define CONFIG_SILENT_CONSOLE		1
+#define CONFIG_SYS_DEVICE_NULLDEV
+#define CONFIG_SILENT_CONSOLE_UPDATE_ON_RELOC
+
 /*
  * Default settings
  */

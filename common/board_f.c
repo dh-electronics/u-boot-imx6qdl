@@ -20,7 +20,6 @@
 #if defined(CONFIG_CMD_IDE)
 #include <ide.h>
 #endif
-#include <i2c.h>
 #include <initcall.h>
 #include <logbuff.h>
 #include <malloc.h>
@@ -171,11 +170,13 @@ static int display_text_info(void)
 	return 0;
 }
 
+#if !defined(CONFIG_SILENT_CONSOLE)
 static int announce_dram_init(void)
 {
 	puts("DRAM:  ");
 	return 0;
 }
+#endif
 
 #if defined(CONFIG_MIPS) || defined(CONFIG_PPC) || defined(CONFIG_M68K)
 static int init_func_ram(void)
@@ -195,7 +196,7 @@ static int init_func_ram(void)
 	return 1;
 }
 #endif
-
+#if !defined(CONFIG_SILENT_CONSOLE)
 static int show_dram_config(void)
 {
 	unsigned long long size;
@@ -223,6 +224,7 @@ static int show_dram_config(void)
 
 	return 0;
 }
+#endif
 
 __weak void dram_init_banksize(void)
 {
@@ -231,20 +233,6 @@ __weak void dram_init_banksize(void)
 	gd->bd->bi_dram[0].size = get_effective_memsize();
 #endif
 }
-
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
-static int init_func_i2c(void)
-{
-	puts("I2C:   ");
-#ifdef CONFIG_SYS_I2C
-	i2c_init_all();
-#else
-	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
-#endif
-	puts("ready\n");
-	return 0;
-}
-#endif
 
 #if defined(CONFIG_HARD_SPI)
 static int init_func_spi(void)
@@ -829,7 +817,9 @@ static init_fnc_t init_sequence_f[] = {
 #ifdef CONFIG_OF_CONTROL
 	fdtdec_prepare_fdt,
 #endif
+#if !defined(CONFIG_SILENT_CONSOLE)
 	display_options,	/* say that we are here */
+#endif
 	display_text_info,	/* show debugging info if required */
 #if defined(CONFIG_MPC8260)
 	prt_8260_rsr,
@@ -841,25 +831,28 @@ static init_fnc_t init_sequence_f[] = {
 #if defined(CONFIG_PPC) || defined(CONFIG_M68K)
 	checkcpu,
 #endif
+#if !defined(CONFIG_SILENT_CONSOLE)
 	print_cpuinfo,		/* display cpu info (and speed) */
+#endif
 #if defined(CONFIG_MPC5xxx)
 	prt_mpc5xxx_clks,
 #endif /* CONFIG_MPC5xxx */
+#if !defined(CONFIG_SILENT_CONSOLE)
 #if defined(CONFIG_DISPLAY_BOARDINFO)
 	show_board_info,
+#endif
 #endif
 	INIT_FUNC_WATCHDOG_INIT
 #if defined(CONFIG_MISC_INIT_F)
 	misc_init_f,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
-	init_func_i2c,
-#endif
 #if defined(CONFIG_HARD_SPI)
 	init_func_spi,
 #endif
+#if !defined(CONFIG_SILENT_CONSOLE)
 	announce_dram_init,
+#endif
 	/* TODO: unify all these dram functions? */
 #if defined(CONFIG_ARM) || defined(CONFIG_X86) || defined(CONFIG_NDS32) || \
 		defined(CONFIG_MICROBLAZE) || defined(CONFIG_AVR32)
@@ -932,7 +925,9 @@ static init_fnc_t init_sequence_f[] = {
 	reserve_arch,
 	reserve_stacks,
 	setup_dram_config,
+#if !defined(CONFIG_SILENT_CONSOLE)
 	show_dram_config,
+#endif
 #if defined(CONFIG_PPC) || defined(CONFIG_M68K)
 	setup_board_part1,
 	INIT_FUNC_WATCHDOG_RESET

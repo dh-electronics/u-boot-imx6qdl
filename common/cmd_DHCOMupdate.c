@@ -79,7 +79,7 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 // ===============================================================================================================
-// Variables
+// Defines
 // ===============================================================================================================
 
 // ===============================================================================================================
@@ -96,9 +96,7 @@ extern int do_load_wrapper(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 extern int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_mem.c */
 extern int do_source(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_source.c */
 extern int do_env_set(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_nvedit.c */
-extern int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]); /* cmd_mmc.c */
 extern int do_bmp (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
-extern int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 extern int DHCOMUpdateLED_Init(updateinfo_t *p_stDHupdateINI);
 extern void DHCOMUpdateDelayMs(unsigned long msec);
 extern void DHCOMUpdateLED_SetHigh(void);
@@ -119,6 +117,15 @@ void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
         p_cCharArray[i] = '\0';
 }
 
+void print_flashing_banner(char* itemtext, unsigned long blocks)
+{
+        printf ("\n--> Update: The new %s image File needs %lu Flash blocks\n", itemtext, blocks);
+        printf ("    e = Erase Block\n");
+        printf ("    w = Write to Block\n");
+        printf ("    d = Done\n");
+        printf ("    Write File to Flash:[");
+}
+
 //------------------------------------------------------------------------------
 //
 //  Function:  update_flash_content
@@ -134,87 +141,31 @@ void CopyAddressStringToCharArray(char *p_cCharArray, char *p_cPointer)
 //                  1 = Flash erase error (the error block number is specified from bit 3 to bit 31)
 //                  2 = Flash write error (the error block number is specified from bit 3 to bit 31)
 //
-int update_flash_content (unsigned long ulOffset, unsigned long ulSDRAMBufferAddress, unsigned long ulBlocks, unsigned long ulFlashBlockSize)
+int update_flash_content(unsigned long ulOffset, unsigned long ulSDRAMBufferAddress, unsigned long ulBlocks, unsigned long ulFlashBlockSize)
 {
-        char *p_cEraseFlashBlock[4]         = {"sf", "erase", "12345671", "12345672"};
-        char *p_cWriteFlashBlock[5]         = {"sf", "write", "12345673", "12345674", "12345675"};
-        char *p_cSFProbe[2]         = {"sf", "probe"};
-
-        unsigned long i,j;
+        char *p_cEraseFlash[4]         = {"sf", "erase", "12345671", "12345672"};
+        char *p_cWriteFlash[5]         = {"sf", "write", "12345673", "12345674", "12345675"};
         int ret_value = 0;
-        unsigned long ulWrittenBytes = 0;
+        
+        printf ("--> Update: Erase/Write new image into flash ... \n");
+        
+        // set erase offset and size
+        sprintf (p_cEraseFlash[2], "%08lx", (ulOffset/ulFlashBlockSize)*ulFlashBlockSize); // meet erase block border !!!
+        sprintf (p_cEraseFlash[3], "%08lx", ulBlocks*ulFlashBlockSize);
+        // set write addresses and size
+        sprintf (p_cWriteFlash[2], "%08lx", ulSDRAMBufferAddress);
+        sprintf (p_cWriteFlash[3], "%08lx", ulOffset);
+        sprintf (p_cWriteFlash[4], "%08lx", ulBlocks*ulFlashBlockSize);
+                                
+        ret_value = run_command ("sf probe", 0);
+        if(ret_value != 0)
+                return ret_value;
 
-        // Set FLash Block size
-        sprintf (p_cEraseFlashBlock[3], "%08x", (unsigned int)ulFlashBlockSize);
-        sprintf (p_cWriteFlashBlock[4], "%08x", (unsigned int)ulFlashBlockSize);
+        ret_value = do_spi_flash(NULL, 0, 4, p_cEraseFlash);
+        if(ret_value != 0)
+                return ret_value;
 
-        DISABLE_PRINTF()
-        do_spi_flash(NULL, 0, 2, p_cSFProbe);
-        ENABLE_PRINTF()
-
-        // Set SDRAM Buffer address
-        sprintf (p_cWriteFlashBlock[2], "%08x", (unsigned int)(ulSDRAMBufferAddress));
-
-        for(j = 1, i = 0; i < ulBlocks; j++, i++)
-        {
-                if(j == 51)
-                {
-                        printf ("\n                         ");
-                        j = 1;
-                }
-
-                // Set block address
-                sprintf (p_cEraseFlashBlock[2], "%08x", (unsigned int)(((ulOffset/ulFlashBlockSize)*ulFlashBlockSize) + i * ulFlashBlockSize));
-
-                if((ulOffset < ulFlashBlockSize) && (i == 0))
-                {
-                        sprintf (p_cWriteFlashBlock[3], "%08x", (unsigned int)(ulOffset));
-                        sprintf (p_cWriteFlashBlock[4], "%08x", (unsigned int)(ulFlashBlockSize-ulOffset));
-                        ulWrittenBytes = ulFlashBlockSize-ulOffset;
-                }
-                else
-                {
-                        sprintf (p_cWriteFlashBlock[3], "%08x", (unsigned int)(((ulOffset/ulFlashBlockSize)*ulFlashBlockSize) + i * ulFlashBlockSize));
-                        sprintf (p_cWriteFlashBlock[4], "%08x", (unsigned int)ulFlashBlockSize);
-                        ulWrittenBytes = ulFlashBlockSize;
-                }
-
-                // Erase flash block
-                printf ("e");
-
-                DISABLE_PRINTF()
-                ret_value = do_spi_flash(NULL, 0, 4, p_cEraseFlashBlock);
-                ENABLE_PRINTF()
-
-                // Exit on Erase ERROR
-                if(ret_value != 0)
-                {
-                        ret_value = (i << 2) | 1;
-                        return ret_value;
-                }
-
-                // Write flash block
-                printf ("\bw");
-                DISABLE_PRINTF()
-                ret_value = do_spi_flash(NULL, 0, 5, p_cWriteFlashBlock);
-                ENABLE_PRINTF()
-
-                // Exit on Write ERROR
-                if(ret_value != 0)
-                {
-                        ret_value = (i << 2) | 2;
-                        return ret_value;
-                }
-
-                // Set SDRAM Buffer address
-                ulSDRAMBufferAddress = ulSDRAMBufferAddress + ulWrittenBytes;
-                sprintf (p_cWriteFlashBlock[2], "%08x", (unsigned int)(ulSDRAMBufferAddress));
-
-                printf ("\bd");
-        }
-
-        printf ("]");
-        return 0;
+        return do_spi_flash(NULL, 0, 5, p_cWriteFlash);
 }
 
 //------------------------------------------------------------------------------
@@ -234,7 +185,7 @@ int update_flash_content (unsigned long ulOffset, unsigned long ulSDRAMBufferAdd
 //                  2 = Flash write error (the error block number is specified from bit 3 to bit 31)
 //
 #ifdef DH_IMX6_NAND_VERSION
-int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBlocks, unsigned long ulFlashBlockSize, loff_t maxsize)
+int update_nand_flash_content(char* itemtext, unsigned long ulFlashAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBlocks, unsigned long ulFlashBlockSize, loff_t maxsize)
 {
     nand_info_t *nand;
     nand_erase_options_t opts;
@@ -242,6 +193,8 @@ int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDR
     size_t write_size = 0;
     unsigned long i,j;
     int ret_value = 0;
+
+    print_flashing_banner(itemtext, ulBlocks);
 
     // Get nand-info structure from current device
     nand = &nand_info[nand_curr_device];
@@ -253,7 +206,6 @@ int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDR
     opts.jffs2  = 1;
     opts.quiet  = 0;
     opts.spread = 0;
-
 
     for(j = 1, i = 0; i < ulBlocks; j++, i++) {
         if(j == 51) {
@@ -275,9 +227,7 @@ int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDR
        DISABLE_PRINTF()
        ret_value = nand_erase_opts(nand, &opts);
        ENABLE_PRINTF()
-        // Exit on Erase ERROR
-        if(ret_value != 0) {
-           // Exit on Erase ERROR
+       if(ret_value != 0) { // Exit on Erase ERROR
            ret_value = (i << 2) | 1;
            return ret_value;
        }
@@ -290,10 +240,7 @@ int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDR
        write_size = ulFlashBlockSize;
        ret_value = nand_write_skip_bad(nand, ulBlockOffset, &write_size, NULL, maxsize,(u_char *)(ulSDRAMBufferAddress + i * ulFlashBlockSize), 0);
        ENABLE_PRINTF()
-
-        // Exit on Erase ERROR
-        if(ret_value != 0) {
-           // Exit on Write ERROR
+       if(ret_value != 0) { // Exit on Write ERROR
            ret_value = (i << 2) | 2;
            return ret_value;
        }
@@ -324,7 +271,7 @@ int update_nand_flash_content (unsigned long ulFlashAddress, unsigned long ulSDR
 int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBytes)
 {
         unsigned int i,j;
-        int ret_value = 0;
+        int ret_value;
         uchar ucBuffer;
 
         /* Set i2c driver to use i2c bus 0  */
@@ -332,14 +279,10 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
         ret_value = run_command ("i2c dev 0", 0);
         ENABLE_PRINTF()
         if (ret_value != 0)
-        {
-                return 1;
-        }
+                return ret_value;
 
-        for(j = 1, i = 0; i < ulBytes; j++, i++)
-        {
-                if(j == 51)
-                {
+        for(j = 1, i = 0; i < ulBytes; j++, i++) {
+                if(j == 51)  {
                         printf ("\n                         ");
                         j = 1;
                 }
@@ -351,47 +294,29 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
                 DHCOMUpdateDelayMs(8);
                 ENABLE_PRINTF()
 
-                // Exit on Write ERROR
-                if(ret_value != 0)
-                {
-
+                if(ret_value != 0) { // Exit on Write ERROR
                         /* Set i2c driver back to use i2c bus 2 */
                         DISABLE_PRINTF()
-                        ret_value = run_command ("i2c dev 2", 0);
+                        run_command ("i2c dev 2", 0);
                         ENABLE_PRINTF()
-                        if (ret_value != 0)
-                        {
-                                return 1;
-                        }
-
-
-                        return 1;
+                        return ret_value;
                 }
-
                 printf ("\bd");
         }
 
         // Verify EEPROM data
-        for(i = 0; i < ulBytes; i++)
-        {
+        for(i = 0; i < ulBytes; i++) {
                 DISABLE_PRINTF()
                 ret_value = i2c_read(DISPLAY_ADAPTER_EEPROM_ADDR, i, 1, &ucBuffer, 1);
                 ENABLE_PRINTF()
 
                 // Exit on Write ERROR
-                if((ret_value != 0) || (ucBuffer != *(uchar*)(ulSDRAMBufferAddress+i)))
-                {
-
+                if((ret_value != 0) || (ucBuffer != *(uchar*)(ulSDRAMBufferAddress+i))) {
                         /* Set i2c driver back to use i2c bus 2 */
                         DISABLE_PRINTF()
-                        ret_value = run_command ("i2c dev 2", 0);
+                        run_command ("i2c dev 2", 0);
                         ENABLE_PRINTF()
-                        if (ret_value != 0)
-                        {
-                                return 1;
-                        }
-
-                        return 1;
+                        return ret_value;
                 }
         }
 
@@ -401,8 +326,7 @@ int update_eeprom_content (unsigned long ulEepromRegisterAddress, unsigned long 
         DISABLE_PRINTF()
         ret_value = run_command ("i2c dev 2", 0);
         ENABLE_PRINTF()
-        if (ret_value != 0)
-        {
+        if (ret_value != 0) {
                 return 1;
         }
 
@@ -426,8 +350,7 @@ int UpdateGlobalDataDHSettings (ulong addr)
         gd->dh_board_settings.wValidationID = ((readl(addr) & 0xFFFF0000) >> 16);
 
         // settings.bin file Valid Mask should be "DH" = 0x4844
-        if(gd->dh_board_settings.wValidationID == 0x4844)
-        {
+        if(gd->dh_board_settings.wValidationID == 0x4844) {
                 gd->dh_board_settings.cLength = (readl(addr) & 0xFF);
                 gd->dh_board_settings.cDisplayID = ((readl(addr) & 0xFF00) >> 8);
 
@@ -459,8 +382,7 @@ int UpdateGlobalDataDHSettings (ulong addr)
         }
 
         // settings.bin file Valid Mask should be "V2" = 0x3256
-        else if(gd->dh_board_settings.wValidationID == 0x3256)
-        {
+        else if(gd->dh_board_settings.wValidationID == 0x3256) {
                 gd->dh_board_settings.cLength = (readl(addr) & 0xFF);
                 gd->dh_board_settings.cDisplayID = ((readl(addr) & 0xFF00) >> 8);
 
@@ -492,12 +414,7 @@ int UpdateGlobalDataDHSettings (ulong addr)
                 return 0;
         }
 
-        else
-        {
-                gd->dh_board_settings.wValidationID = 0;
-                return 1; /* no valid settings.bin available */
-        }
-
+        gd->dh_board_settings.wValidationID = 0;
         return 1; /* no valid settings.bin available */
 }
 
@@ -516,10 +433,8 @@ int UpdateGlobalDataDHSettings (ulong addr)
 //
 int check_imagesize (unsigned long ulFilesize, unsigned long ulFlashPartitionSize, char cUpdatetype, char* pcErrorString )
 {
-        if (ulFilesize > ulFlashPartitionSize)
-        {
-                switch (cUpdatetype)
-                {
+        if (ulFilesize > ulFlashPartitionSize) {
+                switch (cUpdatetype) {
                 case BOOTLOADER_FLASH_UPDATE:
                         sprintf (pcErrorString, "\n==> Update ERROR: u-boot image to large: max %li bytes\n", ulFlashPartitionSize);
                         break;
@@ -532,7 +447,6 @@ int check_imagesize (unsigned long ulFilesize, unsigned long ulFlashPartitionSiz
                 default:
                         sprintf (pcErrorString, "\n==> Update ERROR: Image to large: max %li bytes\n", ulFlashPartitionSize);
                 }
-
                 return -1;
         }
 
@@ -558,10 +472,6 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
         int iPositionPointerMemorize = 0;                           // Old position in DHupdate.ini file
         int iDifference = 0;                                        // differenc between act. and old position
         int iSpecialFilename = 0;
-        char *p_cCompareStringDisplay = {"display\0"};
-        char *p_cCompareStringLED = {"led\0"};
-        char *p_cCompareStringUpdate = {"update\0"};
-        char *p_cCompareStringEnd = {"end\0"};
 
         // Set to invalid
         p_stDHupdateINI->iDisplayInfo = 0;
@@ -575,19 +485,16 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
 
         iPositionPointer++;
         // Search for '['']' content
-        while(*(char*)(p_vFilePointer + iPositionPointer) == '[')
-        {
+        while(*(char*)(p_vFilePointer + iPositionPointer) == '[') {
                 iPositionPointer++;
                 iPositionPointerMemorize = iPositionPointer;
-                while(*(char*)(p_vFilePointer + iPositionPointer) != ']')
-                {
+                while(*(char*)(p_vFilePointer + iPositionPointer) != ']') {
                         iPositionPointer++;
                 }
                 *(char*)(p_vFilePointer + iPositionPointer) = '\0';
                 iDifference = iPositionPointer - iPositionPointerMemorize;
 
-                if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), p_cCompareStringDisplay, iDifference)))
-                {
+                if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), UPDATEINI_DISPLAY, iDifference))) {
                         // **********************************************************
                         // ***************** Update Block [display] *****************
                         // **********************************************************
@@ -596,8 +503,7 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                         // Progress Bmp
                         iPositionPointer+=2; // +2, because ']' and '\n'
                         iPositionPointerMemorize = iPositionPointer;
-                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n')
-                        {
+                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n') {
                                 iPositionPointer++;
                         }
                         *(char*)(p_vFilePointer + iPositionPointer) = '\0';
@@ -605,13 +511,11 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                         // Ok Bmp
                         iPositionPointer++;
                         iPositionPointerMemorize = iPositionPointer;
-                        if(*(char*)(p_vFilePointer + iPositionPointer) == '[')
-                        {
+                        if(*(char*)(p_vFilePointer + iPositionPointer) == '[') {
                                 // DHupdate.ini display file missing
                                 return 1;
                         }
-                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n')
-                        {
+                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n') {
                                 iPositionPointer++;
                         }
                         *(char*)(p_vFilePointer + iPositionPointer) = '\0';
@@ -619,21 +523,18 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                         // Error Bmp
                         iPositionPointer++;
                         iPositionPointerMemorize = iPositionPointer;
-                        if(*(char*)(p_vFilePointer + iPositionPointer) == '[')
-                        {
+                        if(*(char*)(p_vFilePointer + iPositionPointer) == '[') {
                                 // DHupdate.ini display file missing
                                 return 1;
                         }
-                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n')
-                        {
+                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n') {
                                 iPositionPointer++;
                         }
                         *(char*)(p_vFilePointer + iPositionPointer) = '\0';
                         p_stDHupdateINI->p_cFileNameErrorBmp = (char*)(p_vFilePointer+iPositionPointerMemorize);
                         iPositionPointer++;
                 }
-                else if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), p_cCompareStringLED, iDifference)))
-                {
+                else if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), UPDATEINI_LED, iDifference))) {
                         // **********************************************************
                         // ******************* Update Block [led] *******************
                         // **********************************************************
@@ -641,19 +542,16 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                         // Update GPIO
                         iPositionPointer+=2; // +2, because ']' and '\n'
                         iPositionPointerMemorize = iPositionPointer;
-                        while((*(char*)(p_vFilePointer + iPositionPointer) != '\n') && (*(char*)(p_vFilePointer + iPositionPointer) != ' '))
-                        {
+                        while((*(char*)(p_vFilePointer + iPositionPointer) != '\n') && (*(char*)(p_vFilePointer + iPositionPointer) != ' ')) {
                                 iPositionPointer++;
                         }
 
-                        if(*(char*)(p_vFilePointer + iPositionPointer) == '\n')
-                        {
+                        if(*(char*)(p_vFilePointer + iPositionPointer) == '\n') {
                                 // Active state is missing --> Don't set Update GPIO, because we don't know the active state of the connected LED
                                 p_stDHupdateINI->iLedInfo = 0;
                                 iPositionPointer++;
                         }
-                        else
-                        {
+                        else {
                                 // GPIO name
                                 *(char*)(p_vFilePointer + iPositionPointer) = '\0';
                                 p_stDHupdateINI->p_cUpdateGpioName = (char*)(p_vFilePointer+iPositionPointerMemorize);
@@ -661,23 +559,19 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
 
                                 // GPIO Active state
                                 iPositionPointerMemorize = iPositionPointer;
-                                while(*(char*)(p_vFilePointer + iPositionPointer) != '\n')
-                                {
+                                while(*(char*)(p_vFilePointer + iPositionPointer) != '\n') {
                                         iPositionPointer++;
                                 }
 
                                 *(char*)(p_vFilePointer + iPositionPointer) = '\0';
 
-                                if (strcmp((char*)(p_vFilePointer+iPositionPointerMemorize), "high") == 0)
-                                {
+                                if (strcmp((char*)(p_vFilePointer+iPositionPointerMemorize), "high") == 0) {
                                         p_stDHupdateINI->iUpdateGpioActiveState = 1;
                                 }
-                                else if (strcmp((char*)(p_vFilePointer+iPositionPointerMemorize), "low") == 0)
-                                {
+                                else if (strcmp((char*)(p_vFilePointer+iPositionPointerMemorize), "low") == 0) {
                                         p_stDHupdateINI->iUpdateGpioActiveState = 0;
                                 }
-                                else
-                                {
+                                else {
                                         // Wrong active state argument
                                         p_stDHupdateINI->iLedInfo = 0;
                                 }
@@ -685,40 +579,30 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                                 iPositionPointer++;
                         }
                 }
-                else if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), p_cCompareStringUpdate, iDifference)))
-                {
+                else if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), UPDATEINI_UPDATE, iDifference))) {
                         // **********************************************************
                         // ***************** Update Block [update] ******************
                         // **********************************************************
                         iPositionPointer+=2; // +2, because ']' and '\n'
 
-                        while(*(char*)(p_vFilePointer + iPositionPointer) != '[')
-                        {
+                        while(*(char*)(p_vFilePointer + iPositionPointer) != '[') {
                                 if(p_stDHupdateINI->iUpdateCounter >= DHUPDATEINI_MAX_UPDATES)
-                                {
-                                        // Too much update arguments in DHupdate.ini file
-                                        return 1;
-                                }
+                                        return 1; // Too much update arguments in DHupdate.ini file
 
                                 p_stDHupdateINI->iUpdateCounter++;
                                 // Update Type
                                 iPositionPointerMemorize = iPositionPointer;
 
                                 // read text until '\n' or ' '
-                                while((*(char*)(p_vFilePointer + iPositionPointer) != '\n') && (*(char*)(p_vFilePointer + iPositionPointer) != ' '))
-                                {
+                                while((*(char*)(p_vFilePointer + iPositionPointer) != '\n') && (*(char*)(p_vFilePointer + iPositionPointer) != ' ')) {
                                         iPositionPointer++;
                                 }
 
                                 // Only if ' ' after update type a custom filename should be available
                                 if(*(char*)(p_vFilePointer + iPositionPointer) == ' ')
-                                {
                                         iSpecialFilename = 1;
-                                }
                                 else
-                                {
                                         iSpecialFilename = 0;
-                                }
 
                                 *(char*)(p_vFilePointer + iPositionPointer) = '\0'; // Set '\0' to mark end of update-type string
 
@@ -726,12 +610,10 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                                 p_stDHupdateINI->stDHUpdateInfo[p_stDHupdateINI->iUpdateCounter - 1].p_cUpdateType = (char*)(p_vFilePointer+iPositionPointerMemorize);
                                 iPositionPointer++;
 
-                                if(iSpecialFilename)
-                                {
+                                if(iSpecialFilename) {
                                         // Update Type
                                         iPositionPointerMemorize = iPositionPointer;
-                                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n')
-                                        {
+                                        while(*(char*)(p_vFilePointer + iPositionPointer) != '\n') {
                                                 iPositionPointer++;
                                         }
                                         *(char*)(p_vFilePointer + iPositionPointer) = '\0'; // Set '\0' to mark end of filename string
@@ -740,22 +622,16 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
                                         p_stDHupdateINI->stDHUpdateInfo[p_stDHupdateINI->iUpdateCounter - 1].p_cFilename = (char*)(p_vFilePointer+iPositionPointerMemorize);
                                         iPositionPointer++;
                                 }
-                                else
-                                {
+                                else {
                                         p_stDHupdateINI->stDHUpdateInfo[p_stDHupdateINI->iUpdateCounter - 1].p_cFilename = NULL;
                                 }
                         }
                 }
-                else if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), p_cCompareStringEnd, iDifference)))
-                {
+                else if(!(memcmp ( (char*)(p_vFilePointer+iPositionPointer-iDifference), UPDATEINI_END, iDifference)))
                         return 0;
-                }
                 else
-                {
-                        return 1;
-                }
+                        return 1; /* missind [end] tag ?*/
         }
-
         return 1;
 }
 
@@ -784,20 +660,16 @@ int ShowBitmap(updateinfo_t *p_stDHupdateINI, enum BitmapTypeEnum eBitmapType, c
         char *p_cDisplayBmpOnScreen[5]  = {"bmp","display",cBmpSDRAMAddress,"32767","32767"};
         int ret_value                   = 0;
         char const *panel = getenv("panel");
-        const char *no_panel = "no_panel";
 
-        if(panel)
-        {
-                if (strcmp(panel, no_panel))
-                {
+        if(panel) {
+                if (strcmp(panel, "no_panel")) {
                         // Set current device (mmc or usb)
                         p_cLoadBmpToSDRAM[1] = p_cStorageDevice;
 
                         // Set current device number and partition
                         p_cLoadBmpToSDRAM[2] = p_cDevicePartitionNumber;
 
-                        switch(eBitmapType)
-                        {
+                        switch(eBitmapType) {
                         case PROGRESS_BITMAP:
                                 // Set "progress bmp" filename from DHupdate.ini file
                                 p_cLoadBmpToSDRAM[4] = p_stDHupdateINI->p_cFileNameProgressBmp;
@@ -825,23 +697,18 @@ int ShowBitmap(updateinfo_t *p_stDHupdateINI, enum BitmapTypeEnum eBitmapType, c
                         //       since the use of a four-byte alignment will cause alignment exceptions at run-time.
                         sprintf (&cSplashSize[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE));
                         p_cMemCp[3] = &cSplashSize[0];
-                        if(do_mem_cp(NULL, 0, 4, p_cMemCp))
-                        {
+                        if(do_mem_cp(NULL, 0, 4, p_cMemCp)) {
                                 return 1;
                         }
 
-                        if(ret_value == 0)
-                        {
+                        if(ret_value == 0) {
                                 do_bmp(NULL, 0, 5, p_cDisplayBmpOnScreen);
                                 return 0;
                         }
                         return 1;
                 }
         }
-
-        // Don't display anything, because panel is deactivated
-        return 0;
-
+        return 0; // Don't display anything, panel is disabled
 }
 
 //------------------------------------------------------------------------------
@@ -856,15 +723,10 @@ int ShowBitmap(updateinfo_t *p_stDHupdateINI, enum BitmapTypeEnum eBitmapType, c
 //
 void AcitvateUpdateGPIO(updateinfo_t *p_stDHupdateINI)
 {
-        // Activate Update GPIO
         if(p_stDHupdateINI->iUpdateGpioActiveState == 1)
-        {
                 DHCOMUpdateLED_SetHigh();
-        }
         else
-        {
                 DHCOMUpdateLED_SetLow();
-        }
 }
 
 //------------------------------------------------------------------------------
@@ -879,15 +741,10 @@ void AcitvateUpdateGPIO(updateinfo_t *p_stDHupdateINI)
 //
 void DeacitvateUpdateGPIO(updateinfo_t *p_stDHupdateINI)
 {
-        // Activate Update GPIO
         if(p_stDHupdateINI->iUpdateGpioActiveState == 1)
-        {
                 DHCOMUpdateLED_SetLow();
-        }
         else
-        {
                 DHCOMUpdateLED_SetHigh();
-        }
 }
 
 //------------------------------------------------------------------------------
@@ -903,8 +760,7 @@ void DeacitvateUpdateGPIO(updateinfo_t *p_stDHupdateINI)
 //
 void UpdateGPIOBlinkInterval(updateinfo_t *p_stDHupdateINI, int iNumber)
 {
-        for( ; iNumber > 0; iNumber--)
-        {
+        for( ; iNumber > 0; iNumber--) {
                 DHCOMUpdateDelayMs(250);
                 AcitvateUpdateGPIO(p_stDHupdateINI);
                 DHCOMUpdateDelayMs(250);
@@ -932,87 +788,73 @@ void UpdateGPIOBlinkInterval(updateinfo_t *p_stDHupdateINI, int iNumber)
 void ShowUpdateError(updateinfo_t *p_stDHupdateINI, char *p_cErrorStringPointer, enum UpdateErrorEnum eDHCOMUpdateError, int iUpdateViaDHupdateIniFile, char *p_cStorageDevice, char *p_cDevicePartitionNumber)
 {
         printf ("%s", p_cErrorStringPointer);
-        if(iUpdateViaDHupdateIniFile == 1)
-        {
+        if(iUpdateViaDHupdateIniFile == 1) {
                 // Check if DHupdate.ini contains [display] section
-                if(p_stDHupdateINI->iDisplayInfo == 1)
-                {
-                        if(ShowBitmap(p_stDHupdateINI, ERROR_BITMAP, p_cStorageDevice, p_cDevicePartitionNumber) != 0)
-                        {
+                if(p_stDHupdateINI->iDisplayInfo == 1) {
+                        if(ShowBitmap(p_stDHupdateINI, ERROR_BITMAP, p_cStorageDevice, p_cDevicePartitionNumber) != 0) {
                                 printf ("\n--> Update INFO: Error bitmap %s not found\n", p_stDHupdateINI->p_cFileNameErrorBmp);
                         }
                 }
                 // Don't Start OS after Update error
                 ////CLEAR_DH_GD_FLAG(BOOT_AFTER_UPDATE_FLAG);
 
-                if(p_stDHupdateINI->iLedInfo == 1)
-                {
-                        switch(eDHCOMUpdateError)
-                        {
+                if(p_stDHupdateINI->iLedInfo == 1) {
+                        switch(eDHCOMUpdateError) {
                         case DHUPDATE_INI_ERROR:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 1);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case FILE_NOT_FOUND_ERROR:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 2);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case FLASH_ERROR:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 3);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case IMAGE_TYPE_ERROR:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 4);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case INVALID_FILE_ERROR:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 5);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case IMAGE_SIZE_ERROR:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 6);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case CANT_LOAD_UPDATE_KERNEL:
                                 DeacitvateUpdateGPIO(p_stDHupdateINI);
-                                while(1)
-                                {
+                                while(1) {
                                         UpdateGPIOBlinkInterval(p_stDHupdateINI, 7);
                                         DHCOMUpdateDelayMs(1750);
                                 }
                                 break;
                         case NO_ERROR:
-                                /* This case is to suppress warnings */
+                                /* This case is to suppress compiler warnings */
                                 break;
                         }
-
                 }
         }
-
         return;
 }
 
@@ -1083,9 +925,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
         int i = 0;
         uchar buf[128];
 
-        void *p_vUpdateArgument;
         char *cmd, *file_name, *file_type;
-        char *p_cCompareString[1]               = {"##DHCOMupdate##\0"};
         char *p_cLoadDHUpdateIniToSDRAM[5]      = {"load","","",cDHUpdateIniSDRAMAddress,"DHupdate.ini"};
         char *p_cLoadUBootBinToSDRAM[5]         = {"load","","",cENVSDRAMBufferAddress,"u-boot.imx"};
         char *p_cLoadEepromBinToSDRAM[5]        = {"load","","",cENVSDRAMBufferAddress,"eeprom.bin"};
@@ -1118,66 +958,37 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
         // Update without DHupdate.ini file --> Command line update
         if(argc > 1) {
                 cmd = argv[1];
-
-                // StartUp automatic update with DHupdate.ini file
+                iUpdateViaDHupdateIniFile = 0;
                 if (strcmp(cmd, "auto") == 0) {
-                        iUpdateViaDHupdateIniFile = 1;    // Set indicator for automatic update
-                } 
-                // Identify the specified command line update
-                else if (strcmp(cmd, "bootloader") == 0) {
-                        cUpdateArgument = BOOTLOADER_FLASH_UPDATE;
-                        p_vUpdateArgument = &cUpdateArgument;
-                        iUpdateViaDHupdateIniFile = 0;
-                        // Load File name from command line
-                        if(argc > 2) {
-                                file_name = argv[2];
-                                p_cLoadUBootBinToSDRAM[4] = file_name;
+                        // automatic update with DHupdate.init
+                        iUpdateViaDHupdateIniFile = 1;    
+                } else {
+                        // manual command line update
+                        if (strcmp(cmd, "bootloader") == 0) {
+                                cUpdateArgument = BOOTLOADER_FLASH_UPDATE;
+                                if(argc > 2)
+                                        p_cLoadUBootBinToSDRAM[4] = argv[2];
+                        } else if (strcmp(cmd, "eeprom") == 0) {
+                                cUpdateArgument = EEPROM_SETTINGS_UPDATE;
+                                if(argc > 2)
+                                        p_cLoadEepromBinToSDRAM[4] = argv[2];
+                        } else if (strcmp(cmd, "script") == 0) {
+                                cUpdateArgument = EXECUTE_BOOTLOADER_SCRIPT;
+                                if(argc > 2)
+                                        p_cLoadScriptBinToSDRAM[4] = argv[2];
+                        } else if (strcmp(cmd, "wince") == 0) {
+                                cUpdateArgument = WINCE_IMAGE_UPDATE;
+                                if(argc > 2)
+                                        p_cLoadNkNB0ToSDRAM[4] = argv[2];
+                        } else if (strcmp(cmd, "eboot") == 0) {
+                                cUpdateArgument = EBOOT_IMAGE_UPDATE;
+                                if(argc > 2)
+                                        p_cLoadEbootNB0ToSDRAM[4] = argv[2];
+                        } else { // Wrong argument
+                                iUpdateViaDHupdateIniFile = 2;
+                                printf ("\n--> Update ERROR: Unkown command: %s\n", cmd);
+                                goto usage;
                         }
-                }
-                else if (strcmp(cmd, "eeprom") == 0) {
-                        cUpdateArgument = EEPROM_SETTINGS_UPDATE;
-                        p_vUpdateArgument = &cUpdateArgument;
-                        iUpdateViaDHupdateIniFile = 0;
-                        // Load File name from command line
-                        if(argc > 2) {
-                                file_name = argv[2];
-                                p_cLoadEepromBinToSDRAM[4] = file_name;
-                        }
-                }
-                else if (strcmp(cmd, "script") == 0) {
-                        cUpdateArgument = EXECUTE_BOOTLOADER_SCRIPT;
-                        p_vUpdateArgument = &cUpdateArgument;
-                        iUpdateViaDHupdateIniFile = 0;
-                        // Load File name from command line
-                        if(argc > 2)  {
-                                file_name = argv[2];
-                                p_cLoadScriptBinToSDRAM[4] = file_name;
-                        }
-                }
-                else if (strcmp(cmd, "wince") == 0) {
-                        cUpdateArgument = WINCE_IMAGE_UPDATE;
-                        p_vUpdateArgument = &cUpdateArgument;
-                        iUpdateViaDHupdateIniFile = 0;
-                        // Load File name from command line
-                        if(argc > 2) {
-                                file_name = argv[2];
-                                p_cLoadNkNB0ToSDRAM[4] = file_name;
-                        }
-                }
-                else if (strcmp(cmd, "eboot") == 0) {
-                        cUpdateArgument = EBOOT_IMAGE_UPDATE;
-                        p_vUpdateArgument = &cUpdateArgument;
-                        iUpdateViaDHupdateIniFile = 0;
-                        // Load File name from command line
-                        if(argc > 2) {
-                                file_name = argv[2];
-                                p_cLoadEbootNB0ToSDRAM[4] = file_name;
-                        }
-                }      
-                else { // Wrong argument
-                        iUpdateViaDHupdateIniFile = 2;
-                        printf ("\n--> Update ERROR: Wrong command line update argument\n");
-                        goto usage;
                 }
         }
 
@@ -1192,49 +1003,41 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                 ////SESSION_DEPENDED_PRINTF_ENABLE()
 
                 // Check if DHupdate.ini was found on Storage Device
-                if((ret_value != 0))
-                {
+                if((ret_value != 0)) {
                         printf ("\n--> Update INFO: No DHupdate.ini file found on Storage Device\n");
                         return 1;
                 }
 
                 // Read DHupdate.ini file content
-                if(ReadDHupdateFile(p_stDHupdateINI, simple_strtoul (cDHUpdateIniSDRAMAddress, NULL, 16)))
-                {
+                if(ReadDHupdateFile(p_stDHupdateINI, simple_strtoul (cDHUpdateIniSDRAMAddress, NULL, 16))) {
                         printf("\n--> Update ERROR: Wrong DHupdate.ini file content \n");
                         return 1;
                 }
 
                 // Check if DHupdate.ini is a valid update file.
-                if(memcmp ( (char*)p_stDHupdateINI->p_cValidMarker, p_cCompareString[0], 15))
-                {
+                if(memcmp ( (char*)p_stDHupdateINI->p_cValidMarker, UPDATEINI_ID, 15)) {
                         printf ("\n--> Update ERROR: No valid DHupdate.ini file found on Storage Device\n");
                         // Don't Start OS after Update error
                         ////CLEAR_DH_GD_FLAG(BOOT_AFTER_UPDATE_FLAG);
                         return 1;
                 }
 
-                printf ("\n--> Update: DHupdate.ini (%d bytes) found on Storage Device\n", (int)simple_strtoul (getenv("filesize"), NULL, 16));
+                printf ("\n--> Update: found DHupdate.ini (%d bytes)\n", (int)simple_strtoul (getenv("filesize"), NULL, 16));
         }
 
         // *************************************************************************************************************************************************
         // Check if DHupdate.ini contains [display] section
         // If so, load progress bitmap.
-        if(p_stDHupdateINI->iDisplayInfo == 1)
-        {
-                for(i = 0; i < p_stDHupdateINI->iUpdateCounter; i++)
-                {
-                        if (strcmp(p_stDHupdateINI->stDHUpdateInfo[i].p_cUpdateType, "refresh") == 0)
-                        {
+        if(p_stDHupdateINI->iDisplayInfo == 1) {
+                for(i = 0; i < p_stDHupdateINI->iUpdateCounter; i++) {
+                        if (strcmp(p_stDHupdateINI->stDHUpdateInfo[i].p_cUpdateType, "refresh") == 0) {
                                 iRefreshStringFound = 1;
                                 break;
                         }
                 }
 
-                if(iRefreshStringFound == 0)
-                {
-                        if(ShowBitmap(p_stDHupdateINI, PROGRESS_BITMAP, p_cStorageDevice, p_cDevicePartitionNumber) != 0)
-                        {
+                if(iRefreshStringFound == 0) {
+                        if(ShowBitmap(p_stDHupdateINI, PROGRESS_BITMAP, p_cStorageDevice, p_cDevicePartitionNumber) != 0) {
                                 printf ("\n--> Update INFO: Progress bitmap %s not found", p_stDHupdateINI->p_cFileNameProgressBmp);
                         }
                 }
@@ -1243,65 +1046,48 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
         // *************************************************************************************************************************************************
         // Check if DHupdate.ini contains [led] section
         // If so, init. update led
-        if(p_stDHupdateINI->iLedInfo == 1)
-        {
-                if(DHCOMUpdateLED_Init(p_stDHupdateINI) != 0)
-                {
+        if(p_stDHupdateINI->iLedInfo == 1) {
+                if(DHCOMUpdateLED_Init(p_stDHupdateINI) != 0) {
                         printf ("\n--> Update INFO: Can't initialize update LED Pin %s", p_stDHupdateINI->p_cUpdateGpioName);
                         p_stDHupdateINI->iLedInfo = 0;
                 }
-                else
-                {
-                        // Activate Update GPIO
+                else {
                         AcitvateUpdateGPIO(p_stDHupdateINI);
                 }
         }
 
         // *************************************************************************************************************************************************
         // ==> Start UPDATE LOOP
-        do
-        {
+        do {
                 // Identify the next specified update in DHupdate.ini file
-                if(iUpdateViaDHupdateIniFile == 1)
-                {
+                if(iUpdateViaDHupdateIniFile == 1) {
                         // Don't enable printf after update, if DIS_PRINTF in settings.bin file is set.
                         ////SET_DH_GD_FLAG(UPDATE_ACTIVE_FLAG);
 
-                        if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "eeprom") == 0)
-                        {
+                        if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "eeprom") == 0) {
                                 cUpdateArgument = EEPROM_SETTINGS_UPDATE;
-                                p_vUpdateArgument = &cUpdateArgument;
 
                                 // Check if filename is specified in DHupdate.ini file
-                                if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL)
-                                {
+                                if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL) {
                                         p_cLoadEepromBinToSDRAM[4] = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
                                 }
                         }
-                        else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "script") == 0)
-                        {
+                        else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "script") == 0) {
                                 cUpdateArgument = EXECUTE_BOOTLOADER_SCRIPT;
-                                p_vUpdateArgument = &cUpdateArgument;
 
                                 // Check if filename is specified in DHupdate.ini file
-                                if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL)
-                                {
+                                if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL) {
                                         p_cLoadScriptBinToSDRAM[4] = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
                                 }
                         }
-                        else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "refresh") == 0)
-                        {
+                        else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "refresh") == 0) {
                                 cUpdateArgument = REFRESH_DH_SETTINGS;
-                                p_vUpdateArgument = &cUpdateArgument;
                         }
-                        else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "reset") == 0)
-                        {
+                        else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "reset") == 0) {
                                 cUpdateArgument = EXECUTE_RESET;
-                                p_vUpdateArgument = &cUpdateArgument;
                         }
                         else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "wince") == 0) {
                                 cUpdateArgument = WINCE_IMAGE_UPDATE;
-                                p_vUpdateArgument = &cUpdateArgument;
 
                                 // Check if filename is specified in DHupdate.ini file
                                 if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL) {
@@ -1328,7 +1114,6 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                         }
                         else if (strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "eboot") == 0) {
                                 cUpdateArgument = EBOOT_IMAGE_UPDATE;
-                                p_vUpdateArgument = &cUpdateArgument;
 
                                 // Check if filename is specified in DHupdate.ini file
                                 if(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename != NULL) {
@@ -1338,17 +1123,14 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                         else {
                                 iLoadUpdateKernel = 1;
                                 cUpdateArgument = LOAD_UPDATE_KERNEL_LATER;
-                                p_vUpdateArgument = &cUpdateArgument;
 
-                                if((strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "settings") == 0))
-                                {
+                                if((strcmp(p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cUpdateType, "settings") == 0)) {
                                         // Set DH settings Filename for refresh command
                                         p_cLoadSettingsBinToSDRAM[4] = p_stDHupdateINI->stDHUpdateInfo[iUpdateLoopCounter].p_cFilename;
                                 }
                         }
                 }
-                else
-                {
+                else {
                         // Run only one command line update
                         p_stDHupdateINI->iUpdateCounter = 1;
                 }
@@ -1361,8 +1143,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                 // Argument = '5' ==> Bootloader Script
                 // Argument = '6' ==> WEC7 Update
                 // Argument = '7' ==> eboot Update
-                switch (*(char*)p_vUpdateArgument)
-                {
+                switch (cUpdateArgument) {
                 case LOAD_UPDATE_KERNEL_LATER:
                         // Do nothing!!! Load update kernel later...
                         break;
@@ -1380,48 +1161,31 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                         ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadUBootBinToSDRAM);
                         ////SESSION_DEPENDED_PRINTF_ENABLE()
 
-                        if(ret_value == 0)
-                        {
-                                printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadUBootBinToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+                        if(ret_value == 0) {
+                                printf ("\n--> Update: Load %s to SDRAM (%d bytes)\n", (char*)p_cLoadUBootBinToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
 
                                 // Calculate necessary sectors in flash for the u-boot image file.
                                 ulFilesize = simple_strtoul (getenv("filesize"), NULL, 16);
                                 ulBlocks = (ulFilesize+ulBootloaderOffset) / ulFlashBlockSize + 0x1;
 
                                 // Check if the file fits into to the flash-partition
-                                if (check_imagesize (ulFilesize+ulBootloaderOffset, ulBootloaderFlashPartitionSize, BOOTLOADER_FLASH_UPDATE, cErrorString ))
-                                {
+                                if (check_imagesize (ulFilesize+ulBootloaderOffset, ulBootloaderFlashPartitionSize, BOOTLOADER_FLASH_UPDATE, cErrorString )) {
                                         // ERROR: file is to large for the specified partition
                                         ShowUpdateError(p_stDHupdateINI, cErrorString, IMAGE_SIZE_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                                         return 1;
                                 }
-
-                                printf ("\n--> Update: The new u-boot image File needs %lu Flash blocks\n", ulBlocks);
-                                printf ("    e = Erase Block\n");
-                                printf ("    w = Write to Block\n");
-                                printf ("    d = Done\n");
-                                printf ("    Write File to Flash:[");
-
-                                ret_value = update_flash_content (ulBootloaderOffset, ulSDRAMBufferAddress, ulBlocks, ulFlashBlockSize);
-
-                                if((ret_value & 0x3) == 1)
-                                {
-                                        sprintf (&cErrorString[0], "\n--> Update ERROR: Erase error on block 0x%08x\n", (unsigned int)(ulBootloaderOffset + (ret_value >> 2) * ulFlashBlockSize));
+                                
+                                ret_value = update_flash_content(ulBootloaderOffset, ulSDRAMBufferAddress, ulBlocks, ulFlashBlockSize);
+                                if (ret_value != 0) {
+                                        sprintf (&cErrorString[0], "\n--> Update ERROR: Failed flashing ... \n");
                                         ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                                         return 1;
                                 }
-                                else if((ret_value & 0x3) == 2)
-                                {
-                                        sprintf (&cErrorString[0], "\n--> Update ERROR: Write error on block 0x%08x\n", (unsigned int)(ulBootloaderOffset + (ret_value >> 2) * ulFlashBlockSize));
-                                        ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
-                                        return 1;
-                                }
-
+ 
                                 // Bootloader Flash Update done.
                                 printf ("\n--> Update: U-Boot Update done\n");
                         }
-                        else
-                        {
+                        else  {
                                 // Can't load u-boot image file from Storage Device to SDRAM.
                                 sprintf (&cErrorString[0], "\n--> Update ERROR: No %s file found on Storage Device\n", (char*)p_cLoadUBootBinToSDRAM[4]);
                                 ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FILE_NOT_FOUND_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
@@ -1438,9 +1202,8 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                         ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadEepromBinToSDRAM);
                         ////SESSION_DEPENDED_PRINTF_ENABLE()
 
-                        if(ret_value == 0)
-                        {
-                                printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadEepromBinToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+                        if(ret_value == 0) {
+                                printf ("\n--> Update: Load %s to SDRAM (%d bytes)\n", (char*)p_cLoadEepromBinToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
 
                                 // Get eeprom.bin filesize
                                 ulFilesize = simple_strtoul (getenv("filesize"), NULL, 16);
@@ -1471,8 +1234,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                 // Settings EEPROM Update done.
                                 printf ("\n--> Update: Settings Update done\n");
                         }
-                        else
-                        {
+                        else {
                                 // Can't load settings file from Storage Device to SDRAM.
                                 sprintf (&cErrorString[0], "\n--> Update ERROR: No %s file found on Storage Device\n", (char*)p_cLoadEepromBinToSDRAM[4]);
                                 ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FILE_NOT_FOUND_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
@@ -1487,21 +1249,18 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 
                         ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadSettingsBinToSDRAM);
 
-                        if(ret_value == 0)
-                        {
+                        if(ret_value == 0) {
                                 if(UpdateGlobalDataDHSettings(ulSDRAMBufferAddress) == 0)
                                 {
                                         generate_dh_settings_kernel_args();
                                 }
                         }
-                        else
-                        {
+                        else {
                                 // Can't load settings file from Storage Device to SDRAM.
                                 sprintf (&cErrorString[0], "\n--> Update ERROR: No %s file found on Storage Device\n", (char*)p_cLoadSettingsBinToSDRAM[4]);
                                 ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FILE_NOT_FOUND_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                                 return 1;
                         }
-
 
                         printf ("\n--> Update: DH settings refresh done\n");
                         break;
@@ -1513,16 +1272,14 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
 
                         ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadScriptBinToSDRAM);
 
-                        if(ret_value == 0)
-                        {
-                                printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadScriptBinToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+                        if(ret_value == 0) {
+                                printf ("\n--> Update: Load %s to SDRAM (%d bytes)\n", (char*)p_cLoadScriptBinToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
 
                                 printf ("\n\n----------------- Print Script Info: -----------------\n");
                                 do_source(NULL, 0, 2, p_cRunScript);
                                 printf ("\n----------------------------------------------------------\n");
                         }
-                        else
-                        {
+                        else {
                                 // Can't load script file from Storage Device to SDRAM.
                                 sprintf (&cErrorString[0], "\n--> Update ERROR: No %s file found on Storage Device\n", (char*)p_cLoadScriptBinToSDRAM[4]);
                                 ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FILE_NOT_FOUND_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
@@ -1536,9 +1293,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                 // ****************************** Reset Board ********************************************
                 // ***************************************************************************************
                 case EXECUTE_RESET:
-
-                        if(p_stDHupdateINI->iUpdateCounter != 1)
-                        {
+                        if(p_stDHupdateINI->iUpdateCounter != 1) {
                                 printf ("\n==> Update ERROR: Skipped reset!!!");
 
                                 // Can't do reset.
@@ -1546,10 +1301,8 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                 ShowUpdateError(p_stDHupdateINI, cErrorString, DHUPDATE_INI_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                                 return 1;
                         }
-                        if(iLoadUpdateKernel == 0)
-                        {
+                        if(iLoadUpdateKernel == 0) {
                                 printf ("\n==> Update: Reset Board");
-                                // do reset
                                 run_command("reset",0);
                         }
 
@@ -1573,7 +1326,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                 ////SESSION_DEPENDED_PRINTF_ENABLE()
 
                                 if(ret_value == 0) {
-                                        printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadNkNB0ToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+                                        printf ("\n--> Update: Load %s to SDRAM (%d bytes)\n", (char*)p_cLoadNkNB0ToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
 
                                         // Get nk.nb0 filesize
                                         ulFilesize = simple_strtoul (getenv("filesize"), NULL, 16);
@@ -1593,13 +1346,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                         saveenv();
                                         ENABLE_PRINTF()
 
-                                        printf ("\n--> Update: The new WinCE image File needs %lu Flash blocks\n", ulBlocks);
-                                        printf ("    e = Erase Block\n");
-                                        printf ("    w = Write to Block\n");
-                                        printf ("    d = Done\n");
-                                        printf ("    Write File to Flash:[");
-
-                                        ret_value = update_nand_flash_content (ulOSImageFlashAddress, ulSDRAMBufferAddress, ulBlocks, ulNANDFlashBlockSize, WEC_PARTITION_SIZE);
+                                        ret_value = update_nand_flash_content("WinCE", ulOSImageFlashAddress, ulSDRAMBufferAddress, ulBlocks, ulNANDFlashBlockSize, WEC_PARTITION_SIZE);
 
                                         if((ret_value & 0x3) == 1) {
                                                 sprintf (&cErrorString[0], "\n--> Update ERROR: NAND erase error on block 0x%08x\n", (unsigned int)(ulOSImageFlashAddress + (ret_value >> 2) * ulNANDFlashBlockSize));
@@ -1656,7 +1403,7 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                 ////SESSION_DEPENDED_PRINTF_ENABLE()
 
                                 if(ret_value == 0) {
-                                        printf ("\n--> Update: Load %s to SDRAM (%d bytes)", (char*)p_cLoadEbootNB0ToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
+                                        printf ("\n--> Update: Load %s to SDRAM (%d bytes)\n", (char*)p_cLoadEbootNB0ToSDRAM[4], (int)simple_strtoul (getenv("filesize"), NULL, 16));
 
                                         // Calculate necessary sectors in flash for the eboot image file.
                                         ulFilesize = simple_strtoul (getenv("filesize"), NULL, 16);
@@ -1675,21 +1422,9 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                                         saveenv();
                                         ENABLE_PRINTF()
 
-                                        printf ("\n--> Update: The new eboot image File needs %lu Flash blocks\n", ulBlocks);
-                                        printf ("    e = Erase Block\n");
-                                        printf ("    w = Write to Block\n");
-                                        printf ("    d = Done\n");
-                                        printf ("    Write File to Flash:[");
-
-                                        ret_value = update_flash_content (ulEbootOffset, ulSDRAMBufferAddress, ulBlocks, ulFlashBlockSize);
-
-                                        if((ret_value & 0x3) == 1) {
-                                                sprintf (&cErrorString[0], "\n--> Update ERROR: Erase error on block 0x%08x\n", (unsigned int)((ulEbootOffset/ulFlashBlockSize) + (ret_value >> 2) *  ulFlashBlockSize));
-                                                ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
-                                                return 1;
-                                        }
-                                        else if((ret_value & 0x3) == 2) {
-                                                sprintf (&cErrorString[0], "\n--> Update ERROR: Write error on block 0x%08x\n", (unsigned int)((ulEbootOffset/ulFlashBlockSize) + (ret_value >> 2) * ulFlashBlockSize));
+                                        ret_value = update_flash_content(ulEbootOffset, ulSDRAMBufferAddress, ulBlocks, ulFlashBlockSize);
+                                        if (ret_value != 0) {
+                                                sprintf (&cErrorString[0], "\n--> Update ERROR: Failed flashing ... \n");
                                                 ShowUpdateError(p_stDHupdateINI, &cErrorString[0], FLASH_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                                                 return 1;
                                         }
@@ -1713,22 +1448,19 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                 // *** No Update Event is defined for the Update Argument in the DHupdate.ini file ***
                 // ***************************************************************************************
                 default:
-                        if(iUpdateViaDHupdateIniFile == 1)
-                        {
-                                sprintf (&cErrorString[0], "\n--> Update ERROR: No Update Event defined for the Argument: %s\n", (char*)p_vUpdateArgument);
+                        if(iUpdateViaDHupdateIniFile == 1) {
+                                sprintf (&cErrorString[0], "\n--> Update ERROR: No Update Event defined for the Argument: %c\n", cUpdateArgument);
                                 ShowUpdateError(p_stDHupdateINI, &cErrorString[0], DHUPDATE_INI_ERROR, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                                 return 1;
                         }
-                        else
-                        {
+                        else {
                                 printf ("\n--> Update ERROR: No Update Event defined for this command line Argument\n");
                                 // Don't Start OS after Update error
                                 goto usage;
                         }
                 }
 
-                if(iUpdateViaDHupdateIniFile == 1)
-                {
+                if(iUpdateViaDHupdateIniFile == 1) {
                         // Start next update
                         iUpdateLoopCounter++;
                 }
@@ -1736,15 +1468,13 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
                 // Number of updates
                 p_stDHupdateINI->iUpdateCounter--;
 
-        } while(p_stDHupdateINI->iUpdateCounter > 0);
+        } while (p_stDHupdateINI->iUpdateCounter > 0);
         // ==> End UPDATE LOOP
         // *************************************************************************************************************************************************
 
         // ==> Start Update Kernel
-        if(iLoadUpdateKernel == 1)
-        {
-                if ((cmd = getenv ("load_update_kernel")) == NULL)
-                {
+        if(iLoadUpdateKernel == 1) {
+                if ((cmd = getenv ("load_update_kernel")) == NULL) {
                         sprintf (&cErrorString[0], "\n--> Update ERROR: \"load_update_kernel\" not defined\n");
                         ShowUpdateError(p_stDHupdateINI, &cErrorString[0], CANT_LOAD_UPDATE_KERNEL, iUpdateViaDHupdateIniFile, p_cStorageDevice, p_cDevicePartitionNumber);
                         return 1;
@@ -1767,24 +1497,20 @@ int DHCOMupdate (cmd_tbl_t *cmdtp, int argc, char * const argv[], updateinfo_t *
         }
 
         // Check if DHupdate.ini contains [display] section
-        if(p_stDHupdateINI->iDisplayInfo == 1)
-        {
-                if(ShowBitmap(p_stDHupdateINI, END_BITMAP, p_cStorageDevice, p_cDevicePartitionNumber) != 0)
-                {
+        if(p_stDHupdateINI->iDisplayInfo == 1) {
+                if(ShowBitmap(p_stDHupdateINI, END_BITMAP, p_cStorageDevice, p_cDevicePartitionNumber) != 0) {
                         printf ("\n--> Update INFO: End bitmap %s not found\n", p_stDHupdateINI->p_cFileNameOkBmp);
                 }
         }
         
         // Check if DHupdate.ini contains [led] section
         // If so, init. update led
-        if(p_stDHupdateINI->iLedInfo == 1)
-        {
+        if(p_stDHupdateINI->iLedInfo == 1) {
                 // Activate Update GPIO
                 DeacitvateUpdateGPIO(p_stDHupdateINI);
         }
 
         printf ("\n");
-
         return 0;
 
 usage:
@@ -1804,14 +1530,7 @@ usage:
 //
 int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-        // char *p_cUSBInit[2]                     = {"usb","start"};
-        char *p_cMMCDevSDCard[3]                = {"mmc","dev","0"};
-        char *p_cMMCDevMicroSDCard[3]           = {"mmc","dev","1"};
-        char *p_cMMCReScan[2]                   = {"mmc","rescan"};
-        char *p_cCompareString[1]               = {"##DHCOMupdate##\0"};
         char *cmd;
-
-        char *p_cUSBInit[2]                     = {"usb","start"};
 
         char cSDCardStorageDevice[4]            = {"mmc\0"};
         char cMicroSDCardDevicePartitionNumber[4]    = {"1:1\0"};
@@ -1832,16 +1551,13 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
         stDHupdateINI.iDisplayInfo = 0;
         stDHupdateINI.iLedInfo = 0;
 
-        if(argc > 1)
-        {
+        if(argc > 1) {
                 // Check if this is a StartUp automatically Update
                 // In this case, check which storage devices are enabled in the settings block
                 cmd = argv[1];
 
                 if (strcmp(cmd, "auto") == 0)
-                {
                         iStartUpAutomaticallyUpdate = 1;
-                }
         }
 
         // Check for available storage devices depending on the flags of the settings block
@@ -1849,47 +1565,30 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
         {
                 stDHupdateINI.p_cValidMarker = &cDHupdateIniInvalid[0];
 
-                switch(iUpdateDeviceCounter)
-                {
+                switch(iUpdateDeviceCounter) {
                 // MicroSD Card Slot
                 case 1:
-                        if(((iStartUpAutomaticallyUpdate == 1) && (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_MICROSD_SLOT)) || (iStartUpAutomaticallyUpdate == 0))
-                        {
+                        if(((iStartUpAutomaticallyUpdate == 1) && (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_MICROSD_SLOT)) || (iStartUpAutomaticallyUpdate == 0)) {
                                 // Call update function, if MicroSD init returns success
-                                do_mmcops(NULL, 0, 3, p_cMMCDevMicroSDCard);
-                                ret_value = do_mmcops(NULL, 0, 2, p_cMMCReScan);
-
-                                if(ret_value == 0)
-                                {
+                                run_command("mmc dev 1", 0);
+                                ret_value = run_command("mmc rescan", 0);
+                                if(ret_value == 0) {
                                         ret_value = DHCOMupdate (cmdtp, argc, argv, &stDHupdateINI, &cSDCardStorageDevice[0], &cMicroSDCardDevicePartitionNumber[0]);
-
-                                        // Update success
-                                        if(ret_value == 0)
-                                        {
-                                                // Don't try to start update from another storage device
-                                                iUpdateSuccess = 1;
+                                        if(ret_value == 0) { // Update success
+                                                iUpdateSuccess = 1; // Don't try to start update from another storage device
                                         }
-                                        // Wrong update argument. Usage was called...
-                                        else if(ret_value == 2)
-                                        {
+                                        else if(ret_value == 2) { // Wrong update argument. Usage was called...
                                                 return 1;
                                         }
-
                                         // DHupdate.ini File found on storage device, but Update fails with error
-                                        else if(!(memcmp ( (char*)stDHupdateINI.p_cValidMarker, p_cCompareString[0], 15)))
-                                        {
-                                                // Don't try to start update from another storage device
-                                                iDHupdateIniFound = 1;
+                                        else if(!(memcmp ( (char*)stDHupdateINI.p_cValidMarker, UPDATEINI_ID, 15))) {
+                                                iDHupdateIniFound = 1; // Don't try to start update from another storage device
                                         }
-
-                                        // Command line Update with error --> New line is neccessary
-                                        else
-                                        {
+                                        else { // Command line Update with error --> New line is neccessary
                                                 printf ("\n");
                                         }
                                 }
-                                else
-                                {
+                                else {
                                         printf ("\n--> Update INFO: No MicroSD - Card detected!\n");
                                 }
                         }
@@ -1898,43 +1597,28 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
                 // SD/MMC Card Slot
                 case 2:
                         if(((iStartUpAutomaticallyUpdate == 1) && (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_SD_MMC_SLOT)) ||
-                                        (iStartUpAutomaticallyUpdate == 0))
-                        {
+                                        (iStartUpAutomaticallyUpdate == 0)) {
                                 // Call update function, if MMC/SD init returns success
-                                do_mmcops(NULL, 0, 3, p_cMMCDevSDCard);
-                                ret_value = do_mmcops(NULL, 0, 2, p_cMMCReScan);
+                                run_command("mmc dev 0", 0);
+                                ret_value = run_command("mmc rescan", 0);
 
-                                if(ret_value == 0)
-                                {
+                                if(ret_value == 0) {
                                         ret_value = DHCOMupdate (cmdtp, argc, argv, &stDHupdateINI, &cSDCardStorageDevice[0], &cSDCardDevicePartitionNumber[0]);
-
-                                        // Update success
-                                        if(ret_value == 0)
-                                        {
-                                                // Don't try to start update from another storage device
-                                                iUpdateSuccess = 1;
+                                        if(ret_value == 0) { // Update success
+                                                iUpdateSuccess = 1; // Don't try to start update from another storage device
                                         }
-                                        // Wrong update argument. Usage was called...
-                                        else if(ret_value == 2)
-                                        {
+                                        else if(ret_value == 2) { // Wrong update argument. Usage was called...
                                                 return 1;
                                         }
-
                                         // DHupdate.ini File found on storage device, but Update fails with error
-                                        else if(!(memcmp ( (char*)stDHupdateINI.p_cValidMarker, p_cCompareString[0], 15)))
-                                        {
-                                                // Don't try to start update from another storage device
-                                                iDHupdateIniFound = 1;
+                                        else if(!(memcmp ( (char*)stDHupdateINI.p_cValidMarker, UPDATEINI_ID, 15))) {
+                                                iDHupdateIniFound = 1; // Don't try to start update from another storage device
                                         }
-
-                                        // Command line Update with error --> New line is neccessary
-                                        else
-                                        {
+                                        else { // Command line Update with error --> New line is neccessary
                                                 printf ("\n");
                                         }
                                 }
-                                else
-                                {
+                                else {
                                         printf ("\n--> Update INFO: No MMC/SD - Card detected!\n");
                                 }
                         }
@@ -1943,45 +1627,30 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
                 // USB Host 1 Port
                 case 3:
                         if(((iStartUpAutomaticallyUpdate == 1) && (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_HOST_1_PORT)) ||
-                                        (iStartUpAutomaticallyUpdate == 0))
-                        {
-
+                                        (iStartUpAutomaticallyUpdate == 0)) {
                                 // Initialize USB Stick
                                 printf ("--> Update: Try to initialize USB Stick on Host Port:");
-                                ret_value = do_usb(NULL, 0, 2, p_cUSBInit);
+                                ret_value = run_command("usb start", 0);
 
                                 // Call update function, if USB init returns success
                                 if(ret_value == 0)
                                 {
                                         ret_value = DHCOMupdate (cmdtp, argc, argv, &stDHupdateINI, &cUSBStorageDevice[0], &cUSBHost1DevicePartitionNumber[0]);
-
-                                        // Update success
-                                        if(ret_value == 0)
-                                        {
-                                                // Don't try to start update from another storage device
-                                                iUpdateSuccess = 1;
+                                        if(ret_value == 0) { // Update success
+                                                iUpdateSuccess = 1; // Don't try to start update from another storage device
                                         }
-                                        // Wrong update argument. Usage was called...
-                                        else if(ret_value == 2)
-                                        {
+                                        else if(ret_value == 2) { // Wrong update argument. Usage was called...
                                                 return 1;
                                         }
-
                                         // DHupdate.ini File found on storage device, but Update fails with error
-                                        else if(!(memcmp ( (char*)stDHupdateINI.p_cValidMarker, p_cCompareString[0], 15)))
-                                        {
-                                                // Don't try to start update from another storage device
-                                                iDHupdateIniFound = 1;
+                                        else if(!(memcmp ( (char*)stDHupdateINI.p_cValidMarker, UPDATEINI_ID, 15))) {
+                                                iDHupdateIniFound = 1; // Don't try to start update from another storage device
                                         }
-
-                                        // Command line Update with error --> New line is neccessary
-                                        else
-                                        {
+                                        else { // Command line Update with error --> New line is neccessary
                                                 printf ("\n");
                                         }
                                 }
-                                else
-                                {
+                                else {
                                         printf ("\n--> Update INFO: No USB Stick detected!\n");
                                 }
                         }
@@ -1990,20 +1659,14 @@ int do_DHCOMupdate(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
                 // USB OTG Port
                 case 4:
                         if(((iStartUpAutomaticallyUpdate == 1) && (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_OTG_PORT)) ||
-                                        (iStartUpAutomaticallyUpdate == 0))
-                        {
+                                        (iStartUpAutomaticallyUpdate == 0)) {
                                 printf ("\n--> Update INFO: USB OTG update is not supported yet!\n");
                         }
                         break;
                 }
         }
-
-        // Check if DHupdate.ini contains [led] section
-
         return 0;
 }
-
-/* ====================================================================== */
 
 U_BOOT_CMD(
         update,      3,      0,      do_DHCOMupdate,

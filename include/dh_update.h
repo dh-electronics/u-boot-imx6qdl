@@ -38,8 +38,6 @@
 #ifndef DH_UPDATE_H
 #define DH_UPDATE_H
 
-#define DHUPDATEINI_MAX_UPDATES 10
-
 /*
  * Flash Update defines (Command do_update())
  */
@@ -54,6 +52,13 @@
 #define EXECUTE_BOOTLOADER_SCRIPT                   '5'
 #define WINCE_IMAGE_UPDATE                          '6'
 #define EBOOT_IMAGE_UPDATE                          '7'
+
+#define UPDATEINI_ID         "##DHCOMupdate##"
+#define UPDATEINI_DISPLAY    "display"
+#define UPDATEINI_LED        "led"
+#define UPDATEINI_UPDATE     "update"
+#define UPDATEINI_END        "end"
+#define DHUPDATEINI_MAX_UPDATES 10
 
 typedef struct {
     char *p_cUpdateType;

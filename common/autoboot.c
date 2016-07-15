@@ -125,6 +125,10 @@ static int passwd_abort(uint64_t etime)
 	if (delaykey[1].str == NULL)
 		delaykey[1].str = CONFIG_AUTOBOOT_STOP_STR;
 #  endif
+        /* when value == none, disable stopkey */
+        if (strcmp(delaykey[1].str, "none") == 0) {
+		delaykey[1].str = NULL;
+	}
 
 	for (i = 0; i < sizeof(delaykey) / sizeof(delaykey[0]); i++) {
 		delaykey[i].len = delaykey[i].str == NULL ?
@@ -156,19 +160,20 @@ static int passwd_abort(uint64_t etime)
 		}
 
 		for (i = 0; i < sizeof(delaykey) / sizeof(delaykey[0]); i++) {
-			if (delaykey[i].len > 0 &&
-			    presskey_len >= delaykey[i].len &&
-				memcmp(presskey + presskey_len -
+			if (delaykey[i].len > 0) {
+			        if (presskey_len >= delaykey[i].len &&
+				        memcmp(presskey + presskey_len -
 					delaykey[i].len, delaykey[i].str,
 					delaykey[i].len) == 0) {
 					debug_bootkeys("got %skey\n",
 						delaykey[i].retry ? "delay" :
 						"stop");
 
-				/* don't retry auto boot */
-				if (!delaykey[i].retry)
-					bootretry_dont_retry();
-				abort = 1;
+				        /* don't retry auto boot */
+				        if (!delaykey[i].retry)
+					        bootretry_dont_retry();
+				        abort = 1;
+                                }
 			}
 		}
 	} while (!abort && get_ticks() <= etime);

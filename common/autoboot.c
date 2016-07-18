@@ -127,7 +127,7 @@ static int passwd_abort(uint64_t etime)
 #  endif
         /* when value == none, disable stopkey */
         if (strcmp(delaykey[1].str, "none") == 0) {
-		delaykey[1].str = NULL;
+		return 0; /* do not abort */
 	}
 
 	for (i = 0; i < sizeof(delaykey) / sizeof(delaykey[0]); i++) {

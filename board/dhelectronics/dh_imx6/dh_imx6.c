@@ -975,25 +975,17 @@ static void setup_usb(void)
 
 int board_usb_phy_mode(int port)
 {
-	if (port == 1)
-		return USB_INIT_HOST;
-	else
-		return usb_phy_mode(port);
+	return USB_INIT_HOST;
 }
 
+/*
+ * Use only Port 1 == DHCOM USB Host 1
+ */
 int board_ehci_hcd_init(int port)
 {
-        u32 *usbnc_usb_ctrl;
-
-        if (port > 1)
-                return -EINVAL;
-
-        usbnc_usb_ctrl = (u32 *)(USB_BASE_ADDR + USB_OTHERREGS_OFFSET +
-                                 port * 4);
-
-        setbits_le32(usbnc_usb_ctrl, UCTRL_PWR_POL);
-
-        return 0;
+        if (port == 1)
+                return 0;
+        return -ENODEV;
 }
 
 int board_ehci_power(int port, int on)

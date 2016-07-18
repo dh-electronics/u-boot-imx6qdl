@@ -326,6 +326,7 @@ int __weak board_ehci_power(int port, int on)
 int ehci_hcd_init(int index, enum usb_init_type init,
 		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
+	int ret;
 	enum usb_init_type type;
 #if defined(CONFIG_MX6)
 	u32 controller_spacing = 0x200;
@@ -341,7 +342,9 @@ int ehci_hcd_init(int index, enum usb_init_type init,
 	mdelay(1);
 
 	/* Do board specific initialization */
-	board_ehci_hcd_init(index);
+	ret = board_ehci_hcd_init(index);
+	if (ret)
+		return ret;
 
 	usb_power_config(index);
 	usb_oc_config(index);

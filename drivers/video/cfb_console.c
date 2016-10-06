@@ -2133,6 +2133,23 @@ int video_init(void)
 {
 	unsigned char color8;
 
+#ifdef CONFIG_DHCOM
+	int iDI_TYPE = 0;
+
+        /* get pointer to global settings block */
+        volatile settingsinfo_t *gsb = &gd->dh_board_settings;
+
+        /* check for headless system */
+        if (gsb->wValidationID == 0x3256) { // "V2" = 0x3256
+		iDI_TYPE = ((gsb->wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13);
+		/* skip lcd_init on headless systems */
+		if (iDI_TYPE == 1) {
+			debug("[cfb_console] skip video_init on headless systems\n");
+			return 0;
+		}
+       }
+#endif
+
 	pGD = video_hw_init();
 	if (pGD == NULL)
 		return -1;

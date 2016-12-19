@@ -1209,6 +1209,12 @@ void load_dh_settings_file(void)
 			printf ("Info: Can't load DH settings file from eeprom\n");		
 		}
 	}
+
+	// SETTINGS_LCD_BL_ON_FLAG must be set for function set_dhcom_backlight_gpio(),
+	// but isn't defined in the old DHCOM settings (0x4844)
+	// ==> We have to set a default value (ON)
+	if(gd->dh_board_settings.wValidationID == 0x4844)
+		gd->dh_board_settings.wLCDConfigFlags |= SETTINGS_LCD_BL_ON_FLAG;
 }
 
 void generate_dh_settings_kernel_args(void)

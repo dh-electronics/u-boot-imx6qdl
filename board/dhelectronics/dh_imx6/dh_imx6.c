@@ -803,10 +803,10 @@ int board_video_skip(void)
 			clksonframe = ((gd->dh_board_settings.wXResolution + gd->dh_board_settings.wHFrontPorch + gd->dh_board_settings.wHPulseWidth + gd->dh_board_settings.wHBackPorch) *
 								 (gd->dh_board_settings.wYResolution + gd->dh_board_settings.wVFrontPorch + gd->dh_board_settings.wVPulseWidth + gd->dh_board_settings.wVBackPorch));
 			displays[0].mode.refresh = ((gd->dh_board_settings.wPixelClock * 1000) / (clksonframe));
-			if((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG)) {
+			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG)) {
 				displays[0].mode.sync |= FB_SYNC_VERT_HIGH_ACT;
 			}
-			if((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG)) {
+			if(!(gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG)) {
 				displays[0].mode.sync |= FB_SYNC_HOR_HIGH_ACT;
 			}			
 			if((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG)) {

@@ -1,0 +1,77 @@
+#! /bin/sh
+# uboot_make_emmc_archive
+# Author:  CN
+# Version: 1.0
+
+
+################################################################################
+# C O N F I G U R A T I O N
+################################################################################
+WORKING_FOLDER="build_archive"
+BUILT_RESULT_FILE="u-boot.imx"
+VERSION_FILE="include/configs/dh_mx6_common.h"
+################################################################################
+
+
+# FUNCTION: build_model()
+# parameter #1: Model
+# parameter #2: File name for model
+build_model() {
+	if [ $# -ne 2 ]; then
+		echo "Error: build_model() got wrong number of parameter" 
+		exit 1
+	fi
+
+	echo
+	echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+	echo "Building for model \"$1\" ==> \"$2\""
+	echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+	./uboot_make "$1"
+	cp -v "$BUILT_RESULT_FILE" "$WORKING_FOLDER/$2"
+}
+
+# FUNCTION: make_archive()
+# parameter #1: Working folder
+# parameter #2: Archive file name
+make_archive() {
+	if [ $# -ne 2 ]; then
+		echo "Error: make_archive() got wrong number of parameter" 
+		exit 2
+	fi
+
+	echo
+	echo "Add following files to archive \"$2\""
+	cd "$1"
+	tar cfJv "$2" *.imx
+	cd ..
+	echo
+}
+
+
+# Get version
+uboot_version=$(grep UBOOT_DH_VERSION "$VERSION_FILE" | cut -d "\"" -f 2 | sed "s/\./-/g")
+uboot_version="v$uboot_version"
+
+# Deleting working folder if necessary
+if [ -d "$WORKING_FOLDER" ]; then
+	echo "Cleaning up..."
+	rm -Rv "$WORKING_FOLDER"
+fi
+
+# Creating working folder
+mkdir -v "$WORKING_FOLDER"
+
+# Build each model
+build_model "s" "${uboot_version}_u-boot_imx6s-dhcom3_512M.imx"
+build_model "s_1g" "${uboot_version}_u-boot_imx6s-dhcom3_1G.imx"
+build_model "dl" "${uboot_version}_u-boot_imx6dl-dhcom2_1G.imx"
+build_model "dl" "${uboot_version}_u-boot_imx6dl-dhcom3_1G.imx"
+build_model "q_d" "${uboot_version}_u-boot_imx6q-dhcom3_1G.imx"
+
+# Cleaning up
+echo "Cleaning up built files..."
+make distclean
+rm -fv u-boot*
+
+# Build archive
+make_archive "$WORKING_FOLDER" "${uboot_version}_u-boot-imx6qdl.tar.xz"

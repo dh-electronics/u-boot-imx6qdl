@@ -566,6 +566,18 @@ static int board_get_splashimage(void)
 	char *buffer;
 	char *splashimage;
         char *command;
+        int iDI_TYPE = 0;
+
+        /* get pointer to global settings block */
+        volatile settingsinfo_t *gsb = &gd->dh_board_settings;
+
+        /* check for headless system */
+        if (gsb->wValidationID == 0x3256) { // "V2" = 0x3256
+		iDI_TYPE = ((gsb->wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13);
+		/* skip loading splash on headless systems */
+		if (iDI_TYPE == 1)
+			return 0;
+        }
 
 	/* get pointer to buffer and point to splashimage in ram from env */
 	buffer = (char*)simple_strtoul(getenv("loadaddr"), NULL, 16);
@@ -770,7 +782,7 @@ int board_video_skip(void)
 		if (!panel) {
 		        iDHSettingsInitialization = 1;
 			panel = displays[0].mode.name;
-			printf("No panel detected: default to %s\n", panel);
+
 			i = 0;
 			
         		iDI_TYPE = ((gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13);
@@ -778,6 +790,8 @@ int board_video_skip(void)
 
 			switch (iDI_TYPE)
 			{
+				case 1: // Headless
+					return 0; // nothing to do
 				case 2: // RGB
 					displays[0].enable = enable_rgb;
 					break;
@@ -845,8 +859,12 @@ int board_video_skip(void)
 			printf("LCD %s cannot be configured: %d\n",
 			       displays[i].mode.name, ret);
 	} else {
-		printf("unsupported panel %s\n", panel);
-		return -EINVAL;
+		if (strcmp(panel, "no_panel") == 0) {
+			return 0;
+		} else {
+			printf("unsupported panel %s\n", panel);
+			return -EINVAL;
+		}
 	}
 
 	return 0;

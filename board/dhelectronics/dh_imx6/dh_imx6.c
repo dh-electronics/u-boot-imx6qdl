@@ -1346,7 +1346,7 @@ void generate_dh_settings_kernel_args(void)
 		case 5: // Dual LVDS
 			sprintf((char *)buf, "parallel_display.disable");	
 			setenv("parallel_display", (char *)buf);		
-			sprintf((char *)buf, "imx_ldb.timings0=ID:%d,PCLK:%d,XRES:%d,YRES:%d,HFP:%d,HBP:%d,HSYNC:%d,VFP:%d,VBP:%d,VSYNC:%d,HINV:%d,VINV:%d,DEINV:%d,PCLKPOL:%d",
+			sprintf((char *)buf, "imx_ldb.timings0=DUAL:1,ID:%d,PCLK:%d,XRES:%d,YRES:%d,HFP:%d,HBP:%d,HSYNC:%d,VFP:%d,VBP:%d,VSYNC:%d,HINV:%d,VINV:%d,DEINV:%d,PCLKPOL:%d",
 		                 gd->dh_board_settings.cDisplayID, (gd->dh_board_settings.wPixelClock*1000), gd->dh_board_settings.wXResolution,
 		                 gd->dh_board_settings.wYResolution, gd->dh_board_settings.wHFrontPorch, gd->dh_board_settings.wHBackPorch, 
 		                 gd->dh_board_settings.wHPulseWidth, gd->dh_board_settings.wVFrontPorch, gd->dh_board_settings.wVBackPorch, 

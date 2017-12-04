@@ -2,7 +2,7 @@ echo ============================
 echo -- run u-boot i.mx6 build 
 echo ----------------------------
 
-if [ "$#" == "0" ]; then
+if [ "$#" = "0" ]; then
     echo "Error: No arguments provided"
     echo "q_d = Quad or Dual core"
     echo "dl = DualLite core"

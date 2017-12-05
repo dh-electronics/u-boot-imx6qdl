@@ -566,6 +566,7 @@ static int board_get_splashimage(void)
 	char *buffer;
 	char *splashimage;
         char *command;
+	unsigned long splash_size;
         int iDI_TYPE = 0;
 
         /* get pointer to global settings block */
@@ -606,7 +607,16 @@ static int board_get_splashimage(void)
 	// Copy bitmap to splashscreen addresss
 	// Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2, 
 	//       since the use of a four-byte alignment will cause alignment exceptions at run-time.
-	memcpy(splashimage, buffer, SPLASH_MAX_SIZE);
+
+	/* get filesize of bmp from env */
+	splash_size = simple_strtoul(getenv("filesize"), NULL, 16);
+
+	if ( splash_size > SPLASH_MAX_SIZE ) {
+		printf ("Warning: invalid \"filesize\" of splashimage!\n");
+		splash_size = SPLASH_MAX_SIZE;
+	}
+
+	memcpy(splashimage, buffer, splash_size);
 
 	gd->flags &= (~GD_FLG_DISABLE_CONSOLE);
 	return 0;

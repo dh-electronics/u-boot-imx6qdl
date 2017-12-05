@@ -250,7 +250,6 @@
  * Flash Update defines (Command do_update())
  */
 #define UPDATE_DHUPDATE_INI_SDRAM_ADDRESS           "10000000"  /* should equal os base */
-#define UPDATE_BMP_SDRAM_ADDRESS                    "10100002"
 
 #ifdef DH_IMX6_NAND_VERSION
 	#define MTDIDS_DEFAULT		"nand0=gpmi-nand"

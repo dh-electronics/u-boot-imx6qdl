@@ -651,64 +651,54 @@ int ReadDHupdateFile(updateinfo_t *p_stDHupdateINI, unsigned long ulDHUpdateIniS
 //
 int ShowBitmap(updateinfo_t *p_stDHupdateINI, enum BitmapTypeEnum eBitmapType, char *p_cStorageDevice, char *p_cDevicePartitionNumber)
 {
-        char cBmpSDRAMAddress[9]        = {UPDATE_BMP_SDRAM_ADDRESS};
-        char cENVSDRAMBufferAddress[9];
-        char cSplashSize[9];
-        CopyAddressStringToCharArray(&cENVSDRAMBufferAddress[0], getenv ("loadaddr"));
-        char *p_cLoadBmpToSDRAM[5]      = {"load","","",cENVSDRAMBufferAddress,""};
-        char *p_cMemCp[4]                       = {"cp.b", cENVSDRAMBufferAddress, cBmpSDRAMAddress, ""};
-        char *p_cDisplayBmpOnScreen[5]  = {"bmp","display",cBmpSDRAMAddress,"32767","32767"};
-        int ret_value                   = 0;
-        char const *panel = getenv("panel");
+	int ret;
+	char *buffer;
+	char *filename;
+	char command[128];
+	char const *panel;
 
-        if(panel) {
-                if (strcmp(panel, "no_panel")) {
-                        // Set current device (mmc or usb)
-                        p_cLoadBmpToSDRAM[1] = p_cStorageDevice;
+	panel = getenv("panel");
+	if ( panel != NULL && strcmp(panel, "no_panel") == 0) {
+		return 0; // panel is disabled
+	}
 
-                        // Set current device number and partition
-                        p_cLoadBmpToSDRAM[2] = p_cDevicePartitionNumber;
+	/* get buffer in ddr3 */
+	buffer = (char*)simple_strtoul(getenv("loadaddr"), NULL, 16);
 
-                        switch(eBitmapType) {
-                        case PROGRESS_BITMAP:
-                                // Set "progress bmp" filename from DHupdate.ini file
-                                p_cLoadBmpToSDRAM[4] = p_stDHupdateINI->p_cFileNameProgressBmp;
-                                break;
-                        case END_BITMAP:
-                                // Set "done bmp" filename from DHupdate.ini file
-                                p_cLoadBmpToSDRAM[4] = p_stDHupdateINI->p_cFileNameOkBmp;
-                                break;
-                        case ERROR_BITMAP:
-                                // Set "error bmp" filename from DHupdate.ini file
-                                p_cLoadBmpToSDRAM[4] = p_stDHupdateINI->p_cFileNameErrorBmp;
-                                break;
-                        default:
-                                return 1;
-                                break;
-                        }
-
-                        // Load bitmap from MMC/SD - Card to SDRAM.
-                        DISABLE_PRINTF()
-                        ret_value = do_load_wrapper(NULL, 0, 5, p_cLoadBmpToSDRAM);
-                        ENABLE_PRINTF()
-
-                        // Copy bitmap to splashscreen addresss
-                        // Note: It is necessary to align bitmaps on a memory address with an offset of an odd multiple of +2,
-                        //       since the use of a four-byte alignment will cause alignment exceptions at run-time.
-                        sprintf (&cSplashSize[0], "%08x", (unsigned int)(SPLASH_MAX_SIZE));
-                        p_cMemCp[3] = &cSplashSize[0];
-                        if(do_mem_cp(NULL, 0, 4, p_cMemCp)) {
-                                return 1;
-                        }
-
-                        if(ret_value == 0) {
-                                do_bmp(NULL, 0, 5, p_cDisplayBmpOnScreen);
-                                return 0;
-                        }
-                        return 1;
-                }
+	switch(eBitmapType) {
+	case PROGRESS_BITMAP: // Set "progress bmp"
+		filename = p_stDHupdateINI->p_cFileNameProgressBmp;
+		break;
+	case END_BITMAP:      // Set "done bmp"
+		filename = p_stDHupdateINI->p_cFileNameOkBmp;
+		break;
+	case ERROR_BITMAP:    // Set "error bmp"
+		filename = p_stDHupdateINI->p_cFileNameErrorBmp;
+		break;
+	default:
+		return 1;
         }
-        return 0; // Don't display anything, panel is disabled
+
+	ret = snprintf(command, sizeof(command), "load %s %s %08x %s ", p_cStorageDevice, p_cDevicePartitionNumber, (unsigned int)buffer, filename);
+	if (ret < 0 || ret > sizeof(command)) {
+		printf ("ERROR: load command!\n");
+		return 1;
+	}
+	
+	ret = run_command(command, 0); // load bitmap to ddr3
+	if (ret != 0) {
+		printf ("ERROR: loading bitmap!\n");
+		return 1;
+	}
+
+	ret = snprintf(command, sizeof(command), "bmp display %08x 32767 32767", (unsigned int)buffer);
+	if (ret < 0 || ret > sizeof(command)) {
+		printf ("ERROR: display command!\n");
+		return 1;
+	}
+
+	run_command(command, 0); // display bitmap
+        return 0;
 }
 
 //------------------------------------------------------------------------------

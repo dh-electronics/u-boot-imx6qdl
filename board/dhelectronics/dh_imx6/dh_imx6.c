@@ -612,7 +612,7 @@ static int board_get_splashimage(void)
 	splash_size = simple_strtoul(getenv("filesize"), NULL, 16);
 
 	if ( splash_size > SPLASH_MAX_SIZE ) {
-		printf ("Warning: invalid \"filesize\" of splashimage!\n");
+		printf ("Warning: Crop spashimage because \"filesize\" exceeds maximum (%d bytes)!\n", SPLASH_MAX_SIZE);
 		splash_size = SPLASH_MAX_SIZE;
 	}
 

@@ -1,0 +1,30 @@
+echo ============================
+echo -- run u-boot i.mx6 build 
+echo ----------------------------
+
+echo -- setup toolchain 
+
+# Linaro
+CROSS_COMPILE="/opt/gcc-linaro-6.3.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-"
+export CROSS_COMPILE
+
+echo ----------------------------
+echo -- make distclean
+make distclean
+
+echo ----------------------------
+echo -- delete old u-boot* files
+rm -fv u-boot*
+
+echo ----------------------------
+
+make dh_imx6_defconfig  
+
+
+echo -- make u-boot imx6 
+make -j5 all > u-boot.txt
+echo make messages: u-boot.txt
+
+echo ----------------------------
+echo -- make u-boot imx6 done 
+echo ============================

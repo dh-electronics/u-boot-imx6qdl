@@ -89,7 +89,9 @@ u32 spl_boot_device(void)
 	/* MMC/eMMC: 8.5.3 */
 	case IMX6_BMODE_MMC:
 	case IMX6_BMODE_EMMC:
-		return BOOT_DEVICE_MMC1;
+		/* DHCOM i.MX6: eMMC is connected to USDHC4 */
+		return BOOT_DEVICE_MMC3;
+		// return BOOT_DEVICE_MMC1; 
 	/* NAND Flash: 8.5.2, Table 8-10 */
 	case IMX6_BMODE_NAND_MIN ... IMX6_BMODE_NAND_MAX:
 		return BOOT_DEVICE_NAND;

@@ -25,8 +25,10 @@
 
 /* SPL */
 #include "imx6_spl.h"			/* common IMX6 SPL configuration */
+#if defined(CONFIG_SPL_SPI_SUPPORT)
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x11400
 #define CONFIG_SPL_SPI_LOAD
+#endif
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.imx"
 
 /* Miscellaneous configurable options */
@@ -196,6 +198,15 @@
 #define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
 #define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
+#endif
+
+#if defined(CONFIG_ENV_IS_IN_MMC)
+#define CONFIG_SYS_MMC_ENV_DEV		2  /*USDHC4*/
+#define CONFIG_ENV_OFFSET		(1024 * 1024)
+#define CONFIG_ENV_SECT_SIZE		(64 * 1024)
+#define CONFIG_ENV_OFFSET_REDUND	\
+	(CONFIG_ENV_OFFSET + CONFIG_ENV_SECT_SIZE)
+#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
 #endif
 
 #endif	/* __DH_IMX6_CONFIG_H */

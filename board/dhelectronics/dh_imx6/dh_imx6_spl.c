@@ -211,6 +211,18 @@ static void setup_iomux_boardid(void)
 	SETUP_IOMUX_PADS(hwcode_pads);
 }
 
+/* DDR Code */
+static iomux_v3_cfg_t const ddrcode_pads[] = {
+	IOMUX_PADS(PAD_EIM_A16__GPIO2_IO22	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+	IOMUX_PADS(PAD_EIM_A17__GPIO2_IO21	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+};
+
+static void setup_iomux_ddrcode(void)
+{
+	/* ddr code pins */
+	SETUP_IOMUX_PADS(ddrcode_pads);
+}
+
 /* GPIO */
 static iomux_v3_cfg_t const gpio_pads[] = {
 	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
@@ -439,6 +451,7 @@ void board_init_f(ulong dummy)
 	timer_init();
 
 	setup_iomux_boardid();
+	setup_iomux_ddrcode();
 	setup_iomux_gpio();
 	setup_iomux_enet();
 	setup_iomux_sd();

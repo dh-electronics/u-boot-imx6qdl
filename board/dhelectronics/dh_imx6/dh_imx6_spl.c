@@ -157,7 +157,7 @@ static const struct mx6_mmdc_calibration dhcom_mmdc_calib = {
 static const struct mx6_ddr3_cfg dhcom_mem_ddr = {
 	.mem_speed	= 1600,
 	.density	= 2,
-	.width		= 64,
+	.width		= 16,
 	.banks		= 8,
 	.rowaddr	= 14,
 	.coladdr	= 10,
@@ -167,10 +167,30 @@ static const struct mx6_ddr3_cfg dhcom_mem_ddr = {
 	.trasmin	= 3750,
 };
 
-static const struct mx6_ddr_sysinfo dhcom_ddr_info = {
+/* DDR 64bit 1GB */
+static const struct mx6_ddr_sysinfo dhcom_ddr_1gb_64bit = {
 	/* width of data bus:0=16,1=32,2=64 */
 	.dsize		= 2,
-	.cs_density	= 16,
+	.cs_density	= 32,
+	.ncs		= 1,	/* single chip select */
+	.cs1_mirror	= 1,
+	.rtt_wr		= 1,	/* DDR3_RTT_60_OHM, RTT_Wr = RZQ/4 */
+	.rtt_nom	= 1,	/* DDR3_RTT_60_OHM, RTT_Nom = RZQ/4 */
+	.walat		= 1,	/* Write additional latency */
+	.ralat		= 5,	/* Read additional latency */
+	.mif3_mode	= 3,	/* Command prediction working mode */
+	.bi_on		= 1,	/* Bank interleaving enabled */
+	.sde_to_rst	= 0x10,	/* 14 cycles, 200us (JEDEC default) */
+	.rst_to_cke	= 0x23,	/* 33 cycles, 500us (JEDEC default) */
+	.refsel		= 1,	/* Refresh cycles at 32KHz */
+	.refr		= 3,	/* 4 refresh commands per refresh cycle */
+};
+
+/* DDR 32bit 512MB */
+static const struct mx6_ddr_sysinfo dhcom_ddr_512mb_32bit = {
+	/* width of data bus:0=16,1=32,2=64 */
+	.dsize		= 1,
+	.cs_density	= 32,
 	.ncs		= 1,	/* single chip select */
 	.cs1_mirror	= 1,
 	.rtt_wr		= 1,	/* DDR3_RTT_60_OHM, RTT_Wr = RZQ/4 */
@@ -221,6 +241,21 @@ static void setup_iomux_ddrcode(void)
 {
 	/* ddr code pins */
 	SETUP_IOMUX_PADS(ddrcode_pads);
+}
+
+#define DDR3_CODE_BIT_0   IMX_GPIO_NR(2, 22)
+#define DDR3_CODE_BIT_1   IMX_GPIO_NR(2, 21)
+
+int get_ddr3_size(void)
+{
+	int ddr3_size = 0;
+
+	gpio_direction_input(DDR3_CODE_BIT_0);
+	gpio_direction_input(DDR3_CODE_BIT_1);
+
+	// 256MB = 00b; 512MB = 01b; 1GB = 10b; 2GB = 11b
+	ddr3_size = ((gpio_get_value(DDR3_CODE_BIT_1) << 1) | gpio_get_value(DDR3_CODE_BIT_0));
+	return 256 << ddr3_size;
 }
 
 /* GPIO */
@@ -439,6 +474,24 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
+static void spl_dram_init(void)
+{
+	printf("ddr3 size = %d MB\n", get_ddr3_size());
+
+	if (is_mx6dq()) {
+		mx6dq_dram_iocfg(64, &dhcom6dq_ddr_ioregs, &dhcom6dq_grp_ioregs);
+		mx6_dram_cfg(&dhcom_ddr_1gb_64bit, &dhcom_mmdc_calib, &dhcom_mem_ddr);
+	} else if (is_cpu_type(MXC_CPU_MX6DL)) {
+		mx6sdl_dram_iocfg(64, &dhcom6sdl_ddr_ioregs, &dhcom6sdl_grp_ioregs);
+		mx6_dram_cfg(&dhcom_ddr_1gb_64bit, &dhcom_mmdc_calib, &dhcom_mem_ddr);
+	} else if (is_cpu_type(MXC_CPU_MX6SOLO)) {
+		mx6sdl_dram_iocfg(32, &dhcom6sdl_ddr_ioregs, &dhcom6sdl_grp_ioregs);
+		mx6_dram_cfg(&dhcom_ddr_512mb_32bit, &dhcom_mmdc_calib, &dhcom_mem_ddr);
+	}
+
+	udelay(100);
+}
+
 void board_init_f(ulong dummy)
 {
 	/* setup AIPS and disable watchdog */
@@ -462,14 +515,8 @@ void board_init_f(ulong dummy)
 	/* UART clocks enabled and gd valid - init serial console */
 	preloader_console_init();
 
-	/* Start the DDR DRAM */
-	if (is_mx6dq())
-		mx6dq_dram_iocfg(dhcom_mem_ddr.width, &dhcom6dq_ddr_ioregs,
-				 &dhcom6dq_grp_ioregs);
-	else
-		mx6sdl_dram_iocfg(dhcom_mem_ddr.width, &dhcom6sdl_ddr_ioregs,
-				  &dhcom6sdl_grp_ioregs);
-	mx6_dram_cfg(&dhcom_ddr_info, &dhcom_mmdc_calib, &dhcom_mem_ddr);
+	/* DDR initialization */
+	spl_dram_init();
 
 	/* Clear the BSS. */
 	memset(__bss_start, 0, __bss_end - __bss_start);

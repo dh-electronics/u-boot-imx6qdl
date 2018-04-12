@@ -337,6 +337,12 @@ config CMD_FITUPD
 	  Implements the 'fitupd' command, which allows to automatically
 	  store software updates present on a TFTP server in NOR Flash
 
+config CMD_DHCOM_UPDATE
+	bool "dhcom update command"
+	help
+	  Implements the 'update' command, which allows to automatically
+	  store software updates to flash memory
+
 config CMD_THOR_DOWNLOAD
 	bool "thor - TIZEN 'thor' download"
 	help

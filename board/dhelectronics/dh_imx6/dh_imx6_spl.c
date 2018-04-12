@@ -361,6 +361,16 @@ static void setup_iomux_gpio(void)
 	SETUP_IOMUX_PADS(gpio_pads);
 }
 
+/* PWM (init in gpio mode) */
+static iomux_v3_cfg_t const pwm_pads[] = {
+	IOMUX_PADS(PAD_SD1_DAT3__GPIO1_IO21	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+};
+
+static void setup_iomux_pwm(void)
+{
+	SETUP_IOMUX_PADS(pwm_pads);
+}
+
 /* Ethernet */
 static iomux_v3_cfg_t const enet_pads[] = {
 	IOMUX_PADS(PAD_ENET_MDIO__ENET_MDIO	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
@@ -542,6 +552,7 @@ void board_init_f(ulong dummy)
 	setup_iomux_boardid();
 	setup_iomux_ddrcode();
 	setup_iomux_gpio();
+	setup_iomux_pwm();
 	setup_iomux_enet();
 	setup_iomux_sd();
 	setup_iomux_spi();

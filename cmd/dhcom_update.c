@@ -67,9 +67,6 @@
 #include <linux/ctype.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
-#ifdef CONFIG_DHCOM_SETTINGS
-#include <dh_settings.h>
-#endif
 #ifdef DH_IMX6_NAND_VERSION
 #  include <nand.h>
 #endif
@@ -131,7 +128,7 @@ typedef struct {
     char *filename;		// image filename
     char *src_dev;		// storage device
     char *src_part;		// storage partition
-    unsigned long loadaddr;	// ram load address
+    ulong loadaddr;	// ram load address
 #ifdef DH_IMX6_NAND_VERSION
     nand_info_t *nand;		// reference to current nand device
 #endif
@@ -140,7 +137,7 @@ typedef struct {
 unsigned int led_gpio = UINT_MAX;
 
 // Extern defined functions
-#ifdef CONFIG_DHCOM_SETTINGS
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
 extern void generate_dh_settings_kernel_args(void);
 #endif
 
@@ -216,11 +213,11 @@ void led_blink(bool active_high, int blinking)
 //                  1 = Flash erase error (the error block number is specified from bit 3 to bit 31)
 //                  2 = Flash write error (the error block number is specified from bit 3 to bit 31)
 //
-int write_spiflash(unsigned long write_offset, unsigned long loadaddr, unsigned long erase_blocks, unsigned long erase_size)
+int write_spiflash(ulong write_offset, ulong loadaddr, ulong erase_blocks, ulong erase_size)
 {
         int ret = 0;
-	unsigned long erase_offset;
-	unsigned long update_size;
+	ulong erase_offset;
+	ulong update_size;
 	char cmd[128];
        
         printf ("--> Update: Erase/Write new image into flash ... \n");
@@ -259,13 +256,13 @@ int write_spiflash(unsigned long write_offset, unsigned long loadaddr, unsigned 
 //                  2 = Flash write error (the error block number is specified from bit 3 to bit 31)
 //
 #ifdef DH_IMX6_NAND_VERSION
-int write_nandflash(char* itemtext, unsigned long ulFlashAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBlocks, unsigned long ulFlashBlockSize, loff_t maxsize)
+int write_nandflash(char* itemtext, ulong ulFlashAddress, ulong ulSDRAMBufferAddress, ulong ulBlocks, ulong ulFlashBlockSize, loff_t maxsize)
 {
     nand_info_t *nand;
     nand_erase_options_t opts;
     ulong ulBlockOffset = ulFlashAddress;
     size_t write_size = 0;
-    unsigned long i,j;
+    ulong i,j;
     int ret = 0;
 
     printf ("\n--> Update: The new %s image File needs %lu Flash blocks\n", itemtext, ulBlocks);
@@ -344,7 +341,7 @@ int write_nandflash(char* itemtext, unsigned long ulFlashAddress, unsigned long 
 //                  1 = EEPROM write error
 //
 #ifdef DISPLAY_ADAPTER_EEPROM_ADDR
-int write_eeprom(unsigned long ulEepromRegisterAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBytes)
+int write_eeprom(ulong ulEepromRegisterAddress, ulong ulSDRAMBufferAddress, ulong ulBytes)
 {
         unsigned int i,j;
         int ret;
@@ -394,13 +391,13 @@ int write_eeprom(unsigned long ulEepromRegisterAddress, unsigned long ulSDRAMBuf
         return 0;
 }
 #else
-int write_eeprom(unsigned long ulEepromRegisterAddress, unsigned long ulSDRAMBufferAddress, unsigned long ulBytes)
+int write_eeprom(ulong ulEepromRegisterAddress, ulong ulSDRAMBufferAddress, ulong ulBytes)
 {
 	return 0;
 }
 #endif
 
-#ifdef CONFIG_DHCOM_SETTINGS
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
 //------------------------------------------------------------------------------
 //
 //  Function:  UpdateGlobalDataDHSettings
@@ -492,7 +489,7 @@ int UpdateGlobalDataDHSettings (ulong addr)
 }
 #endif
 
-int check_imagesize(context_t *context, unsigned long filesize, unsigned long partsize)
+int check_imagesize(context_t *context, ulong filesize, ulong partsize)
 {
         if (filesize > partsize) {
                 printf("\n==> Update ERROR:");
@@ -543,7 +540,7 @@ int load_file(context_t *context)
 //  Return value:   0 = No error
 //                  1 = error
 //
-int parse_DHupdateINI(updateini_t *DHupdateINI, unsigned long loadaddr, int filesize)
+int parse_DHupdateINI(updateini_t *DHupdateINI, ulong loadaddr, int filesize)
 {
         void *buf;        // Pointer to DHupdate.ini file in RAM
         int refIndex;     // Act. position in DHupdate.ini file
@@ -804,12 +801,12 @@ void handle_error(context_t *context, updateini_t *DHupdateINI, ERR_STATE code)
 int update_bootloader(context_t *context, updateini_t *DHupdateINI)
 {
 	int ret;
-	unsigned long uboot_offset = CONFIG_SYS_SPI_SPL_OFFS;
-        unsigned long uboot_partsize = CONFIG_ENV_OFFSET;
+	ulong uboot_offset = CONFIG_SYS_SPI_SPL_OFFS;
+        ulong uboot_partsize = CONFIG_ENV_OFFSET;
 
-	unsigned long blocksize = CONFIG_ENV_SECT_SIZE;
-        unsigned long filesize;
-        unsigned long ulBlocks;
+	ulong blocksize = CONFIG_ENV_SECT_SIZE;
+        ulong filesize;
+        ulong ulBlocks;
 
         printf("\n==> Update bootloader\n");
 
@@ -844,7 +841,7 @@ int update_bootloader(context_t *context, updateini_t *DHupdateINI)
 int update_eeprom_settings(context_t *context, updateini_t *DHupdateINI)
 {
 	int ret;
-	unsigned long filesize;
+	ulong filesize;
 
 	printf ("\n==> Update display adapter eeprom\n");
 
@@ -896,10 +893,10 @@ int refresh_settings(context_t *context, updateini_t *DHupdateINI)
 	}
 
         if (UpdateGlobalDataDHSettings(context->loadaddr) == 0) {
-#ifdef CONFIG_DHCOM_SETTINGS
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
                 generate_dh_settings_kernel_args();
 #else
-	#warning refresh only available with CONFIG_DHCOM_SETTINGS
+	#warning refresh only available with CONFIG_CMD_DHCOM_SETTINGS
 #endif
         }
 
@@ -942,11 +939,11 @@ int update_wince(context_t *context, updateini_t *DHupdateINI, char OSFileType)
         return -ENOSYS;
 #else 
 	int ret;
-        unsigned long filesize;
-        unsigned long ulBlocks;
+        ulong filesize;
+        ulong ulBlocks;
 
 	// determine NAND block size
-        unsigned long ulNANDFlashBlockSize = context->nand->erasesize; 
+        ulong ulNANDFlashBlockSize = context->nand->erasesize; 
 
 	char cImageFileSize[9] = {"12345677\0"};
 
@@ -1010,10 +1007,10 @@ int update_wince(context_t *context, updateini_t *DHupdateINI, char OSFileType)
 int update_eboot(context_t *context, updateini_t *DHupdateINI)
 {
 	int ret;
-        unsigned long eboot_offset;
-	unsigned long blocksize = CONFIG_ENV_SECT_SIZE;
-        unsigned long filesize;
-        unsigned long ulBlocks;
+        ulong eboot_offset;
+	ulong blocksize = CONFIG_ENV_SECT_SIZE;
+        ulong filesize;
+        ulong ulBlocks;
 
 	eboot_offset = simple_strtoul(env_get ("eboot_flash_offset"), NULL, 16);
 
@@ -1359,7 +1356,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
         }
 
         // MicroSD Card Slot
-#ifdef CONFIG_DHCOM_SETTINGS
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
         if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_MICROSD_SLOT) || !update_auto) {
 #else
 	if (true) {
@@ -1385,7 +1382,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
       	}
 
         // SD/MMC Card Slot
-#ifdef CONFIG_DHCOM_SETTINGS
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
         if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_SD_MMC_SLOT) || !update_auto) {
 #else
 	if (true) {
@@ -1411,7 +1408,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
         }
 
 	// USB Host 1 Port
-#ifdef CONFIG_DHCOM_SETTINGS
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
         if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_HOST_1_PORT) || !update_auto) {
 #else
 	if (true) {
@@ -1437,8 +1434,8 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
         }
 
 	// USB OTG Port
-#ifdef CONFIG_DHCOM_SETTINGS
-        if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_OTG_PORT) || !update_auto)
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
+        if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_OTG_PORT) || !update_auto) {
 #else
 	if (true) {
 #endif

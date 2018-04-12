@@ -83,6 +83,9 @@
 #define DHCOM_GPIO_V	IMX_GPIO_NR(5, 18)
 #define DHCOM_GPIO_W	IMX_GPIO_NR(5, 19)
 
+/* GPIO for backlight pwm (init in gpio mode) */
+#define PWM_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
+
 /* I2C Configs */
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC

@@ -55,6 +55,7 @@ obj-$(CONFIG_CMD_FDC) += fdc.o
 obj-$(CONFIG_CMD_FDT) += fdt.o
 obj-$(CONFIG_CMD_FITUPD) += fitupd.o
 obj-$(CONFIG_CMD_DHCOM_UPDATE) += dhcom_update.o
+obj-$(CONFIG_CMD_DHCOM_SETTINGS) += dhcom_settings.o
 obj-$(CONFIG_CMD_FLASH) += flash.o
 obj-$(CONFIG_CMD_FPGA) += fpga.o
 obj-$(CONFIG_CMD_FPGAD) += fpgad.o

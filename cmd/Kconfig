@@ -343,6 +343,13 @@ config CMD_DHCOM_UPDATE
 	  Implements the 'update' command, which allows to automatically
 	  store software updates to flash memory
 
+config CMD_DHCOM_SETTINGS
+	bool "dhcom settings command"
+	depends on CMD_DHCOM_UPDATE
+	help
+	  Implements the 'settings' command, which loads the dhcom settings file
+	  and handles the board setup specified in the settings file
+
 config CMD_THOR_DOWNLOAD
 	bool "thor - TIZEN 'thor' download"
 	help

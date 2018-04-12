@@ -375,7 +375,7 @@ static const struct boot_mode board_boot_modes[] = {
 #define HW_CODE_BIT_1	IMX_GPIO_NR(6, 6)
 #define HW_CODE_BIT_2	IMX_GPIO_NR(2, 16)
 
-static int board_get_hwcode(void)
+int board_get_hwcode(void)
 {
 	int hw_code;
 

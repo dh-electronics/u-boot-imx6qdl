@@ -49,6 +49,10 @@ typedef volatile unsigned char	vu_char;
 
 typedef void (interrupt_handler_t)(void *);
 
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
+#include <dhcom_settings.h>
+#endif
+
 #include <asm/u-boot.h> /* boot information for Linux kernel */
 #include <asm/global_data.h>	/* global data used for startup functions */
 

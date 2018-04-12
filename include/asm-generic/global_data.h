@@ -122,6 +122,9 @@ typedef struct global_data {
 	struct list_head log_head;	/* List of struct log_device */
 	int log_fmt;			/* Mask containing log format info */
 #endif
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
+	settingsinfo_t  dh_board_settings;  /* DHCOM settings block */	
+#endif
 } gd_t;
 #endif
 

@@ -71,8 +71,6 @@
 #  include <nand.h>
 #endif
 
-DECLARE_GLOBAL_DATA_PTR;
-
 #define WINCE_IMG_NB0	'1'
 #define WINCE_IMG_GZ	'2'
 
@@ -138,7 +136,12 @@ unsigned int led_gpio = UINT_MAX;
 
 // Extern defined functions
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
-extern void generate_dh_settings_kernel_args(void);
+extern void settings_gen_kernel_args(void);
+extern int  settings_bin_to_struct(ulong addr, bool is_DA_eeprom);
+extern bool settings_get_microSD(void);
+extern bool settings_get_extSD(void);
+extern bool settings_get_usbhost1(void);
+extern bool settings_get_usbotg(void);
 #endif
 
 int led_init(updateini_t *DHupdateINI)
@@ -392,98 +395,6 @@ int write_eeprom(ulong ulEepromRegisterAddress, ulong ulSDRAMBufferAddress, ulon
 }
 #else
 int write_eeprom(ulong ulEepromRegisterAddress, ulong ulSDRAMBufferAddress, ulong ulBytes)
-{
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_CMD_DHCOM_SETTINGS
-//------------------------------------------------------------------------------
-//
-//  Function:  UpdateGlobalDataDHSettings
-//
-//  Update the DHsettings global data structure from ram
-//
-//  Commit values:  - addr = Address of the new settings file.
-//
-//  Return value:   0 = No error
-//                  1 = error
-//
-int UpdateGlobalDataDHSettings (ulong addr)
-{
-        /* copy settingsblock from dram into the dh_board_settings structure */
-        gd->dh_board_settings.wValidationID = ((readl(addr) & 0xFFFF0000) >> 16);
-
-        // settings.bin file Valid Mask should be "DH" = 0x4844
-        if(gd->dh_board_settings.wValidationID == 0x4844) {
-                gd->dh_board_settings.cLength = (readl(addr) & 0xFF);
-                gd->dh_board_settings.cDisplayID = ((readl(addr) & 0xFF00) >> 8);
-
-                gd->dh_board_settings.wYResolution = (readl(addr+4) & 0xFFFF);
-                gd->dh_board_settings.wXResolution = ((readl(addr+4) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wLCDConfigFlags = (readl(addr+8) & 0xFFFF);
-                gd->dh_board_settings.wPixelClock = ((readl(addr+8) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wVPulseWidth = (readl(addr+12) & 0xFFFF);
-                gd->dh_board_settings.wHPulseWidth = ((readl(addr+12) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wHBackPorch = (readl(addr+16) & 0xFFFF);
-                gd->dh_board_settings.wHFrontPorch = ((readl(addr+16) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wVBackPorch = (readl(addr+20) & 0xFFFF);
-                gd->dh_board_settings.wVFrontPorch = ((readl(addr+20) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.cACBiasTrans = (readl(addr+24) & 0xFF);
-                gd->dh_board_settings.cACBiasFreq = ((readl(addr+24) & 0xFF00) >> 8);
-                gd->dh_board_settings.cDatalines = ((readl(addr+24) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wGPIODir = (readl(addr+32));
-                gd->dh_board_settings.wGPIOState = (readl(addr+36));
-
-                gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
-
-                return 0;
-        }
-
-        // settings.bin file Valid Mask should be "V2" = 0x3256
-        else if(gd->dh_board_settings.wValidationID == 0x3256) {
-                gd->dh_board_settings.cLength = (readl(addr) & 0xFF);
-                gd->dh_board_settings.cDisplayID = ((readl(addr) & 0xFF00) >> 8);
-
-                gd->dh_board_settings.wYResolution = (readl(addr+4) & 0xFFFF);
-                gd->dh_board_settings.wXResolution = ((readl(addr+4) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wPixelClock = (readl(addr+8));
-
-                gd->dh_board_settings.wVPulseWidth = (readl(addr+12) & 0xFFFF);
-                gd->dh_board_settings.wHPulseWidth = ((readl(addr+12) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wHBackPorch = (readl(addr+16) & 0xFFFF);
-                gd->dh_board_settings.wHFrontPorch = ((readl(addr+16) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wVBackPorch = (readl(addr+20) & 0xFFFF);
-                gd->dh_board_settings.wVFrontPorch = ((readl(addr+20) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.cACBiasTrans = (readl(addr+24) & 0xFF);
-                gd->dh_board_settings.cACBiasFreq = ((readl(addr+24) & 0xFF00) >> 8);
-                gd->dh_board_settings.cDatalines = ((readl(addr+24) & 0xFFFF0000) >> 16);
-
-                gd->dh_board_settings.wLCDConfigFlags = (readl(addr+28));
-
-                gd->dh_board_settings.wGPIODir = (readl(addr+32));
-                gd->dh_board_settings.wGPIOState = (readl(addr+36));
-
-                gd->dh_board_settings.wHWConfigFlags = (readl(addr+40) & 0xFFFF);
-
-                return 0;
-        }
-
-        gd->dh_board_settings.wValidationID = 0;
-        return 1; /* no valid settings.bin available */
-}
-#else
-int UpdateGlobalDataDHSettings (ulong addr)
 {
 	return 0;
 }
@@ -892,13 +803,14 @@ int refresh_settings(context_t *context, updateini_t *DHupdateINI)
 		return ret;
 	}
 
-        if (UpdateGlobalDataDHSettings(context->loadaddr) == 0) {
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
-                generate_dh_settings_kernel_args();
+	ret =  settings_bin_to_struct(context->loadaddr, false);
+        if (ret == 0)
+                settings_gen_kernel_args();
 #else
 	#warning refresh only available with CONFIG_CMD_DHCOM_SETTINGS
 #endif
-        }
+
 
         printf("\n--> Update: refresh settings done\n");
 	return 0;
@@ -1357,7 +1269,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 
         // MicroSD Card Slot
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
-        if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_MICROSD_SLOT) || !update_auto) {
+        if (settings_get_microSD() || !update_auto) {
 #else
 	if (true) {
 #endif
@@ -1383,7 +1295,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 
         // SD/MMC Card Slot
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
-        if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_SD_MMC_SLOT) || !update_auto) {
+        if (settings_get_extSD() || !update_auto) {
 #else
 	if (true) {
 #endif
@@ -1409,7 +1321,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 
 	// USB Host 1 Port
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
-        if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_HOST_1_PORT) || !update_auto) {
+        if (settings_get_usbhost1() || !update_auto) {
 #else
 	if (true) {
 #endif
@@ -1435,7 +1347,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 
 	// USB OTG Port
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
-        if ((gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_OTG_PORT) || !update_auto) {
+        if (settings_get_usbotg() || !update_auto) {
 #else
 	if (true) {
 #endif

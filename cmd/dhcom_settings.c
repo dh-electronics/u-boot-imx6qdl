@@ -45,9 +45,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/*
- * Default settings
- */
+static bool settings_loaded = false; // to remember if settings cmd was executed
+
+/* Default settings */
 #define DEFAULT_BLOCK_LENGTH       0x2C        /* 44 Byte */
 #define DEFAULT_DISPLAY_ID         0xFF
 #define DEFAULT_Y_RESOLUTION       0xFFFF
@@ -73,9 +73,13 @@ DECLARE_GLOBAL_DATA_PTR;
 // TODO: This is i.MX6 specific -> DIRTY
 extern int board_get_hwcode(void);
 
+
+
 /* copy settingsblock from buffer into the dh_board_settings structure */
-int settings_bin_to_struct(volatile settingsinfo_t  *ptr, ulong addr)
+int settings_bin_to_struct(ulong addr, bool is_DA_eeprom)
 {
+	volatile settingsinfo_t  *ptr = &gd->dh_board_settings;
+
 	u16 valid_ID = ((readl(addr) & 0xFFFF0000) >> 16);
 
 	// settings.bin file Valid Mask should be "DH" = 0x4844
@@ -96,10 +100,11 @@ int settings_bin_to_struct(volatile settingsinfo_t  *ptr, ulong addr)
 		ptr->cACBiasTrans = (readl(addr+24) & 0xFF);
 		ptr->cACBiasFreq  = ((readl(addr+24) & 0xFF00) >> 8);
 		ptr->cDatalines   = ((readl(addr+24) & 0xFFFF0000) >> 16);
-		ptr->wGPIODir     = (readl(addr+32));
-		ptr->wGPIOState   = (readl(addr+36));
-
-		ptr->wHWConfigFlags = (readl(addr+40) & 0xFFFF);
+		if (!is_DA_eeprom) { // skip in DA eeprom case
+			ptr->wGPIODir     = (readl(addr+32));
+			ptr->wGPIOState   = (readl(addr+36));
+			ptr->wHWConfigFlags = (readl(addr+40) & 0xFFFF);
+		}
 	}
 	// settings.bin file Valid Mask should be "V2" = 0x3256
 	else if(valid_ID == 0x3256) {
@@ -119,9 +124,11 @@ int settings_bin_to_struct(volatile settingsinfo_t  *ptr, ulong addr)
 		ptr->cACBiasFreq  = ((readl(addr+24) & 0xFF00) >> 8);
 		ptr->cDatalines   = ((readl(addr+24) & 0xFFFF0000) >> 16);
 		ptr->wLCDConfigFlags = (readl(addr+28));
-		ptr->wGPIODir     = (readl(addr+32));
-		ptr->wGPIOState   = (readl(addr+36));
-		ptr->wHWConfigFlags = (readl(addr+40) & 0xFFFF);
+		if (!is_DA_eeprom) { // skip in DA eeprom case
+			ptr->wGPIODir     = (readl(addr+32));
+			ptr->wGPIOState   = (readl(addr+36));
+			ptr->wHWConfigFlags = (readl(addr+40) & 0xFFFF);
+		}
 	} else {
 		return -EFAULT;
 	}
@@ -129,7 +136,7 @@ int settings_bin_to_struct(volatile settingsinfo_t  *ptr, ulong addr)
 	return 0;
 }
 
-int load_dh_settings_file(void)
+int settings_load(void)
 {
 	int ret;
 	ulong addr;
@@ -176,7 +183,7 @@ int load_dh_settings_file(void)
 		//return; // Don't return, because display settings needs to be loaded from eeprom in that case
 	}
 	
-	ret = settings_bin_to_struct(ptr, addr);
+	ret = settings_bin_to_struct(addr, false);
 	if (ret < 0)
 		ptr->wValidationID = 0; // set to invalid on error
 	
@@ -194,7 +201,7 @@ int load_dh_settings_file(void)
 
 		I2C_SET_BUS(old_bus);
 
-		ret = settings_bin_to_struct(ptr, (ulong)ucBuffer);
+		ret = settings_bin_to_struct((ulong)ucBuffer, true);
 		if (ret == 0)
 			printf ("Info: use settings of DA eeprom\n"); 
 	}
@@ -318,7 +325,7 @@ void set_dhcom_backlight_gpio(void)
 	}
 }
 
-void generate_dh_settings_kernel_args(void)
+void settings_gen_kernel_args(void)
 {
 	int iDI_TYPE = 0;
 	uchar buf[512];
@@ -455,10 +462,17 @@ void generate_dh_settings_kernel_args(void)
 
 static int do_settings( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-        load_dh_settings_file();
-        generate_dh_settings_kernel_args();
+	int ret;
+	settings_loaded = true;
+
+        ret = settings_load();
+	if (ret < 0)
+		return -1;
+
+        settings_gen_kernel_args();
         set_dhcom_gpios();
         set_dhcom_backlight_gpio();
+
         return 0;
 }
 
@@ -467,6 +481,58 @@ U_BOOT_CMD(
 	"load and apply DHCOM settings (display and gpios)",
 	"\n"
 );
+
+bool settings_get_microSD(void)
+{
+	/* if settings are not loaded (uninitialized) -> load settings */
+	if (!settings_loaded)
+		run_command("settings", 0);
+
+	if (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_MICROSD_SLOT)
+		return true;
+
+	printf ("\nsettings: on module microSD slot is disabled!\n");
+	return false;
+}
+
+bool settings_get_extSD(void)
+{
+	/* if settings are not loaded (uninitialized) -> load settings */
+	if (!settings_loaded)
+		run_command("settings", 0);
+
+	if (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_SD_MMC_SLOT)
+		return true;
+
+	printf ("\nsettings: external SD slot (baseboard) is disabled!\n");
+	return false;
+}
+
+bool settings_get_usbhost1(void)
+{
+	/* if settings are not loaded (uninitialized) -> load settings */
+	if (!settings_loaded)
+		run_command("settings", 0);
+
+	if (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_HOST_1_PORT)
+		return true;
+
+	printf ("\nsettings: usb host1 is disabled!\n");
+	return false;
+}
+
+bool settings_get_usbotg(void)
+{
+	/* if settings are not loaded (uninitialized) -> load settings */
+	if (!settings_loaded)
+		run_command("settings", 0);
+
+	if (gd->dh_board_settings.wHWConfigFlags & UPDATE_VIA_USB_OTG_PORT)
+		return true;
+
+	printf ("\nsettings: usb otg is disabled!\n");
+	return false;
+}
 
 static int do_settings_info( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {

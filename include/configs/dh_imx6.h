@@ -94,6 +94,12 @@
 #define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
 #define CONFIG_SYS_I2C_SPEED		100000
 
+/* RTC Configs */
+#ifdef CONFIG_RTC_RV3029
+#define CONFIG_SYS_RTC_BUS_NUM		2
+#define CONFIG_SYS_I2C_RTC_ADDR		0x56
+#endif
+
 /* MMC Configs */
 #define CONFIG_FSL_ESDHC
 #define CONFIG_FSL_USDHC

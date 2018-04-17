@@ -36,6 +36,11 @@ config RTC_RX8010SJ
 	help
 	  Support for Epson RX8010SJ Real Time Clock devices.
 
+config RTC_RV3029
+	bool "Enable RV3029 driver"
+	help
+	  Support for Micro Crystal RV3029 Real Time Clock devices.
+
 config RTC_S35392A
 	bool "Enable S35392A driver"
 	select BITREVERSE

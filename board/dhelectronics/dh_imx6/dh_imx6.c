@@ -80,8 +80,8 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 
 static void enable_backlight(void)
 {
-	/* let settings cmd handle backlight */
-	run_command ("settings", 0);
+	/* let dhcom_settings handle backlight */
+	run_command ("backlight", 0);
 }
 
 static void enable_rgb(struct display_info_t const *dev)
@@ -199,7 +199,7 @@ static void do_enable_hdmi(struct display_info_t const *dev)
 	imx_enable_hdmi_phy();
 }
 
-struct display_info_t const displays[] = {{
+struct display_info_t displays[] = {{
 	.bus	= 0,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
@@ -329,6 +329,14 @@ int dram_init(void)
  * Use always serial for U-Boot console
  */
 int overwrite_console(void)
+{
+	return 1;
+}
+
+/*
+ * skip the cfb initialization.
+ */
+int board_cfb_skip(void)
 {
 	return 1;
 }
@@ -598,6 +606,8 @@ int board_late_init(void)
 {
 	u32 hw_code;
 	char buf[16];
+
+	printf("late init\n");
 
 	hw_code = board_get_hwcode();
 

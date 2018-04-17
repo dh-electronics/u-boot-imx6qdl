@@ -43,6 +43,12 @@
 #include <asm/gpio.h>
 #include <i2c.h>
 
+
+#include <asm/mach-imx/video.h>
+
+/* Special MXCFB sync flags are here. */
+#include "../drivers/video/mxcfb.h"
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static bool settings_loaded = false; // to remember if settings cmd was executed
@@ -460,6 +466,73 @@ void settings_gen_kernel_args(void)
 	}	
 }
 
+int apply_display_settings(void)
+{
+	int index = 0;
+	int type;
+	int clksonframe;
+
+	volatile settingsinfo_t *ptr = &gd->dh_board_settings;
+
+	type = (gd->dh_board_settings.wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13;
+
+
+	switch (type) {
+		case 1: // Headless
+			env_set("panel", "no_panel");
+			return 0; // nothing to do
+		case 2: // RGB
+			env_set("panel", "RGB");
+			index = 0;
+			break;
+		case 3: // LVDS0
+			env_set("panel", "lvds_24bit");
+			index = 1;
+			displays[index].mode.sync |= FB_SYNC_EXT;
+			break;
+		default:
+			env_set("panel", "");
+			index = 0;
+			break;
+	}
+
+	/* Setup display settings from DH settings file */
+	displays[index].mode.xres 		= ptr->wXResolution;
+	displays[index].mode.yres 		= ptr->wYResolution;
+	displays[index].mode.pixclock 		= KHZ2PICOS(ptr->wPixelClock);
+	displays[index].mode.left_margin 	= ptr->wHBackPorch;
+	displays[index].mode.hsync_len 		= ptr->wHPulseWidth;
+	displays[index].mode.right_margin 	= ptr->wHFrontPorch;
+	displays[index].mode.upper_margin 	= ptr->wVBackPorch;
+	displays[index].mode.vsync_len 		= ptr->wVPulseWidth;
+	displays[index].mode.lower_margin 	= ptr->wVFrontPorch;
+
+	clksonframe = ((ptr->wXResolution + ptr->wHFrontPorch +
+			ptr->wHPulseWidth + ptr->wHBackPorch) *
+		       (ptr->wYResolution + ptr->wVFrontPorch +
+			ptr->wVPulseWidth + ptr->wVBackPorch));
+	displays[index].mode.refresh = ((ptr->wPixelClock*1000)/clksonframe);
+
+	if(!(ptr->wLCDConfigFlags & SETTINGS_LCD_IVS_FLAG))
+		displays[index].mode.sync |= FB_SYNC_VERT_HIGH_ACT;
+
+	if(!(ptr->wLCDConfigFlags & SETTINGS_LCD_IHS_FLAG))
+		displays[index].mode.sync |= FB_SYNC_HOR_HIGH_ACT;
+
+	if((ptr->wLCDConfigFlags & SETTINGS_LCD_IPC_FLAG))
+		displays[index].mode.sync |= FB_SYNC_CLK_LAT_FALL;
+
+	if(ptr->wLCDConfigFlags & SETTINGS_LCD_IOE_FLAG)
+		displays[index].mode.sync |= FB_SYNC_OE_LOW_ACT;
+
+	if(ptr->wLCDConfigFlags & SETTINGS_LCD_IDATA_FLAG)
+		displays[index].mode.sync |= FB_SYNC_DATA_INVERT;
+
+	displays[index].mode.vmode = FB_VMODE_NONINTERLACED;
+
+	return 0;
+}
+
 static int do_settings( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret;
@@ -471,7 +544,7 @@ static int do_settings( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 
         settings_gen_kernel_args();
         set_dhcom_gpios();
-
+	apply_display_settings();
         return 0;
 }
 
@@ -496,6 +569,76 @@ U_BOOT_CMD(
 	"switch DHCOM backlight pwm and gpio (based on settings)",
 	"\n"
 );
+
+#ifdef CONFIG_SPLASH_SCREEN
+
+#define SPLASH_MAX_SIZE 0x69788A // Max WUXGA 1920x1200 24bpp (1920x1200x3 + 138 BMP Header)
+static int do_splash( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	char *buffer;
+	char *splashimage;
+        char *command;
+	unsigned long splash_size;
+
+	volatile settingsinfo_t *ptr = &gd->dh_board_settings;
+
+        /* check for headless system */
+        if (ptr->wValidationID == 0x3256) { // "V2" = 0x3256
+		int iDI_TYPE = 0;
+
+		iDI_TYPE = ((ptr->wLCDConfigFlags & SETTINGS_LCD_DI_TYPE_FLAG) >> 13);
+		/* skip loading splash on headless systems */
+		if (iDI_TYPE == 1)
+			return 0;
+        }
+
+	/* get pointer to buffer and point to splashimage in ram from env */
+	buffer = (char*)simple_strtoul(env_get("loadaddr"), NULL, 16);
+	splashimage = (char*)simple_strtoul(env_get("splashimage"), NULL, 16);
+
+	if ( buffer < (char*)0x10000000 || splashimage < (char*)0x10000000 ) {
+		printf ("Error: invalid \"loadaddr\" or \"splashimage\"!\n");
+		return -ENOMEM;
+	}
+
+	printf("Load splash...\n");
+
+	/* load splashimage file from a filesystem */
+	if ((command = env_get ("load_splash")) == NULL) {
+		printf ("Error: \"load_splash\" not defined\n");
+		return -ENOENT;
+	}
+
+	if (run_command (command, 0) != 0) {
+		printf ("Warning: Can't load splash bitmap\n");
+		return -EIO;
+	}
+
+	/* get filesize of bmp from env */
+	splash_size = simple_strtoul(env_get("filesize"), NULL, 16);
+	if (splash_size > SPLASH_MAX_SIZE) {
+		printf("Warning: Crop spashimage, \"filesize\" max %d bytes!\n",
+							 SPLASH_MAX_SIZE);
+		splash_size = SPLASH_MAX_SIZE;
+	}
+
+	/*
+	 * Copy bitmap to splashscreen addresss
+         *
+	 *   Note: It is necessary to align bitmaps on a memory address with an
+	 *   offset of an odd multiple of +2, since the use of a four-byte
+	 *   alignment will cause alignment exceptions at run-time.
+	 */
+
+	memcpy(splashimage, buffer, splash_size);
+	return 0;
+}
+U_BOOT_CMD(
+	splash,   1,   1,     do_splash,
+	"load splash image to splashimage addr",
+	"\n"
+);
+#endif
 
 bool settings_get_microSD(void)
 {

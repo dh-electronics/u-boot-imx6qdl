@@ -12,6 +12,14 @@ int board_video_skip(void)
 	int ret;
 	char const *panel = env_get("panel");
 
+#ifdef CONFIG_CMD_DHCOM_SETTINGS
+	/* load dhcom settings */
+	run_command("settings", 0);
+
+	/* load splash image */
+	run_command("splash", 0);
+#endif
+
 	if (!panel) {
 		for (i = 0; i < display_count; i++) {
 			struct display_info_t const *dev = displays+i;

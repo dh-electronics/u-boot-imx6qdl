@@ -471,7 +471,6 @@ static int do_settings( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 
         settings_gen_kernel_args();
         set_dhcom_gpios();
-        set_dhcom_backlight_gpio();
 
         return 0;
 }
@@ -479,6 +478,22 @@ static int do_settings( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 U_BOOT_CMD(
 	settings,   1,   1,     do_settings,
 	"load and apply DHCOM settings (display and gpios)",
+	"\n"
+);
+
+static int do_backlight( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	/* if settings are not loaded (uninitialized) -> load settings */
+	if (!settings_loaded)
+		run_command("settings", 0);
+
+        set_dhcom_backlight_gpio();
+        return 0;
+}
+
+U_BOOT_CMD(
+	backlight,   1,   1,     do_backlight,
+	"switch DHCOM backlight pwm and gpio (based on settings)",
 	"\n"
 );
 

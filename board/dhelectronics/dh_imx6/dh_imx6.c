@@ -497,6 +497,7 @@ static int setup_dhcom_mac_from_fuse(void)
 
 	if (is_valid_ethaddr(enetaddr)) {
 		eth_env_set_enetaddr("ethaddr", enetaddr);
+		env_save();
 		return 0;
 	}
 
@@ -512,8 +513,10 @@ static int setup_dhcom_mac_from_fuse(void)
 		return ret;
 	}
 
-	if (is_valid_ethaddr(enetaddr))
+	if (is_valid_ethaddr(enetaddr)) {
 		eth_env_set_enetaddr("ethaddr", enetaddr);
+		env_save();
+	}
 
 	return 0;
 }
@@ -565,9 +568,6 @@ int board_init(void)
 #ifdef CONFIG_SATA
 	setup_sata();
 #endif
-
-	setup_dhcom_mac_from_fuse();
-
 	return 0;
 }
 
@@ -607,7 +607,7 @@ int board_late_init(void)
 	u32 hw_code;
 	char buf[16];
 
-	printf("late init\n");
+	setup_dhcom_mac_from_fuse();
 
 	hw_code = board_get_hwcode();
 

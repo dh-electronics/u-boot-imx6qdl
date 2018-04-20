@@ -145,6 +145,7 @@ int settings_bin_to_struct(ulong addr, bool is_DA_eeprom)
 int settings_load(void)
 {
 	int ret;
+	int got_settings = 0; // 0 = OK, -1 = no settings
 	ulong addr;
 	char *command;
 	uchar ucBuffer[DHCOM_DISPLAY_SETTINGS_SIZE];
@@ -152,7 +153,6 @@ int settings_load(void)
 
 	volatile settingsinfo_t  *ptr = &gd->dh_board_settings;
 
-	//env = env_get ("loadaddr");
 	addr = simple_strtoul(env_get("loadaddr"), NULL, 16);
 	
 	/* initialize DH Global Data */
@@ -179,14 +179,14 @@ int settings_load(void)
 	printf("Load DH settings...\n");
 
 	/* Load DH settings file from filesystem */
-	if ((command = env_get ("load_settings_bin")) == NULL) {
-		printf ("Warning: \"load_settings_bin\" not defined\n");
+	if ((command = env_get("load_settings_bin")) == NULL) {
+		printf ("\"load_settings_bin\" not defined\n");
 		return -ENOENT;
 	}	
 	
-	if (run_command (command, 0) != 0) {
-		printf ("Info: Can't load DH settings from filesystem\n");		
-		//return; // Don't return, because display settings needs to be loaded from eeprom in that case
+	if (run_command(command, 0) != 0) {
+		printf("Can't load DH settings from filesystem\n");
+		got_settings = -1;
 	}
 	
 	ret = settings_bin_to_struct(addr, false);
@@ -208,8 +208,10 @@ int settings_load(void)
 		I2C_SET_BUS(old_bus);
 
 		ret = settings_bin_to_struct((ulong)ucBuffer, true);
-		if (ret == 0)
-			printf ("Info: use settings of DA eeprom\n"); 
+		if (ret == 0) {
+			printf ("Using settings of DA eeprom\n");
+			got_settings = 0;
+		}
 	}
 
 	// SETTINGS_LCD_BL_ON_FLAG must be set for function set_dhcom_backlight_gpio(),
@@ -218,7 +220,7 @@ int settings_load(void)
 	if(ptr->wValidationID == 0x4844)
 		ptr->wLCDConfigFlags |= SETTINGS_LCD_BL_ON_FLAG;
 
-	return 0;
+	return got_settings;
 }	
 
 unsigned DHCOM_gpios[] = {
@@ -466,7 +468,7 @@ void settings_gen_kernel_args(void)
 	}	
 }
 
-int apply_display_settings(void)
+int apply_display_settings(int got_settings)
 {
 	int index = 0;
 	int type;
@@ -491,7 +493,10 @@ int apply_display_settings(void)
 			displays[index].mode.sync |= FB_SYNC_EXT;
 			break;
 		default:
-			env_set("panel", "");
+			if (got_settings < 0) // no settings file -> headless
+				env_set("panel", "no_panel");
+			else // settings file v1 -> parallel RGB display
+				env_set("panel", "RGB");
 			index = 0;
 			break;
 	}
@@ -539,12 +544,13 @@ static int do_settings( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 	settings_loaded = true;
 
         ret = settings_load();
+	apply_display_settings(ret);
+
 	if (ret < 0)
-		return -1;
+		return 0;
 
         settings_gen_kernel_args();
         set_dhcom_gpios();
-	apply_display_settings();
         return 0;
 }
 
@@ -578,6 +584,7 @@ static int do_splash( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char *buffer;
 	char *splashimage;
         char *command;
+	char *panel; 
 	unsigned long splash_size;
 
 	volatile settingsinfo_t *ptr = &gd->dh_board_settings;
@@ -591,6 +598,13 @@ static int do_splash( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if (iDI_TYPE == 1)
 			return 0;
         }
+
+	panel = env_get("panel");
+	if (panel) {
+		/* skip loading splash on headless systems */
+		if (!strcmp(panel, "no_panel"))
+			return 0;
+	}
 
 	/* get pointer to buffer and point to splashimage in ram from env */
 	buffer = (char*)simple_strtoul(env_get("loadaddr"), NULL, 16);

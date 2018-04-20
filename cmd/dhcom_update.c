@@ -715,7 +715,7 @@ int update_bootloader(context_t *context, updateini_t *DHupdateINI)
 	ulong uboot_offset = CONFIG_SYS_SPI_SPL_OFFS;
         ulong uboot_partsize = CONFIG_ENV_OFFSET;
 
-	ulong blocksize = CONFIG_ENV_SECT_SIZE;
+	ulong blocksize = (64 * 1024); 
         ulong filesize;
         ulong ulBlocks;
 

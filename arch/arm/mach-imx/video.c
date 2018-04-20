@@ -10,7 +10,7 @@ int board_video_skip(void)
 {
 	int i;
 	int ret;
-	char const *panel = env_get("panel");
+	char const *panel;
 
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
 	/* load dhcom settings */
@@ -19,6 +19,7 @@ int board_video_skip(void)
 	/* load splash image */
 	run_command("splash", 0);
 #endif
+	panel = env_get("panel");
 
 	if (!panel) {
 		for (i = 0; i < display_count; i++) {
@@ -39,6 +40,8 @@ int board_video_skip(void)
 			if (!strcmp(panel, displays[i].mode.name))
 				break;
 		}
+		if (!strcmp(panel, "no_panel"))
+			return 1;
 	}
 
 	if (i < display_count) {

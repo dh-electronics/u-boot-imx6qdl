@@ -185,7 +185,7 @@ const struct spi_flash_info spi_flash_ids[] = {
 	 * (w25q80bl, w25q80bv)
 	 * (w25q16cl, w25q16dv, w25q16jv)
 	 * (w25q32bv, w25q32fv_spi)
-	 * (w25q64cv, w25q64fv_spi)
+	 * (w25q64cv, w25q64fv_spi, w25q64jv)
 	 * (w25q128bv, w25q128fv_spi)
 	 * (w25q32dw, w25q32fv_qpi)
 	 * (w25q64dw, w25q64fv_qpi)

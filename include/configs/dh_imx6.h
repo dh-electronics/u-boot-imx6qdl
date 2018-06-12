@@ -168,7 +168,7 @@
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
 
 #ifndef CONFIG_SPL_BUILD
-#define CONFIG_EXTRA_ENV_SETTINGS	\
+#define EXTRA_ENV_SETTINGS	\
 	"panel=no_panel\0" 		\
 	"console=ttymxc0,115200\0"	\
 	"splashimage=0x10000002\0" 	\
@@ -201,7 +201,12 @@
 	"fdt_addr_r=0x13000000\0"	\
 	"ramdisk_addr_r=0x18000000\0"	\
 	"scriptaddr=0x14000000\0"	\
-	"fdtfile=imx6q-dhcom-pdk2.dtb\0"\
+	"fdtfile=imx6q-dhcom-pdk2.dtb\0"
+
+#ifndef CONFIG_NAND_MXS /* eMMC default args */
+
+#define CONFIG_EXTRA_ENV_SETTINGS	\
+	EXTRA_ENV_SETTINGS 		\
 	"load_settings_bin=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${settings_bin_file}\0" \
 	"load_splash=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${splash_file}\0" \
 	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...;" \
@@ -219,6 +224,27 @@
         "update auto; mmc dev ${mmcdev};" \
 		" if mmc rescan; then run bootlinux;" \
 		" else echo Boot failed, because mmc${mmcdev} not found!;fi;"
+
+#else /* NAND default args */
+
+#define MTDIDS_DEFAULT          "nand0=gpmi-nand"
+#define MTDPARTS_DEFAULT        "mtdparts=gpmi-nand:-(gpmi-nand)"
+
+#define CONFIG_EXTRA_ENV_SETTINGS	\
+	EXTRA_ENV_SETTINGS 		\
+	"mtdids=nand0=gpmi-nand\0" \
+	"mtdparts=mtdparts=gpmi-nand:-(gpmi-nand)\0" \
+	"load_settings_bin=ubi part gpmi-nand; ubifsmount ubi0:boot; ubifsload ${loadaddr} ${settings_bin_file}\0" \
+	"load_splash=ubifsload ${loadaddr} ${splash_file}\0" \
+	"load_bootenv=echo Loading u-boot env file ${bootenv_file}...; ubifsload ${loadaddr} ${bootenv_file};\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...; ubifsload ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux ${zImage_file}...; ubifsload ${loadaddr} ${zImage_file}\0" \
+	""
+
+#define CONFIG_BOOTCOMMAND \
+        "update auto; run bootlinux;"
+
+#endif
 #endif
 
 /* Physical Memory Map */

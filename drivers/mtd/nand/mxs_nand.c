@@ -1180,6 +1180,10 @@ int board_nand_init(struct nand_chip *nand)
 
 	memset(&fake_ecc_layout, 0, sizeof(fake_ecc_layout));
 
+#ifdef CONFIG_SYS_NAND_USE_FLASH_BBT
+	nand->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+#endif
+
 	nand_set_controller_data(nand, nand_info);
 	nand->options |= NAND_NO_SUBPAGE_WRITE;
 

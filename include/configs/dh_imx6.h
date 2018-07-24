@@ -84,6 +84,10 @@
 /* GPIO for backlight pwm (init in gpio mode) */
 #define PWM_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
 
+/* PCI express */
+/* call imx_pcie_remove() on reboot to avoid hang on watchdog reset */
+#define CONFIG_PCIE_IMX
+
 /* I2C Configs */
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC

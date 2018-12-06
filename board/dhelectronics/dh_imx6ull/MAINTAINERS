@@ -1,0 +1,8 @@
+DH_IMX6ULL BOARD
+M:	Andreas Geisreiter <ageisreiter@dh-electronics.de>
+M:	Christoph Niedermaier <cniedermaier@dh-electronics.de>
+S:	Maintained
+F:	board/dhelectronics/dh_imx6ull/
+F:	include/configs/dh_imx6ull.h
+F:	configs/dh_imx6ull_nand_defconfig
+F:	configs/dh_imx6ull_emmc_defconfig

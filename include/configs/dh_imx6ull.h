@@ -1,0 +1,228 @@
+/* SPDX-License-Identifier: (GPL-2.0-or-later) */
+/*
+ * DHCOM DH-iMX6ULL PDK board support
+ *
+ * Copyright (C) 2018 DH electronics GmbH
+ */
+
+#ifndef __DH_IMX6ULL_CONFIG_H
+#define __DH_IMX6ULL_CONFIG_H
+
+#include <asm/arch/imx-regs.h>
+#include <linux/sizes.h>
+#include "mx6_common.h"
+#include <asm/mach-imx/gpio.h>
+
+/*
+ * SPI NOR layout:
+ * 0x00_0000-0x00_ffff ... U-Boot SPL
+ * 0x01_0000-0x0f_ffff ... U-Boot
+ * 0x10_0000-0x10_ffff ... U-Boot env #1
+ * 0x11_0000-0x11_ffff ... U-Boot env #2
+ * 0x12_0000-0x1f_ffff ... UNUSED
+ */
+
+/* SPL options */
+#include "imx6_spl.h"			/* common IMX6 SPL configuration */
+#define CONFIG_SYS_SPI_SPL_OFFS		0x00400
+#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x11400
+#define CONFIG_SPL_TARGET		"u-boot-with-spl.imx"
+
+/* Size of malloc() pool */
+#define CONFIG_SYS_MALLOC_LEN		(4 * SZ_1M)
+
+/* UART */
+#define CONFIG_MXC_UART
+#define CONFIG_MXC_UART_BASE		UART1_BASE
+#define CONFIG_BAUDRATE			115200
+
+/* I2C configs */
+#ifdef CONFIG_CMD_I2C
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
+#define CONFIG_SYS_I2C_SPEED		100000
+#endif
+
+/* MMC Configs */
+#define CONFIG_FSL_USDHC
+#define CONFIG_SYS_FSL_ESDHC_ADDR	0
+#define CONFIG_SYS_FSL_USDHC_NUM	1
+#define CONFIG_SYS_MMC_ENV_DEV		1
+
+/* NAND stuff */
+#ifdef CONFIG_NAND_MXS
+#define CONFIG_SYS_MAX_NAND_DEVICE	1
+#define CONFIG_SYS_NAND_BASE		0x40000000
+#define CONFIG_SYS_NAND_5_ADDR_CYCLE
+#define CONFIG_SYS_NAND_ONFI_DETECTION
+
+#define CONFIG_MTD_DEVICE
+#define CONFIG_MTD_PARTITIONS
+#endif
+
+/* SPI Flash Configs */
+#ifdef CONFIG_CMD_SF
+#define CONFIG_SF_DEFAULT_BUS		0
+#define CONFIG_SF_DEFAULT_CS		0
+#define CONFIG_SF_DEFAULT_SPEED		40000000
+#define CONFIG_SF_DEFAULT_MODE		(SPI_MODE_0)
+#endif
+
+#ifndef CONFIG_SPL_BUILD
+#define EXTRA_ENV_SETTINGS \
+	"console=ttymxc0,115200\0" \
+	"ipaddr=10.64.31.252\0" \
+	"bootenv_file=uLinuxEnv.txt\0" \
+	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \
+		"setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs; " \
+		"setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt; " \
+		"run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
+	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
+	"linuxargs=setenv bootargs " \
+		"console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${optargs} dhcom=${dhcom} " \
+		"${backlight} SN=${SN}\0" \
+	"fdt_addr=0x83000000\0" \
+	"fdt_high=0xffffffff\0" \
+	"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
+	"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0"
+	/* TODO: Add update kernel extry */
+/*	"setupdateargs=setenv bootargs " \
+		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom} " \
+		"${backlight} vt.global_cursor_default=0\0" \
+	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0" \ */
+
+#ifndef CONFIG_NAND_MXS /* eMMC default args */
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	EXTRA_ENV_SETTINGS \
+	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...; " \
+		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...; " \
+		"load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux kernel ${zImage_file}...; " \
+		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+	"mmcdev=0\0" \
+	"mmcpart=1\0" \
+	"mmc_rootfs_part=2\0" \
+	""
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev}; " \
+		"if mmc rescan; then run bootlinux; " \
+		"else echo Boot failed, because mmc${mmcdev} not found!;fi;"
+	/* TODO: Add "update auto; " */
+
+#else /* NAND default args */
+
+#define MTDIDS_DEFAULT			"nand0=gpmi-nand"
+#define MTDPARTS_DEFAULT		"mtdparts=gpmi-nand:-(gpmi-nand)"
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	EXTRA_ENV_SETTINGS \
+	"mtdids=nand0=gpmi-nand\0" \
+	"mtdparts=mtdparts=gpmi-nand:-(gpmi-nand)\0" \
+	"load_bootenv=echo Loading u-boot env file ${bootenv_file}...; " \
+		"ubifsload ${loadaddr} ${bootenv_file};\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...; " \
+		"ubifsload ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux ${zImage_file}...; " \
+		"ubifsload ${loadaddr} ${zImage_file}\0" \
+	""
+
+#define CONFIG_BOOTCOMMAND \
+	"run bootlinux"
+	/* TODO: Add "update auto; " */
+
+#endif
+#endif
+
+/* Miscellaneous configurable options */
+#define CONFIG_SYS_MEMTEST_START	0x80000000
+#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 0x8000000)
+
+#define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
+#define CONFIG_SYS_HZ			1000
+
+/* Physical Memory Map */
+#define CONFIG_NR_DRAM_BANKS		1
+#define PHYS_SDRAM			MMDC0_ARB_BASE_ADDR
+
+#define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM
+#define CONFIG_SYS_INIT_RAM_ADDR	IRAM_BASE_ADDR
+#define CONFIG_SYS_INIT_RAM_SIZE	IRAM_SIZE
+
+#define CONFIG_SYS_INIT_SP_OFFSET \
+	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
+#define CONFIG_SYS_INIT_SP_ADDR \
+	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
+
+/* Environment */
+#define CONFIG_ENV_SIZE			(16 * 1024)
+#define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+
+#if defined(CONFIG_ENV_IS_IN_SPI_FLASH)
+#define CONFIG_ENV_OFFSET		(1024 * 1024)
+#define CONFIG_ENV_SECT_SIZE		(64 * 1024)
+#define CONFIG_ENV_OFFSET_REDUND	\
+	(CONFIG_ENV_OFFSET + CONFIG_ENV_SECT_SIZE)
+#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
+#define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
+#define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
+#define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
+#define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
+#endif
+
+#ifndef CONFIG_SYS_DCACHE_OFF
+#endif
+
+#ifdef CONFIG_FSL_QSPI
+#define CONFIG_SF_DEFAULT_BUS		0
+#define CONFIG_SF_DEFAULT_CS		0
+#define CONFIG_SF_DEFAULT_SPEED	40000000
+#define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
+#define FSL_QSPI_FLASH_NUM		1
+#define FSL_QSPI_FLASH_SIZE		SZ_32M
+#endif
+
+/* USB Configs */
+#ifdef CONFIG_CMD_USB
+#define CONFIG_EHCI_HCD_INIT_AFTER_RESET
+#define CONFIG_MXC_USB_PORTSC  (PORT_PTS_UTMI | PORT_PTS_PTW)
+#define CONFIG_MXC_USB_FLAGS   0
+#define CONFIG_USB_MAX_CONTROLLER_COUNT 2
+#endif
+
+#ifdef CONFIG_CMD_NET
+#define CONFIG_MII
+#define CONFIG_FEC_ENET_DEV		0
+
+#if (CONFIG_FEC_ENET_DEV == 0)
+#define IMX_FEC_BASE			ENET_BASE_ADDR
+#define CONFIG_FEC_MXC_PHYADDR		0x0
+#define CONFIG_FEC_XCV_TYPE		RMII
+#elif (CONFIG_FEC_ENET_DEV == 1)
+#define IMX_FEC_BASE			ENET2_BASE_ADDR
+#define CONFIG_FEC_MXC_PHYADDR		0x1
+#define CONFIG_FEC_XCV_TYPE		RMII
+#endif
+#define CONFIG_ETHPRIME			"FEC"
+#endif
+
+#define CONFIG_IMX_THERMAL
+
+#ifndef CONFIG_SPL_BUILD
+#ifdef CONFIG_VIDEO
+#define CONFIG_VIDEO_MXS
+#define CONFIG_VIDEO_LOGO
+#define CONFIG_SPLASH_SCREEN
+#define CONFIG_SPLASH_SCREEN_ALIGN
+#define CONFIG_BMP_16BPP
+#define CONFIG_VIDEO_BMP_RLE8
+#define CONFIG_VIDEO_BMP_LOGO
+#define MXS_LCDIF_BASE MX6UL_LCDIF1_BASE_ADDR
+#endif
+#endif
+
+#endif

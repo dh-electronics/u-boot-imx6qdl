@@ -574,14 +574,14 @@ static struct mx6_mmdc_calibration dhcom_mmdc_calib_1x2G_800 = {
 	.p0_mpwrdlctl = 0x40403A32,
 };
 
-/* TODO: Conduct DDR Stress Test */
+/* Values from DDR Stress Test v2.9.0 */
 static struct mx6_mmdc_calibration dhcom_mmdc_calib_1x4G_800 = {
 	.p0_mpwldectrl0 = 0x00000000,
-	.p0_mpwldectrl1 = 0x001B001B,
-	.p0_mpdgctrl0 = 0x013C013C,
+	.p0_mpwldectrl1 = 0x001F001F,
+	.p0_mpdgctrl0 = 0x012B0128,
 	.p0_mpdgctrl1 = 0x00000000,
-	.p0_mprddlctl = 0x40402A34,
-	.p0_mpwrdlctl = 0x40403A32,
+	.p0_mprddlctl = 0x40402832,
+	.p0_mpwrdlctl = 0x40403F30,
 };
 
 struct mx6_ddr_sysinfo dhcom_ddr_16bit  = {
@@ -603,6 +603,7 @@ struct mx6_ddr_sysinfo dhcom_ddr_16bit  = {
 	.refr = 1,	/* 2 refresh commands per refresh cycle */
 };
 
+/* TBD */
 static struct mx6_ddr3_cfg dhcom_mem_ddr_1G = {
 	.mem_speed = 800,
 	.density = 1,
@@ -616,6 +617,7 @@ static struct mx6_ddr3_cfg dhcom_mem_ddr_1G = {
 	.trasmin = 3500,
 };
 
+/* Nanya Technology NT5CC128M16IP-DII */
 static struct mx6_ddr3_cfg dhcom_mem_ddr_2G = {
 	.mem_speed = 800,
 	.density = 2,
@@ -629,6 +631,7 @@ static struct mx6_ddr3_cfg dhcom_mem_ddr_2G = {
 	.trasmin = 3500,
 };
 
+/* Intelligent Memory IM4G16D3FABG-125I */
 static struct mx6_ddr3_cfg dhcom_mem_ddr_4G = {
 	.mem_speed = 800,
 	.density = 4,

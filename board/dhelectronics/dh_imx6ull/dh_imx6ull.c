@@ -845,11 +845,10 @@ static void setup_iomux_usb(void)
 }
 
 /* DRAM */
-static void dhcom_spl_dram_init(void)
+/* Setup DRAM, in case of NULL it will use default calibration values */
+static void dhcom_setup_dram(struct mx6_mmdc_calibration *calibration)
 {
 	enum dhcom_ddr3_code ddr3_code = dhcom_get_ddr3_size();
-
-	mx6ul_dram_iocfg(16, &mx6_ddr_ioregs, &mx6_grp_ioregs);
 
 	switch (ddr3_code) {
 	default:
@@ -858,24 +857,65 @@ static void dhcom_spl_dram_init(void)
 		/* fall through */
 	case DH_DDR3_SIZE_128MIB:
 		mx6_dram_cfg(&dhcom_ddr_16bit,
-		             &dhcom_mmdc_calib_1x1G_800,
-		             &dhcom_mem_ddr_1G);
+				calibration ? calibration : &dhcom_mmdc_calib_1x1G_800,
+				&dhcom_mem_ddr_1G);
 		break;
 	case DH_DDR3_SIZE_256MIB:
 		mx6_dram_cfg(&dhcom_ddr_16bit,
-		             &dhcom_mmdc_calib_1x2G_800,
-		             &dhcom_mem_ddr_2G);
+				calibration ? calibration : &dhcom_mmdc_calib_1x2G_800,
+				&dhcom_mem_ddr_2G);
 		break;
 	case DH_DDR3_SIZE_512MIB:
 		mx6_dram_cfg(&dhcom_ddr_16bit,
-		             &dhcom_mmdc_calib_1x4G_800,
-		             &dhcom_mem_ddr_4G);
+				calibration ? calibration : &dhcom_mmdc_calib_1x4G_800,
+				&dhcom_mem_ddr_4G);
 		break;
 	}
+}
 
-	/* Perform DDR DRAM calibration */
+static void dhcom_spl_dram_init(void)
+{
+#if defined(CONFIG_MX6_DDRCAL)
+	int errs;
+	struct mx6_mmdc_calibration calibration = {0};
+
+	mx6ul_dram_iocfg(16, &mx6_ddr_ioregs, &mx6_grp_ioregs);
+
+	/* Set leveling calibration defaults */
+	calibration.p0_mpwrdlctl = 0x40404040;
+
+	dhcom_setup_dram(&calibration);
+
+	/* Perform DRAM auto calibration */
 	udelay(100);
-	mmdc_do_dqs_calibration(&dhcom_ddr_16bit);
+	printf("DRAM: Auto calibration...");
+	errs = mmdc_do_write_level_calibration(&dhcom_ddr_16bit);
+	if (!errs) {
+		errs = mmdc_do_dqs_calibration(&dhcom_ddr_16bit);
+	}
+
+	if (!errs) {
+		printf("successful\n");
+#if defined(DEBUG)
+		mmdc_read_calibration(&dhcom_ddr_16bit, &calibration);
+		printf(" MPDGCTRL0\t= 0x%08X\n", calibration.p0_mpdgctrl0);
+		printf(" MPDGCTRL1\t= 0x%08X\n", calibration.p0_mpdgctrl1);
+		printf(" MPRDDLCTL\t= 0x%08X\n", calibration.p0_mprddlctl);
+		printf(" MPWRDLCTL\t= 0x%08X\n", calibration.p0_mpwrdlctl);
+		printf(" MPWLDECTRL0\t= 0x%08X\n", calibration.p0_mpwldectrl0);
+		printf(" MPWLDECTRL1\t= 0x%08X\n", calibration.p0_mpwldectrl1);
+#endif /* DEBUG */
+	} else {
+		/* Use default values if auto calibration is failed */
+		printf("failed, using default values\n");
+		dhcom_setup_dram(NULL);
+	}
+#else /* CONFIG_MX6_DDRCAL */
+	mx6ul_dram_iocfg(16, &mx6_ddr_ioregs, &mx6_grp_ioregs);
+
+	/* Using default calibration values */
+	dhcom_setup_dram(NULL);
+#endif /* CONFIG_MX6_DDRCAL */
 }
 
 void board_init_f(ulong dummy)

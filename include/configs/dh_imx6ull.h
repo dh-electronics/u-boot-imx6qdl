@@ -110,19 +110,20 @@
 
 #define CONFIG_BOOTCOMMAND \
 	"mmc dev ${mmcdev}; " \
-		"if mmc rescan; then run bootlinux; " \
-		"else echo Boot failed, because mmc${mmcdev} not found!;fi;"
+	"if mmc rescan; then run bootlinux; " \
+	"else echo Boot failed, because mmc${mmcdev} not found!; fi;"
 	/* TODO: Add "update auto; " */
 
 #else /* NAND default args */
 
 #define MTDIDS_DEFAULT			"nand0=gpmi-nand"
-#define MTDPARTS_DEFAULT		"mtdparts=gpmi-nand:-(gpmi-nand)"
+#define MTDPARTS_PART_NAME		"main-nand"
+#define MTDPARTS_DEFAULT		"mtdparts=gpmi-nand:-("MTDPARTS_PART_NAME")"
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	EXTRA_ENV_SETTINGS \
 	"mtdids=nand0=gpmi-nand\0" \
-	"mtdparts=mtdparts=gpmi-nand:-(gpmi-nand)\0" \
+	"mtdparts="MTDPARTS_DEFAULT"\0" \
 	"load_bootenv=echo Loading u-boot env file ${bootenv_file}...; " \
 		"ubifsload ${loadaddr} ${bootenv_file};\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...; " \
@@ -132,7 +133,9 @@
 	""
 
 #define CONFIG_BOOTCOMMAND \
-	"run bootlinux"
+	"if mtdparts; then echo Starting nand boot...; " \
+	"else mtdparts default; fi; " \
+	"ubi part "MTDPARTS_PART_NAME"; ubifsmount ubi0:boot; run bootlinux"
 	/* TODO: Add "update auto; " */
 
 #endif

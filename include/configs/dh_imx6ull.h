@@ -31,6 +31,31 @@
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(4 * SZ_1M)
 
+/* DHCOM GPIOS */
+#define DHCOM_GPIO_A	IMX_GPIO_NR(5, 0)
+#define DHCOM_GPIO_B	IMX_GPIO_NR(5, 1)
+#define DHCOM_GPIO_C	IMX_GPIO_NR(5, 2)
+#define DHCOM_GPIO_D	IMX_GPIO_NR(5, 3)
+#define DHCOM_GPIO_E	IMX_GPIO_NR(5, 4)
+#define DHCOM_GPIO_F	IMX_GPIO_NR(5, 7)
+#define DHCOM_GPIO_G	IMX_GPIO_NR(5, 8)
+#define DHCOM_GPIO_H	IMX_GPIO_NR(5, 9)
+#define DHCOM_GPIO_I	IMX_GPIO_NR(1, 18)
+#define DHCOM_GPIO_J	IMX_GPIO_NR(4, 20)
+#define DHCOM_GPIO_K	IMX_GPIO_NR(4, 18)
+#define DHCOM_GPIO_L	IMX_GPIO_NR(4, 17)
+#define DHCOM_GPIO_M	IMX_GPIO_NR(4, 19)
+#define DHCOM_GPIO_N	IMX_GPIO_NR(4, 28)
+#define DHCOM_GPIO_O	IMX_GPIO_NR(4, 27)
+#define DHCOM_GPIO_P	IMX_GPIO_NR(4, 26)
+#define DHCOM_GPIO_Q	IMX_GPIO_NR(4, 25)
+#define DHCOM_GPIO_R	IMX_GPIO_NR(4, 24)
+#define DHCOM_GPIO_S	IMX_GPIO_NR(4, 23)
+#define DHCOM_GPIO_T	IMX_GPIO_NR(4, 22)
+#define DHCOM_GPIO_U	IMX_GPIO_NR(4, 21)
+/* GPIO V is not available */
+/* GPIO W is not available */
+
 /* UART */
 #define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE		UART1_BASE

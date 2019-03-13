@@ -73,8 +73,8 @@
 /* MMC Configs */
 #define CONFIG_FSL_USDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
-#define CONFIG_SYS_FSL_USDHC_NUM	1
-#define CONFIG_SYS_MMC_ENV_DEV		1
+#define MMC_START_INDEX			1
+#define CONFIG_SYS_FSL_USDHC_NUM	3 /* 0=dummy, 1=uSD/SD/MMC, 2=eMMC */
 
 /* NAND stuff */
 #ifdef CONFIG_NAND_MXS
@@ -128,12 +128,14 @@
 		"load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...; " \
 		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
-	"mmcdev=0\0" \
+	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0" \
 	""
 
 #define CONFIG_BOOTCOMMAND \
+	"if test ${mmcdev} -eq 1; then echo Trying to boot from uSD/SD/MMC card...; fi; " \
+	"if test ${mmcdev} -eq 2; then echo Trying to boot from eMMC...; fi; " \
 	"mmc dev ${mmcdev}; " \
 	"if mmc rescan; then run bootlinux; " \
 	"else echo Boot failed, because mmc${mmcdev} not found!; fi;"

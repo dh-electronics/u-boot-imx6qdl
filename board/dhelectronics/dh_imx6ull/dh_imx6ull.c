@@ -154,7 +154,7 @@ int board_get_sodimm_hwcode(void)
 }
 
 #ifdef CONFIG_NAND_MXS
-
+/* NAND (on module) */
 #define NAND_PAD_CTRL (PAD_CTL_DSE_48ohm | PAD_CTL_SRE_SLOW | PAD_CTL_HYS)
 #define NAND_PAD_READY0_CTRL (PAD_CTL_DSE_48ohm | PAD_CTL_PUS_22K_UP)
 
@@ -183,11 +183,39 @@ void setup_gpmi_nand(void)
 	setup_gpmi_io_clk((3 << MXC_CCM_CSCDR1_BCH_PODF_OFFSET) |
 			  (3 << MXC_CCM_CSCDR1_GPMI_PODF_OFFSET));
 }
+#else /* CONFIG_NAND_MXS */
+#ifdef CONFIG_FSL_ESDHC
+/* eMMC (on module) */
+static iomux_v3_cfg_t const usdhc2_pads[] = {
+	MX6_PAD_NAND_RE_B__USDHC2_CLK		| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_WE_B__USDHC2_CMD		| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA00__USDHC2_DATA0	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA01__USDHC2_DATA1	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA02__USDHC2_DATA2	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA03__USDHC2_DATA3	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA04__USDHC2_DATA4	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA05__USDHC2_DATA5	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA06__USDHC2_DATA6	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_DATA07__USDHC2_DATA7	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_NAND_ALE__USDHC2_RESET_B	| MUX_PAD_CTRL(USDHC_PAD_CTRL),
+};
+
+static void setup_emmc(void)
+{
+	imx_iomux_v3_setup_multiple_pads(usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
+}
+#endif /* CONFIG_FSL_ESDHC */
 #endif /* CONFIG_NAND_MXS */
 
 #ifdef CONFIG_FSL_ESDHC
-static struct fsl_esdhc_cfg usdhc_cfg[1] = {
-	{USDHC1_BASE_ADDR, 0, 4}
+static struct fsl_esdhc_cfg usdhc_cfg[CONFIG_SYS_FSL_USDHC_NUM] = {
+	{0},
+	{USDHC1_BASE_ADDR}, /* uSD card (on module) or uSD/SD/MMC card interface (external) */
+#ifdef CONFIG_NAND_MXS
+	{0},
+#else
+	{USDHC2_BASE_ADDR}, /* eMMC (on module) */
+#endif
 };
 
 #define USDHC1_CD_GPIO	IMX_GPIO_NR(1, 19)
@@ -207,6 +235,9 @@ int board_mmc_getcd(struct mmc *mmc)
 		if (ret)
 			printk("SD card detected\n");
 		return ret;
+	case USDHC2_BASE_ADDR:
+		 /* USDHC2/eMMC is always present */
+		return 1;
 	}
 
 	return 0;
@@ -219,13 +250,36 @@ int board_mmc_init(bd_t *bis)
 	/*
 	 * According to the board_mmc_init() the following map is done:
 	 * (U-Boot device node)    (Physical Port)
-	 * mmc0                    SD interface
+	 * mmc0                    not available
+	 * mmc1                    USDHC1
+	 * mmc2                    USDHC2
 	 */
-	gpio_direction_input(USDHC1_CD_GPIO);
-
-	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
 
 	for (i = 0; i < CONFIG_SYS_FSL_USDHC_NUM; i++) {
+		switch (i) {
+		case 0:
+			continue;
+		case 1:
+			/* uSD card (on module) or uSD/SD/MMC card interface (external) */
+			usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
+			usdhc_cfg[i].max_bus_width = 4;
+			gpio_request(USDHC1_CD_GPIO, "usdhc1_cd");
+			gpio_direction_input(USDHC1_CD_GPIO);
+			break;
+		case 2:
+#ifdef CONFIG_NAND_MXS
+			continue;
+#else
+			/* eMMC (on module) */
+			usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
+			usdhc_cfg[i].max_bus_width = 8;
+			break;
+#endif
+		default:
+			printf("Warning: you configured more USDHC controllers (%d) than supported by the board\n", i + 1);
+			return -EINVAL;
+		}
+
 		ret = fsl_esdhc_initialize(bis, &usdhc_cfg[i]);
 		if (ret) {
 			printf("Warning: failed to initialize mmc dev %d\n", i);
@@ -472,7 +526,11 @@ int board_init(void)
 
 #ifdef CONFIG_NAND_MXS
 	setup_gpmi_nand();
+#else
+#ifdef CONFIG_FSL_ESDHC
+	setup_emmc();
 #endif
+#endif /* CONFIG_NAND_MXS */
 
 #ifdef CONFIG_FEC_MXC
 	setup_fec(CONFIG_FEC_ENET_DEV);

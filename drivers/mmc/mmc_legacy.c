@@ -67,7 +67,11 @@ void mmc_do_preinit(void)
 void mmc_list_init(void)
 {
 	INIT_LIST_HEAD(&mmc_devices);
+#ifdef MMC_START_INDEX
+	cur_dev_num = MMC_START_INDEX;
+#else
 	cur_dev_num = 0;
+#endif
 }
 
 void mmc_list_add(struct mmc *mmc)

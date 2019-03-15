@@ -636,10 +636,10 @@ static struct mx6_mmdc_calibration dhcom_mmdc_calib_1x2G_800 = {
 static struct mx6_mmdc_calibration dhcom_mmdc_calib_1x4G_800 = {
 	.p0_mpwldectrl0 = 0x00000000,
 	.p0_mpwldectrl1 = 0x001F001F,
-	.p0_mpdgctrl0 = 0x012B0128,
+	.p0_mpdgctrl0 = 0x011C011C,
 	.p0_mpdgctrl1 = 0x00000000,
-	.p0_mprddlctl = 0x40402832,
-	.p0_mpwrdlctl = 0x40403F30,
+	.p0_mprddlctl = 0x40402831,
+	.p0_mpwrdlctl = 0x40403B2D,
 };
 
 struct mx6_ddr_sysinfo dhcom_ddr_16bit  = {

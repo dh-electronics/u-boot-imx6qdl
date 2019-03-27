@@ -1294,6 +1294,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
       	}
 
         // SD/MMC Card Slot
+#if defined(CONFIG_MX6QDL) /* Only imx6qdl has mmc0 */
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
         if (settings_get_extSD() || !update_auto) {
 #else
@@ -1318,6 +1319,7 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
                 else
                         printf ("\n--> Update INFO: No MMC/SD - Card detected!\n");
         }
+#endif /* CONFIG_MX6QDL */
 
 	// USB Host 1 Port
 #ifdef CONFIG_CMD_DHCOM_SETTINGS

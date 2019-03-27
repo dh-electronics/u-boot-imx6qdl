@@ -497,6 +497,30 @@ static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
 	return 0;
 }
 
+static void handle_hw_revision(void)
+{
+	u32 lga_hw_code;
+	u32 sodimm_hw_code;
+	u32 sw_compatibility;
+	char buf[16];
+
+	lga_hw_code = board_get_lga_hwcode();
+	sodimm_hw_code = board_get_sodimm_hwcode();
+	printf("HW:    LGA=HW%d00, SODIMM=HW%d00\n", lga_hw_code, sodimm_hw_code);
+
+	snprintf(buf, sizeof(buf), "imx6ull-dhcom%1d%1d", lga_hw_code, sodimm_hw_code);
+	env_set("dhcom", buf);
+
+	/*
+	 * If software (device tree) must be changed cased by hardware modifications
+	 * derive next sw_compatibility from lga_hw_code and sodimm_hw_code.
+	 * First version starts with a fixed value of 1.
+	 */
+	sw_compatibility = 1;
+	snprintf(buf, sizeof(buf), "imx6ull-v%1d", sw_compatibility);
+	env_set("dhsw", buf);
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -555,18 +579,10 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
-	u32 lga_hw_code;
-	u32 sodimm_hw_code;
-	char buf[16];
-
 	setup_dhcom_mac_from_fuse(0, "ethaddr");
 	setup_dhcom_mac_from_fuse(1, "eth1addr");
 
-	lga_hw_code = board_get_lga_hwcode();
-	sodimm_hw_code = board_get_sodimm_hwcode();
-	printf("HW:    LGA=HW%d00, SODIMM=HW%d00\n", lga_hw_code, sodimm_hw_code);
-	snprintf(buf, sizeof(buf), "imx6ull-dhcom%1d%1d", lga_hw_code, sodimm_hw_code);
-	env_set("dhcom", buf);
+	handle_hw_revision();
 
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);

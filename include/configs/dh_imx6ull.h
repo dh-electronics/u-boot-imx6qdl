@@ -106,15 +106,15 @@
 		"run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
 	"linuxargs=setenv bootargs " \
-		"console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${optargs} dhcom=${dhcom} dhsw=${dhsw}" \
-		"${backlight} SN=${SN}\0" \
+		"console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs} " \
+		"dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
 	"fdt_addr=0x83000000\0" \
 	"fdt_high=0xffffffff\0" \
 	"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 	"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \
 	"setupdateargs=setenv bootargs " \
-		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom} dhsw=${dhsw} " \
-		"${backlight} vt.global_cursor_default=0 consoleblank=0\0" \
+		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${mtdparts} " \
+		"vt.global_cursor_default=0 consoleblank=0 ${backlight} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dh_uboot_type}.update; run setupdateargs; bootz ${loadaddr}\0" \
 
 #ifndef CONFIG_NAND_MXS /* eMMC default args */

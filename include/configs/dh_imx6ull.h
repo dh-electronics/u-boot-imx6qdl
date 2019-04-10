@@ -14,12 +14,18 @@
 #include <asm/mach-imx/gpio.h>
 
 /*
- * SPI NOR layout:
- * 0x00_0000-0x00_ffff ... U-Boot SPL
- * 0x01_0000-0x0f_ffff ... U-Boot
- * 0x10_0000-0x10_ffff ... U-Boot env #1
- * 0x11_0000-0x11_ffff ... U-Boot env #2
- * 0x12_0000-0x1f_ffff ... UNUSED
+ * SPI NOR flash layout:
+ *
+ * 0x00_0000-0x00_03ff ...     1.024 ... UNUSED
+ * 0x00_0400-0x0f_ffff ... 1.047.552 ... SPL + U-Boot
+ *
+ * 0x10_0000-0x10_3fff ...    16.384 ... U-Boot env #1
+ * 0x10_4000-0x10_ffff ...    49.152     UNUSED
+ *
+ * 0x11_0000-0x11_3fff ...    16.384 ... U-Boot env #2
+ * 0x11_4000-0x11_ffff ...    49.152     UNUSED
+ *
+ * 0x12_0000-0x1f_ffff ...   917.504     UNUSED
  */
 
 /* SPL options */

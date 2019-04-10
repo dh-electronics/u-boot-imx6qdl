@@ -104,7 +104,8 @@
 #ifndef CONFIG_SPL_BUILD
 #define EXTRA_ENV_SETTINGS \
 	"console=ttymxc0,115200\0" \
-	"ipaddr=10.64.31.252\0" \
+	"ipaddr=192.168.178.101\0" \
+	"serverip=192.168.178.1\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \
 		"setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs; " \
@@ -119,9 +120,12 @@
 	"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 	"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \
 	"setupdateargs=setenv bootargs " \
-		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${mtdparts} " \
+		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args} ${mtdparts} " \
 		"vt.global_cursor_default=0 consoleblank=0 ${backlight} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dh_uboot_type}.update; run setupdateargs; bootz ${loadaddr}\0" \
+	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=65464; " \
+		"if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dh_uboot_type}.update; " \
+		"then run setupdateargs; bootz ${loadaddr}; fi;\0" \
 
 #ifndef CONFIG_NAND_MXS /* eMMC default args */
 

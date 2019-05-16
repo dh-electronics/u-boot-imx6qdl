@@ -227,16 +227,19 @@ int board_mmc_getcd(struct mmc *mmc)
 
 	switch (cfg->esdhc_base) {
 	case USDHC1_BASE_ADDR:
-		/* USDHC1 card detect on HW100 is active low */
-		if (board_get_sodimm_hwcode() == 1)
-			ret = !gpio_get_value(USDHC1_CD_GPIO);
-		else
-			ret = gpio_get_value(USDHC1_CD_GPIO);
+		/*
+		 * uSD card (on module) or uSD/SD/MMC card interface (external)
+		 * card detect is active low
+		 */
+		ret = !gpio_get_value(USDHC1_CD_GPIO);
 		if (ret)
-			printk("SD card detected\n");
+			printf("SD card detected\n");
 		return ret;
 	case USDHC2_BASE_ADDR:
-		 /* USDHC2/eMMC is always present */
+		/*
+		 * eMMC (on module)
+		 * card detect is always present
+		 */
 		return 1;
 	}
 

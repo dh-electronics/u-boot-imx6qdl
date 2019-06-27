@@ -451,9 +451,17 @@ static iomux_v3_cfg_t const ecspi1_pads[] = {
 	IOMUX_PADS(PAD_EIM_D16__ECSPI1_SCLK	| MUX_PAD_CTRL(SPI_PAD_CTRL)),
 };
 
+#define DHCOM_SPI1_CS	IMX_GPIO_NR(4, 11)
+
 static void setup_iomux_spi(void)
 {
 	SETUP_IOMUX_PADS(ecspi1_pads);
+
+	/*
+	 * disable devices on DHCOM SPI1 (CS is active low)
+	 * - prevent problems with bootflash access.
+	 */
+	gpio_direction_output(DHCOM_SPI1_CS, 1);
 }
 
 int board_spi_cs_gpio(unsigned bus, unsigned cs)

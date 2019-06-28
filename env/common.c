@@ -102,6 +102,7 @@ int set_default_vars(int nvars, char * const vars[])
 				H_NOCLEAR | H_INTERACTIVE, 0, nvars, vars);
 }
 
+static int import_retry_count = 0;
 /*
  * Check if CRC is valid and (if yes) import the environment.
  * Note that "buf" may or may not be aligned.
@@ -116,7 +117,13 @@ int env_import(const char *buf, int check)
 		memcpy(&crc, &ep->crc, sizeof(crc));
 
 		if (crc32(0, ep->data, ENV_SIZE) != crc) {
-			set_default_env("!bad CRC");
+			if (import_retry_count > 5) {
+				set_default_env("!bad CRC");
+			} else {
+				import_retry_count++;
+				puts("env_import(): try again...\n");
+				return -EAGAIN;
+			}
 			return -EIO;
 		}
 	}

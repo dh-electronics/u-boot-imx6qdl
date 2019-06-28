@@ -276,6 +276,7 @@ static int env_sf_load(void)
 	if (ret)
 		goto out;
 
+try_again:
 	ret = spi_flash_read(env_flash,
 		CONFIG_ENV_OFFSET, CONFIG_ENV_SIZE, buf);
 	if (ret) {
@@ -284,6 +285,8 @@ static int env_sf_load(void)
 	}
 
 	ret = env_import(buf, 1);
+	if (ret == -EAGAIN)
+		goto try_again;
 	if (!ret)
 		gd->env_valid = ENV_VALID;
 

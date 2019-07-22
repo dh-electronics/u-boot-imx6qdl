@@ -201,6 +201,7 @@ static const struct mx6_mmdc_calibration mmdc_calib_2x2G_800 = {
 
 /*
  * 2 Gbit DDR3 memory
+ *   - NANYA #NT5CB128M16JR-EKI
  *   - NANYA #NT5CC128M16IP-DII
  *   - NANYA #NT5CB128M16FP-DII
  */
@@ -213,8 +214,8 @@ static const struct mx6_ddr3_cfg mem_ddr_2G = {
 	.coladdr	= 10,
 	.pagesz		= 2,
 	.trcd		= 1375,
-	.trcmin		= 5863,
-	.trasmin	= 3750,
+	.trcmin		= 4875,
+	.trasmin	= 3500,
 };
 
 /*

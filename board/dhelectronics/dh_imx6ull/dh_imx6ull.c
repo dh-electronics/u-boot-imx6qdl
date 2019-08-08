@@ -119,16 +119,22 @@ static void setup_iomux_uart(void)
 #define LGA_HW_CODE_BIT_0	IMX_GPIO_NR(3, 0)
 #define LGA_HW_CODE_BIT_1	IMX_GPIO_NR(3, 1)
 
+/*
+ * Important: LCD pins are used for lga hardware code. So call this function
+ *            once before setup_lcd() to save the value into a static variable.
+ */
 int board_get_lga_hwcode(void)
 {
-	int hw_code;
+	static int hw_code = (-1);
 
-	gpio_direction_input(LGA_HW_CODE_BIT_0);
-	gpio_direction_input(LGA_HW_CODE_BIT_1);
+	if ( hw_code == (-1) ) {
+		gpio_direction_input(LGA_HW_CODE_BIT_0);
+		gpio_direction_input(LGA_HW_CODE_BIT_1);
 
-	/* HW 100 = 0b00; HW 200 = 0b01; HW 300 = 0b10; HW 400 = 0b11 */
-	hw_code = ( (gpio_get_value(LGA_HW_CODE_BIT_1) << 1) |
-		    (gpio_get_value(LGA_HW_CODE_BIT_0) << 0)  ) + 1;
+		/* HW 100 = 0b00; HW 200 = 0b01; HW 300 = 0b10; HW 400 = 0b11 */
+		hw_code = ( (gpio_get_value(LGA_HW_CODE_BIT_1) << 1) |
+			    (gpio_get_value(LGA_HW_CODE_BIT_0) << 0)  ) + 1;
+	}
 
 	return hw_code;
 }
@@ -562,6 +568,9 @@ int board_init(void)
 #ifdef CONFIG_FEC_MXC
 	setup_fec(CONFIG_FEC_ENET_DEV);
 #endif
+
+	/* Read hw code into static variable */
+	board_get_lga_hwcode();
 
 #ifdef CONFIG_VIDEO_MXS
 	setup_lcd();

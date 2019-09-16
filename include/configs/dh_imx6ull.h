@@ -14,7 +14,7 @@
 #include <asm/mach-imx/gpio.h>
 
 /*
- * SPI NOR flash layout:
+ * SPI NOR flash / eMMC layout:
  *
  * 0x00_0000-0x00_03ff ...     1.024 ... UNUSED
  * 0x00_0400-0x0f_ffff ... 1.047.552 ... SPL + U-Boot
@@ -112,6 +112,8 @@
 	"ipaddr=192.168.178.101\0" \
 	"serverip=192.168.178.1\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
+	"dhblloc="DHBLLOC"\0" \
+	"dhenvloc="DHENVLOC"\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \
 		"setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs; " \
 		"setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt; " \
@@ -119,14 +121,14 @@
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
 	"linuxargs=setenv bootargs " \
 		"console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs} " \
-		"dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
+		"dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
 	"fdt_addr=0x83000000\0" \
 	"fdt_high=0xffffffff\0" \
 	"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 	"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \
 	"setupdateargs=setenv bootargs " \
 		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args} ${mtdparts} " \
-		"vt.global_cursor_default=0 consoleblank=0 ${backlight} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
+		"vt.global_cursor_default=0 consoleblank=0 ${backlight} dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dh_uboot_type}.update; run setupdateargs; bootz ${loadaddr}\0" \
 	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=65464; " \
 		"if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dh_uboot_type}.update; " \
@@ -207,13 +209,20 @@
 /* Environment */
 #define CONFIG_ENV_SIZE			(16 * 1024)
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
-
-#if defined(CONFIG_ENV_IS_IN_SPI_FLASH)
 #define CONFIG_ENV_OFFSET		(1024 * 1024)
 #define CONFIG_ENV_SECT_SIZE		(64 * 1024)
 #define CONFIG_ENV_OFFSET_REDUND	\
 	(CONFIG_ENV_OFFSET + CONFIG_ENV_SECT_SIZE)
 #define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
+
+#if defined(CONFIG_ENV_IS_IN_MMC)
+#define DHBLLOC				"spiflash"
+#define DHENVLOC			"emmc"
+#define CONFIG_SYS_MMC_ENV_DEV		2
+#define CONFIG_SYS_MMC_ENV_PART		1 /* PART1 = mmcblkXboot0 */
+#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
+#define DHBLLOC				"spiflash"
+#define DHENVLOC			"spiflash"
 #define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
 #define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE

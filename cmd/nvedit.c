@@ -777,10 +777,38 @@ int envmatch(uchar *s1, int i2)
 }
 
 #ifndef CONFIG_SPL_BUILD
+void env_get_copy(const char *name, char *buf, unsigned len)
+{
+	const char *data = env_get(name);
+	if (data) {
+		if (strlen(data) < len)
+			strcpy(buf, data);
+		else
+			printf("env_buf [%d bytes] too small for value of \"%s\"\n",
+			len, name);
+	} else {
+		memset(buf, 0, len);
+	}
+}
+
+#define ENV_KEEP_NUM		4
+#define ENV_KEEP1		"SN"
+#define ENV_KEEP2		"PSN"
+#define ENV_KEEP3		"ethaddr"
+#define ENV_KEEP4		"eth1addr"
+#define ENV_KEEP_STRSIZE_NAME	9
+#define ENV_KEEP_STRSIZE_DATA	18
 static int do_env_default(cmd_tbl_t *cmdtp, int __flag,
 			  int argc, char * const argv[])
 {
 	int all = 0, flag = 0;
+	int keep = 0, index = 0, normal = 0;
+
+	char env_elements[ENV_KEEP_NUM][ENV_KEEP_STRSIZE_NAME] = { ENV_KEEP1,
+								   ENV_KEEP2,
+								   ENV_KEEP3,
+								   ENV_KEEP4 };
+	char env_buffer[ENV_KEEP_NUM][ENV_KEEP_STRSIZE_DATA];
 
 	debug("Initial value for argc=%d\n", argc);
 	while (--argc > 0 && **++argv == '-') {
@@ -790,6 +818,9 @@ static int do_env_default(cmd_tbl_t *cmdtp, int __flag,
 			switch (*arg) {
 			case 'a':		/* default all */
 				all = 1;
+				break;
+			case 'e':		/* Only in combination with a */
+				keep = 1;	/* => [a]lmost [e]verything   */
 				break;
 			case 'f':		/* force */
 				flag |= H_FORCE;
@@ -801,8 +832,26 @@ static int do_env_default(cmd_tbl_t *cmdtp, int __flag,
 	}
 	debug("Final value for argc=%d\n", argc);
 	if (all && (argc == 0)) {
+		/* Save data if necessary */
+		if (keep)
+			for (index = 0; index < ENV_KEEP_NUM; index++)
+				env_get_copy(env_elements[index], env_buffer[index],
+					     ENV_KEEP_STRSIZE_DATA);
+
 		/* Reset the whole environment */
 		set_default_env("## Resetting to default environment\n");
+
+		/* Restore data if necessary */
+		if (keep)
+			for (index = 0; index < ENV_KEEP_NUM; index++) {
+				if (strlen(env_buffer[index])) {
+					if (!normal++)
+						printf("Keeping:\n");
+					printf("  %s=%s\n", env_elements[index],
+							    env_buffer[index]);
+					env_set(env_elements[index], env_buffer[index]);
+				}
+			}
 		return 0;
 	}
 	if (!all && (argc > 0)) {

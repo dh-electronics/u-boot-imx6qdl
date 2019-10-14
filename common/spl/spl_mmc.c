@@ -96,12 +96,16 @@ end:
 
 static int spl_mmc_get_device_index(u32 boot_device)
 {
+	int start_index = 0;
+#ifdef MMC_START_INDEX
+	start_index = MMC_START_INDEX;
+#endif
 	switch (boot_device) {
 	case BOOT_DEVICE_MMC1:
-		return 0;
+		return start_index + 0;
 	case BOOT_DEVICE_MMC2:
 	case BOOT_DEVICE_MMC2_2:
-		return 1;
+		return start_index + 1;
 	}
 
 #ifdef CONFIG_SPL_LIBCOMMON_SUPPORT

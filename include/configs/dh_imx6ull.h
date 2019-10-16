@@ -31,7 +31,7 @@
 /* SPL options */
 #include "imx6_spl.h"			/* common IMX6 SPL configuration */
 #define CONFIG_SYS_SPI_SPL_OFFS		0x00400
-#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x11400
+#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x11400 /* 0x8a * 512 */
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.imx"
 
 /* Size of malloc() pool */
@@ -86,6 +86,7 @@
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
 #define MMC_START_INDEX			1
 #define CONFIG_SYS_FSL_USDHC_NUM	3 /* 0=dummy, 1=uSD/SD/MMC, 2=eMMC */
+#define CONFIG_SUPPORT_EMMC_BOOT	/* eMMC specific */
 
 /* NAND stuff */
 #ifdef CONFIG_NAND_MXS

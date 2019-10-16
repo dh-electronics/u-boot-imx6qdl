@@ -29,6 +29,7 @@
 #include <power/pfuze3000_pmic.h>
 #include <usb.h>
 #include <usb/ehci-ci.h>
+#include <nand.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -592,6 +593,25 @@ int board_late_init(void)
 {
 	setup_dhcom_mac_from_fuse(0, "ethaddr");
 	setup_dhcom_mac_from_fuse(1, "eth1addr");
+
+#ifdef CONFIG_NAND_MXS
+	if (nand_size() != 0) {
+		env_set("dhblloc", "spiflash");
+		env_set("dhenvloc", "spiflash");
+		env_set("dhstoragetype", "nand");
+	} else {
+		printf("NAND:  not available => Assuming eMMC for Update Kernel\n");
+		env_set("dhblloc", "emmc");
+		env_set("dhenvloc", "emmc");
+		env_set("dhstoragetype", "emmc");
+	}
+#else
+#ifdef CONFIG_FSL_ESDHC
+	env_set("dhblloc", "emmc");
+	env_set("dhenvloc", "emmc");
+	env_set("dhstoragetype", "emmc");
+#endif /* CONFIG_FSL_ESDHC */
+#endif /* CONFIG_NAND_MXS */
 
 	handle_hw_revision();
 

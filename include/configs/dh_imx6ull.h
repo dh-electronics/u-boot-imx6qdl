@@ -113,8 +113,6 @@
 	"ipaddr=192.168.178.101\0" \
 	"serverip=192.168.178.1\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
-	"dhblloc="DHBLLOC"\0" \
-	"dhenvloc="DHENVLOC"\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \
 		"setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs; " \
 		"setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt; " \
@@ -130,9 +128,9 @@
 	"setupdateargs=setenv bootargs " \
 		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args} ${mtdparts} " \
 		"vt.global_cursor_default=0 consoleblank=0 ${backlight} dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
-	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dh_uboot_type}.update; run setupdateargs; bootz ${loadaddr}\0" \
+	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dhstoragetype}.update; run setupdateargs; bootz ${loadaddr}\0" \
 	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=65464; " \
-		"if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dh_uboot_type}.update; " \
+		"if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dhstoragetype}.update; " \
 		"then run setupdateargs; bootz ${loadaddr}; fi;\0" \
 
 #ifndef CONFIG_NAND_MXS /* eMMC default args */
@@ -148,7 +146,6 @@
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0" \
-	"dh_uboot_type=emmc" \
 	""
 
 #define CONFIG_BOOTCOMMAND \
@@ -175,7 +172,6 @@
 		"ubifsload ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux ${zImage_file}...; " \
 		"ubifsload ${loadaddr} ${zImage_file}\0" \
-	"dh_uboot_type=nand" \
 	""
 
 #define CONFIG_BOOTCOMMAND \
@@ -217,13 +213,9 @@
 #define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
 
 #if defined(CONFIG_ENV_IS_IN_MMC)
-#define DHBLLOC				"spiflash"
-#define DHENVLOC			"emmc"
 #define CONFIG_SYS_MMC_ENV_DEV		2
 #define CONFIG_SYS_MMC_ENV_PART		1 /* PART1 = mmcblkXboot0 */
 #elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
-#define DHBLLOC				"spiflash"
-#define DHENVLOC			"spiflash"
 #define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
 #define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE

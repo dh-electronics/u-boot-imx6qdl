@@ -94,6 +94,7 @@
 #define CONFIG_SYS_NAND_BASE		0x40000000
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
 #define CONFIG_SYS_NAND_ONFI_DETECTION
+#define CONFIG_SYS_NAND_USE_FLASH_BBT
 
 #define CONFIG_MTD_DEVICE
 #define CONFIG_MTD_PARTITIONS
@@ -119,7 +120,7 @@
 		"run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
 	"linuxargs=setenv bootargs " \
-		"console=${console} ${rootfs} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs} " \
+		"console=${console} ${rootfs} ${mtdparts} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs} " \
 		"dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN}\0" \
 	"fdt_addr=0x83000000\0" \
 	"fdt_high=0xffffffff\0" \

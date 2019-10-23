@@ -1328,7 +1328,8 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 	if (true) {
 #endif
                 // Initialize USB Stick
-                printf ("--> Update: Initialize USB Stick on Host Port");
+                printf ("--> Update: Initialize USB Stick on Host Port\n");
+                run_command("usb stop", 0);
                 ret = run_command("usb start", 0);
                 if(ret == 0) {
                         ret = DHCOMupdate(cmdtp, argc, argv, "usb", "0:1");

@@ -32,7 +32,7 @@
 #include "imx6_spl.h"			/* common IMX6 SPL configuration */
 #define CONFIG_SYS_SPI_SPL_OFFS		0x00400
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x11400 /* 0x8a * 512 */
-#define CONFIG_SPL_TARGET		"u-boot-with-spl.imx"
+#define CONFIG_SPL_TARGET		"u-boot-with-spl-env.imx"
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(4 * SZ_1M)
@@ -206,6 +206,7 @@
 
 /* Environment */
 #define CONFIG_ENV_SIZE			(16 * 1024)
+#define CONFIG_ENV_RESERVED_SIZE	CONFIG_ENV_SECT_SIZE /* Reserved size for one env */
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
 #define CONFIG_ENV_OFFSET		(1024 * 1024)
 #define CONFIG_ENV_SECT_SIZE		(64 * 1024)

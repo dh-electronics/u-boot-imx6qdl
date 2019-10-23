@@ -1144,6 +1144,56 @@ SPL: spl/u-boot-spl.bin FORCE
 u-boot-with-spl.imx u-boot-with-nand-spl.imx: SPL u-boot.bin FORCE
 	$(Q)$(MAKE) $(build)=arch/arm/mach-imx $@
 
+default_env.txt: SPL u-boot.bin FORCE
+	@echo "  EXTRACT $@"
+	@if [ -L source ]; then \
+		./source/scripts/get_default_envs.sh ./env > $@; \
+	else \
+		./scripts/get_default_envs.sh ./env > $@; \
+	fi
+
+env_size = $$(echo $(CONFIG_ENV_SIZE) | bc)
+env_fill = $$(echo $(CONFIG_ENV_RESERVED_SIZE) - $(CONFIG_ENV_SIZE) | bc)
+default_env%.bin: default_env.txt
+	@echo "  MKENV   $@"
+	@if [ $(CONFIG_SYS_REDUNDAND_ENVIRONMENT) ]; then \
+		./tools/mkenvimage -r -p 0x00 -s $(env_size) -o $@ $^; \
+	else \
+		./tools/mkenvimage -p 0x00 -s $(env_size) -o $@ $^; \
+	fi
+	@if [ $(CONFIG_SYS_REDUNDAND_ENVIRONMENT) ]; then \
+		if [ $@ = "default_env2.bin" ]; then \
+			cat /dev/zero | dd conv=notrunc bs=1 of=$@ seek=4 count=1 2>/dev/null; \
+		fi \
+	fi
+	@if [ $(CONFIG_ENV_IS_IN_SPI_FLASH) ]; then \
+		cat /dev/zero | tr "\0" "\377" | dd bs=1 of=$@ \
+			seek=$(env_size) count=$(env_fill) 2>/dev/null; \
+	else \
+		cat /dev/zero | dd bs=1 of=$@ \
+			seek=$(env_size) count=$(env_fill) 2>/dev/null; \
+	fi
+
+default_env_complete.bin: default_env1.bin default_env2.bin
+	@echo "  CAT     $@"
+	@if [ $(CONFIG_SYS_REDUNDAND_ENVIRONMENT) ]; then \
+		cat $^ >$@; \
+	else \
+		cat $(word 1,$^) >$@; \
+	fi
+
+env_start = $$(printf "%s - %d\n" $(CONFIG_ENV_OFFSET) $(CONFIG_SYS_SPI_SPL_OFFS)| bc)
+env_start_512 = $$( echo $(env_start) "/ 512" | bc)
+u-boot-with-spl-env.imx: u-boot-with-spl.imx default_env_complete.bin
+	@echo "  CAT     $@"
+	@if [ $(CONFIG_ENV_IS_IN_SPI_FLASH) ]; then \
+		cat /dev/zero | tr "\0" "\377" | dd bs=512 of=$@ count=$(env_start_512) 2>/dev/null; \
+	else \
+		cat /dev/zero | dd bs=512 of=$@ count=$(env_start_512) 2>/dev/null; \
+	fi
+	@dd conv=notrunc if=$(word 1,$^) of=$@ 2>/dev/null
+	@dd bs=1 if=$(word 2,$^) of=$@ seek=$(env_start) 2>/dev/null
+
 MKIMAGEFLAGS_u-boot.ubl = -n $(UBL_CONFIG) -T ublimage -e $(CONFIG_SYS_TEXT_BASE)
 
 u-boot.ubl: u-boot-with-spl.bin FORCE

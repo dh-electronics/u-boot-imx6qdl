@@ -124,6 +124,7 @@ typedef struct {
     bool have_ini;		// true if update uses DHupdate.ini
     TYPE type;			// type: uboot, settings, .. 
     char *filename;		// image filename
+    ulong filesize;		// image filesize
     char *src_dev;		// storage device
     char *src_part;		// storage partition
     ulong loadaddr;	// ram load address
@@ -208,7 +209,7 @@ void led_blink(bool active_high, int blinking)
 //  Update Flash content on the specified address.
 //
 //  Commit values:  write_offset    = Flash Offset address
-//                  loadaddr 	    = SDRAM Buffer address
+//                  context         = load_file context
 //                  erase_blocks    = count of blocks that should be updated
 //                  erase_size      = Flash block size
 //
@@ -216,7 +217,7 @@ void led_blink(bool active_high, int blinking)
 //                  1 = Flash erase error (the error block number is specified from bit 3 to bit 31)
 //                  2 = Flash write error (the error block number is specified from bit 3 to bit 31)
 //
-int write_spiflash(ulong write_offset, ulong loadaddr, ulong erase_blocks, ulong erase_size)
+int write_spiflash(ulong write_offset, context_t *context, ulong erase_blocks, ulong erase_size)
 {
         int ret = 0;
 	ulong erase_offset;
@@ -238,7 +239,7 @@ int write_spiflash(ulong write_offset, ulong loadaddr, ulong erase_blocks, ulong
         if(ret != 0)
                 return ret;
 
-	snprintf(cmd, sizeof(cmd), "sf write %08lx %08lx %08lx", loadaddr, write_offset, update_size);
+	snprintf(cmd, sizeof(cmd), "sf write %08lx %08lx %08lx", context->loadaddr, write_offset, update_size);
         return run_command (cmd, 0);
 }
 
@@ -434,6 +435,7 @@ int load_file(context_t *context)
 	}
 
 	ret = (int)simple_strtoul(env_get("filesize"), NULL, 16);
+	context->filesize = ret;
         printf("--> Loaded %s to SDRAM (%d bytes)\n\n", context->filename, ret);
 
 	return ret;
@@ -737,7 +739,7 @@ int update_bootloader(context_t *context, updateini_t *DHupdateINI)
                 return -ENOSPC;
         }
                 
-        ret = write_spiflash(uboot_offset, context->loadaddr, ulBlocks, blocksize);
+        ret = write_spiflash(uboot_offset, context, ulBlocks, blocksize);
         if (ret != 0) {
                 printf("\n--> Update ERROR: Failed flashing ... \n");
                 handle_error(context, DHupdateINI, ERR_FLASH);
@@ -958,7 +960,7 @@ int update_eboot(context_t *context, updateini_t *DHupdateINI)
         env_set("eboot_image", "");
         env_save();
 
-        ret = write_spiflash(eboot_offset,context->loadaddr,ulBlocks,blocksize);
+        ret = write_spiflash(eboot_offset,context,ulBlocks,blocksize);
         if (ret != 0) {
                 printf("\n--> Update ERROR: Failed flashing ... \n");
                 handle_error(context, DHupdateINI, ERR_FLASH);

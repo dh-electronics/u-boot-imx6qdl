@@ -67,6 +67,7 @@
 #include <linux/ctype.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
+#include <linux/kernel.h>
 #ifdef DH_IMX6_NAND_VERSION
 #  include <nand.h>
 #endif
@@ -731,7 +732,7 @@ int update_bootloader(context_t *context, updateini_t *DHupdateINI)
 
         // Calculate necessary sectors in flash for the u-boot image file.
         filesize = ret; // u-boot.bin filesize
-        ulBlocks = (filesize+uboot_offset) / blocksize + 0x1;
+        ulBlocks = DIV_ROUND_UP(filesize+uboot_offset, blocksize);
 
 	ret = check_imagesize(context, filesize+uboot_offset, uboot_partsize);
         if (ret) {
@@ -868,7 +869,7 @@ int update_wince(context_t *context, updateini_t *DHupdateINI, char OSFileType)
 	}
 
         filesize = ret; // nk.nb0 filesize
-        ulBlocks = filesize / ulNANDFlashBlockSize + 0x1;
+        ulBlocks = DIV_ROUND_UP(filesize, ulNANDFlashBlockSize);
 
 #ifdef WEC_PARTITION_SIZE
         // Check if the file fits into to the WEC-Image-partition
@@ -944,7 +945,7 @@ int update_eboot(context_t *context, updateini_t *DHupdateINI)
 
         // Calculate necessary sectors in flash for the eboot image file.
         filesize = ret;
-        ulBlocks = (filesize / blocksize) + 0x1;
+        ulBlocks = DIV_ROUND_UP(filesize, blocksize);
 #ifdef EBOOT_PARTITION_SIZE
         // Check if the file fits into to the flash-partition
 	ret = check_imagesize(context, filesize, EBOOT_PARTITION_SIZE);

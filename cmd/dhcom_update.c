@@ -67,7 +67,10 @@
 #include <linux/ctype.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
+#include <asm/arch/sys_proto.h>
+#include <asm/spl.h>
 #include <linux/kernel.h>
+#include <mmc.h>
 #ifdef DH_IMX6_NAND_VERSION
 #  include <nand.h>
 #endif
@@ -242,6 +245,56 @@ int write_spiflash(ulong write_offset, context_t *context, ulong erase_blocks, u
 
 	snprintf(cmd, sizeof(cmd), "sf write %08lx %08lx %08lx", context->loadaddr, write_offset, update_size);
         return run_command (cmd, 0);
+}
+
+//------------------------------------------------------------------------------
+//
+//  Function:  write_mmc
+//
+//  Update MMC content on the specified address.
+//
+//  Commit values:  write_offset    = MMC Offset address
+//                  context         = load_file context
+//                  blocks          = Count of blocks that should be updated
+//                  block_size      = Block size
+//
+//  Return value:   0 = No error
+//                  1 = Failure
+//
+int write_mmc(ulong write_offset, context_t *context, ulong blocks, ulong block_size)
+{
+	ulong blocks_offset = write_offset / block_size;
+	int dev = 2;
+	int hwpart = 1; /* PART1 = mmcblkXboot0 */
+	int ret = 0;
+	char cmd[128];
+	struct mmc *mmc;
+	u8 bootpart;
+
+	printf ("--> Update: Write new image into MMC ...\n");
+
+	snprintf(cmd, sizeof(cmd), "mmc dev %d %d", dev, hwpart);
+	ret = run_command (cmd, 0);
+	if (ret != 0)
+		return ret;
+
+	snprintf(cmd, sizeof(cmd), "mmc write %08lx %08lx %08lx", context->loadaddr, blocks_offset, blocks);
+	ret = run_command (cmd, 0);
+	if (ret != 0)
+		return ret;
+
+	mmc = find_mmc_device(dev);
+	if (mmc) {
+		if (mmc_init(mmc) == 0) {
+			if ( (mmc->part_config != MMCPART_NOAVAILABLE) && !IS_SD(mmc) ) {
+				bootpart = EXT_CSD_EXTRACT_BOOT_PART(mmc->part_config);
+				if ( bootpart != hwpart )
+					printf("\nWARNING: Updated hw partition is not selected for booting!\n");
+			}
+		}
+	}
+
+	return 0;
 }
 
 //------------------------------------------------------------------------------
@@ -709,6 +762,17 @@ void handle_error(context_t *context, updateini_t *DHupdateINI, ERR_STATE code)
 		        led_blink(DHupdateINI->led_activeState, blinking);
 			udelay(1750*1000);
 		}                            
+	}
+}
+
+int get_boot_dev(void)
+{
+	switch ((imx6_src_get_boot_mode() & IMX6_BMODE_MASK) >> IMX6_BMODE_SHIFT) {
+	case IMX6_BMODE_MMC:
+	case IMX6_BMODE_EMMC:
+		return BOOT_DEVICE_MMC2;
+	default:
+		return BOOT_DEVICE_SPI;
 	}
 }
 

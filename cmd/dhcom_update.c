@@ -778,40 +778,67 @@ int get_boot_dev(void)
 
 int update_bootloader(context_t *context, updateini_t *DHupdateINI)
 {
+	ulong boot_dev = get_boot_dev();
+	ulong write_offset = CONFIG_SYS_SPI_SPL_OFFS;
+	ulong part_size_uboot = CONFIG_ENV_OFFSET;
+#ifndef CONFIG_SYS_REDUNDAND_ENVIRONMENT
+	ulong part_size_total = CONFIG_ENV_OFFSET + CONFIG_ENV_RESERVED_SIZE;
+#else
+	ulong part_size_total = CONFIG_ENV_OFFSET + 2*CONFIG_ENV_RESERVED_SIZE;
+#endif
+	ulong write_size_total, blocksize, blocks_offset, blocks;
+	unsigned char default_val;
 	int ret;
-	ulong uboot_offset = CONFIG_SYS_SPI_SPL_OFFS;
-        ulong uboot_partsize = CONFIG_ENV_OFFSET;
 
-	ulong blocksize = (64 * 1024); 
-        ulong filesize;
-        ulong ulBlocks;
+	/* Make the update target dependent on where the device was booted from */
+	printf("\n==> Update bootloader on ");
+	if (boot_dev == BOOT_DEVICE_MMC2) {
+		printf("eMMC\n");
+		default_val = 0x00;
+		blocksize = 512;
+	} else {
+		printf("spiflash\n");
+		default_val = 0xFF;
+		blocksize = CONFIG_ENV_SECT_SIZE;
+	}
 
-        printf("\n==> Update bootloader\n");
+	memset((void *)context->loadaddr, default_val, part_size_total);
 
 	ret = load_file(context);
-	if(ret < 0) {
+	if (ret < 0) {
 		handle_error(context, DHupdateINI, ERR_FILE_NOT_FOUND);
 		return ret;
 	}
 
-        // Calculate necessary sectors in flash for the u-boot image file.
-        filesize = ret; // u-boot.bin filesize
-        ulBlocks = DIV_ROUND_UP(filesize+uboot_offset, blocksize);
+	write_size_total = write_offset + context->filesize;
+	if (write_size_total > part_size_uboot) { /* u-boot image also includes environment */
+		printf("--> Update: Assume image contains Bootloader + ENV\n" \
+		       "            Select the whole bootloader partition for erasing.\n");
+		write_size_total = part_size_total;
+	}
+	blocks_offset = (write_offset / blocksize); /* Meet erase block border */
+	blocks = DIV_ROUND_UP(write_size_total, blocksize);
+	blocks -= blocks_offset;
 
-	ret = check_imagesize(context, filesize+uboot_offset, uboot_partsize);
-        if (ret) {
-                handle_error(context, DHupdateINI, ERR_IMAGE_SIZE);
-                return -ENOSPC;
-        }
-                
-        ret = write_spiflash(uboot_offset, context, ulBlocks, blocksize);
-        if (ret != 0) {
-                printf("\n--> Update ERROR: Failed flashing ... \n");
-                handle_error(context, DHupdateINI, ERR_FLASH);
-                return -EFAULT;
-        }
+	ret = check_imagesize(context, context->filesize, part_size_total-write_offset);
+	if (ret) {
+		handle_error(context, DHupdateINI, ERR_IMAGE_SIZE);
+		return -ENOSPC;
+	}
 
-        printf("\n--> Update: U-Boot Update done\n");
+	if (boot_dev == BOOT_DEVICE_MMC2)
+		ret = write_mmc(write_offset, context, blocks, blocksize);
+	else
+		ret = write_spiflash(write_offset, context, blocks, blocksize);
+	if (ret != 0) {
+		printf("\n--> Update ERROR: Failed flashing ... \n");
+		handle_error(context, DHupdateINI, ERR_FLASH);
+		return -EFAULT;
+	}
+
+	printf("\n--> Update: U-Boot Update done (%ld bytes free)\n",
+	       (write_offset + context->filesize) <= part_size_uboot ?
+	       part_size_uboot - (write_offset + context->filesize) : 0);
 	return 0;
 }
 

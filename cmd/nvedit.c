@@ -36,6 +36,9 @@
 #include <linux/stddef.h>
 #include <asm/byteorder.h>
 #include <asm/io.h>
+#include <spi.h>
+#include <spi_flash.h>
+
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -146,6 +149,114 @@ static int do_env_print(cmd_tbl_t *cmdtp, int flag, int argc,
 	}
 
 	return rcode;
+}
+
+static int do_spiflash_env(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	struct spi_flash *flash = NULL;
+	unsigned int bus = CONFIG_SF_DEFAULT_BUS;
+	unsigned int cs = CONFIG_SF_DEFAULT_CS;
+	unsigned int speed = CONFIG_SF_DEFAULT_SPEED;
+	unsigned int mode = CONFIG_SF_DEFAULT_MODE;
+	unsigned int offset = CONFIG_ENV_OFFSET;
+	unsigned long addr = simple_strtoul(env_get("loadaddr"), NULL, 16);
+	char *buf;
+	env_t *env;
+	int crc_ok;
+#ifndef CONFIG_SYS_REDUNDAND_ENVIRONMENT
+	unsigned int len = CONFIG_ENV_RESERVED_SIZE;
+#else
+	unsigned int len = 2*CONFIG_ENV_RESERVED_SIZE;
+	env_t *env2;
+	int crc2_ok;
+#endif /* CONFIG_SYS_REDUNDAND_ENVIRONMENT */
+	unsigned int idx, slen, n, found;
+
+	flash = spi_flash_probe(bus, cs, speed, mode);
+	if (!flash) {
+		printf("Failed to initialize SPI flash at %u:%u\n", bus, cs);
+		return 1;
+	}
+
+	buf = map_physmem(addr, len, MAP_WRBACK);
+	if (!buf && addr) {
+		puts("Failed to map physical memory\n");
+		return 1;
+	}
+
+	if (spi_flash_read(flash, offset, len, buf)) {
+		printf("Read failed\n");
+		unmap_physmem(buf, len);
+		return 1;
+	}
+
+	env = (env_t *)buf;
+	crc_ok = crc32(0, env->data, ENV_SIZE) == env->crc;
+#ifdef CONFIG_SYS_REDUNDAND_ENVIRONMENT
+	env2 = (env_t *)(buf + CONFIG_ENV_RESERVED_SIZE);
+	crc2_ok = crc32(0, env2->data, ENV_SIZE) == env2->crc;
+	if (crc_ok && crc2_ok) {
+		if (env->flags) {
+			printf("Environment 1 is valid\n");
+		} else if (env2->flags) {
+			printf("Environment 2 is valid\n");
+			env = env2;
+			crc_ok = crc2_ok;
+		}
+	} else if (crc_ok && !crc2_ok) {
+		printf("Bad CRC on environment 2 => Using environment 1\n");
+	} else if (!crc_ok && crc2_ok) {
+		printf("Bad CRC on environment 1 => Using environment 2\n");
+		env = env2;
+		crc_ok = crc2_ok;
+	}
+#endif /* CONFIG_SYS_REDUNDAND_ENVIRONMENT */
+	if (!crc_ok) {
+		printf("Bad CRC, maybe spiflash environment not available or corrupt!\n");
+		unmap_physmem(buf, len);
+		return 1;
+	}
+
+	printf("spiflash environment:\n");
+
+	/* No arguments => Show all enviroments */
+	if (argc == 1) {
+		idx = 0;
+		while (idx < ENV_SIZE) {
+			printf("%s\n", env->data + idx);
+			slen = strlen((const char *)(env->data + idx));
+			if (slen == 0)
+				break;
+			idx += slen + 1;
+		}
+		unmap_physmem(buf, len);
+		return 0;
+	}
+
+	/* Show all enviroments given by arguments */
+	for (n = 1; n < argc; ++n) {
+		idx = 0;
+		found = 0;
+		while (idx < ENV_SIZE) {
+			if (strncmp(argv[n], (const char *)(env->data + idx)
+				    , strlen(argv[n])) == 0) {
+				if (*(env->data + idx + strlen(argv[n])) == '=') {
+					printf("%s\n", env->data + idx);
+					found = 1;
+					break;
+				}
+			}
+			slen = strlen((const char *)(env->data + idx));
+			if (slen == 0)
+				break;
+			idx += slen + 1;
+		}
+		if (!found)
+			printf("## Error: \"%s\" not defined\n", argv[n]);
+	}
+	unmap_physmem(buf, len);
+	return 0;
 }
 
 #ifdef CONFIG_CMD_GREPENV
@@ -1328,6 +1439,14 @@ U_BOOT_CMD_COMPLETE(
 	"[-a]\n    - print [all] values of all environment variables\n"
 	"printenv name ...\n"
 	"    - print value of environment variable 'name'",
+	var_complete
+);
+
+U_BOOT_CMD_COMPLETE(
+	sfenv, CONFIG_SYS_MAXARGS, 1,	do_spiflash_env,
+	"print environment variables from spiflash",
+	"name ...\n"
+	"    - print value of environment variable 'name' from spiflash",
 	var_complete
 );
 

@@ -881,7 +881,7 @@ struct mx6_ddr_sysinfo dhcom_ddr_16bit  = {
 	.rst_to_cke = 0x23,	/* 33 cycles, 500us (JEDEC default) */
 	.ddr_type = DDR_TYPE_DDR3,
 	.refsel = 0,	/* Refresh cycles at 64KHz */
-	.refr = 1,	/* 2 refresh commands per refresh cycle */
+	.refr = 3,	/* 4 refresh commands per refresh cycle */
 };
 
 /* TBD */

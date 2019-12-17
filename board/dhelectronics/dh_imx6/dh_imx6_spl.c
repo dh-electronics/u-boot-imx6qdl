@@ -251,7 +251,7 @@ static const struct mx6_ddr_sysinfo dhcom_ddr_64bit = {
 	.sde_to_rst	= 0x10,	/* 14 cycles, 200us (JEDEC default) */
 	.rst_to_cke	= 0x23,	/* 33 cycles, 500us (JEDEC default) */
 	.refsel		= 1,	/* Refresh cycles at 32KHz */
-	.refr		= 3,	/* 4 refresh commands per refresh cycle */
+	.refr		= 7,	/* 8 refresh commands per refresh cycle */
 };
 
 /* DDR3 32bit */
@@ -270,7 +270,7 @@ static const struct mx6_ddr_sysinfo dhcom_ddr_32bit = {
 	.sde_to_rst	= 0x10,	/* 14 cycles, 200us (JEDEC default) */
 	.rst_to_cke	= 0x23,	/* 33 cycles, 500us (JEDEC default) */
 	.refsel		= 1,	/* Refresh cycles at 32KHz */
-	.refr		= 3,	/* 4 refresh commands per refresh cycle */
+	.refr		= 7,	/* 8 refresh commands per refresh cycle */
 };
 
 static void ccgr_init(void)

@@ -514,6 +514,7 @@ static void handle_hw_revision(void)
 	u32 sodimm_hw_code;
 	u32 sw_compatibility;
 	char buf[16];
+	const char *env_value;
 
 	lga_hw_code = board_get_lga_hwcode();
 	sodimm_hw_code = board_get_sodimm_hwcode();
@@ -521,6 +522,13 @@ static void handle_hw_revision(void)
 
 	snprintf(buf, sizeof(buf), "imx6ull-dhcom%1d%1d", lga_hw_code, sodimm_hw_code);
 	env_set("dhcom", buf);
+
+	env_value = env_get("SN");
+	printf("SN:    %s\n", env_value != NULL ? env_value : "not available");
+
+	env_value = env_get("PSN");
+	if (env_value != NULL)
+		printf("PSN:   %s\n", env_value);
 
 	/*
 	 * If software (device tree) must be changed cased by hardware modifications

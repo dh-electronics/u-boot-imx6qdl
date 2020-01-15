@@ -146,7 +146,7 @@
     "setenv fdt_addr_r ${fdt_addr}; "                                   \
     "setenv kernel_addr_r ${loadaddr}; "                                \
     "setenv mmcdev 2; "                                                 \
-    "if test ${auto_update} -eq 1; then"                                \
+    "if test ${auto_update} -eq 1 || gpio input 8; then"                \
     " echo --> Start update auto;"                                      \
     " setenv auto_update 0; saveenv;"                                   \
     " update auto; "                                                    \

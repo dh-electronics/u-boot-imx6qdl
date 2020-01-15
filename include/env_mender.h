@@ -132,17 +132,34 @@
     "ubifsload ${kernel_addr_r} /boot/${mender_kernel_name}; "
 #else
 # define MENDER_BOOTARGS                                                \
-    "setenv bootargs root=${mender_kernel_root} ${bootargs}; "
+    "setenv bootargs root=${mender_kernel_root} ${maveo_bootargs}; "
 # define MENDER_LOAD_KERNEL_AND_FDT                                     \
     "if test \"${fdt_addr_r}\" != \"\"; then "                          \
-    "load ${mender_uboot_root} ${fdt_addr_r} /boot/${mender_dtb_name}; " \
+    "load ${mender_uboot_root} ${fdt_addr_r} /boot/${mender_dtb_name}; "\
     "fi; "                                                              \
     "load ${mender_uboot_root} ${kernel_addr_r} /boot/${mender_kernel_name}; "
 #endif
 
 #define CONFIG_MENDER_BOOTCOMMAND                                       \
+    "echo --> Run boot command for maveo; "                             \
+    "setenv bootenv_file /boot/u-boot.env; "                            \
+    "setenv fdt_addr_r ${fdt_addr}; "                                   \
+    "setenv kernel_addr_r ${loadaddr}; "                                \
+    "setenv mmcdev 2; "                                                 \
+    "if test ${auto_update} -eq 1; then"                                \
+    " echo --> Start update auto;"                                      \
+    " setenv auto_update 0; saveenv;"                                   \
+    " update auto; "                                                    \
+    "fi; "                                                              \
+    "if test ${mmcdev} -eq 2; then echo Booting from eMMC...; fi; "     \
+    "mmc dev ${mmcdev}; "                                               \
+    "echo --> Run mender setup... ; "                                   \
     "run mender_setup; "                                                \
+    "setenv mmcpart ${mender_boot_part}; "                              \
+    "echo Loading ${bootenv_file} from ${mmcdev} ${mmcpart}; "          \
+    "if run load_bootenv; then run importbootenv; fi; "                 \
     MENDER_BOOTARGS                                                     \
+    "echo --> Boot arguments: ${bootargs}; "                            \
     MENDER_LOAD_KERNEL_AND_FDT                                          \
     "${mender_boot_kernel_type} ${kernel_addr_r} - ${fdt_addr_r}; "     \
     "run mender_try_to_recover"

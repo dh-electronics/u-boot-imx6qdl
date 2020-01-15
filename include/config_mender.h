@@ -76,12 +76,12 @@
 #  define CONFIG_SYS_MMC_ENV_DEV   MENDER_UBOOT_STORAGE_DEVICE
 # endif
 # ifdef CONFIG_SYS_MMC_ENV_PART
-#  if CONFIG_SYS_MMC_ENV_PART != 0
-#   error CONFIG_SYS_MMC_ENV_PART need to be set to 0. Make sure that: 1) All the instructions at docs.mender.io/devices/integrating-with-u-boot have been followed. 2) All required layers are included in bblayers.conf, including any board specific layers such as meta-mender-<board>
+#  if CONFIG_SYS_MMC_ENV_PART != 1
+#   error CONFIG_SYS_MMC_ENV_PART need to be set to 0. Current $CONFIG_SYS_MMC_ENV_PART Make sure that: 1) All the instructions at docs.mender.io/devices/integrating-with-u-boot have been followed. 2) All required layers are included in bblayers.conf, including any board specific layers such as meta-mender-<board>
 #  endif
 # else
    /* Use MMC partition zero to select whole user area of memory card. */
-#  define CONFIG_SYS_MMC_ENV_PART  0
+#  define CONFIG_SYS_MMC_ENV_PART  1
 # endif
 #endif
 

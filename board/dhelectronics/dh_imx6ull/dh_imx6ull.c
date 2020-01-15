@@ -152,7 +152,7 @@ int board_get_sodimm_hwcode(void)
 	gpio_direction_input(SODIMM_HW_CODE_BIT_1);
 	gpio_direction_input(SODIMM_HW_CODE_BIT_2);
 
-	/* HW 100 + HW 200 = 00b; HW 300 = 01b */
+	/* HW 100 = 0b00; HW 200 = 0b01; HW 300 = 0b10; HW 400 = 0b11; ... */
 	hw_code = ( (gpio_get_value(SODIMM_HW_CODE_BIT_2) << 2) |
 		    (gpio_get_value(SODIMM_HW_CODE_BIT_1) << 1) |
 		    (gpio_get_value(SODIMM_HW_CODE_BIT_0) << 0)  ) + 1;

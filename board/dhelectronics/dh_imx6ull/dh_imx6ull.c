@@ -600,8 +600,10 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
+#ifdef CONFIG_FEC_MXC
 	setup_dhcom_mac_from_fuse(0, "ethaddr");
 	setup_dhcom_mac_from_fuse(1, "eth1addr");
+#endif
 
 #ifdef CONFIG_NAND_MXS
 	if (nand_size() != 0) {
@@ -1003,6 +1005,7 @@ enum dhcom_ddr3_code  dhcom_get_ddr3_size(void)
 	return ddr3_code;
 }
 
+#ifdef CONFIG_FEC_MXC
 /* ENET */
 /*
  * pin conflicts for fec1 and fec2, GPIO1_IO06 and GPIO1_IO07 can only
@@ -1051,6 +1054,7 @@ static void setup_iomux_fec(int fec_id)
 		imx_iomux_v3_setup_multiple_pads(fec2_pads,
 						 ARRAY_SIZE(fec2_pads));
 }
+#endif /* CONFIG_FEC_MXC */
 
 /* GPIO */
 static iomux_v3_cfg_t const gpio_pads[] = {
@@ -1226,7 +1230,9 @@ void board_init_f(ulong dummy)
 	/* board muxing */
 	setup_iomux_boardid();
 	setup_iomux_ddrcode();
+#ifdef CONFIG_FEC_MXC
 	setup_iomux_fec(CONFIG_FEC_ENET_DEV);
+#endif
 	setup_iomux_gpio();
 	setup_iomux_sd();
 	setup_iomux_spi();

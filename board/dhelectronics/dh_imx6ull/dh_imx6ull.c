@@ -142,24 +142,41 @@ int board_get_lga_hwcode(void)
 	return hw_code;
 }
 
-#define SODIMM_HW_CODE_BIT_0	IMX_GPIO_NR(4, 21)
-#define SODIMM_HW_CODE_BIT_1	IMX_GPIO_NR(4, 22)
-#define SODIMM_HW_CODE_BIT_2	IMX_GPIO_NR(4, 23)
+#define MAVEO_HW_CODE_BIT_0	IMX_GPIO_NR(4, 17)
+#define MAVEO_HW_CODE_BIT_1	IMX_GPIO_NR(4, 21)
+#define MAVEO_HW_CODE_BIT_2	IMX_GPIO_NR(4, 22)
 
-int board_get_sodimm_hwcode(void)
+int board_get_maveo_hwcode(void)
 {
 	int hw_code;
 
-	gpio_direction_input(SODIMM_HW_CODE_BIT_0);
-	gpio_direction_input(SODIMM_HW_CODE_BIT_1);
-	gpio_direction_input(SODIMM_HW_CODE_BIT_2);
+	gpio_direction_input(MAVEO_HW_CODE_BIT_0);
+	gpio_direction_input(MAVEO_HW_CODE_BIT_1);
+	gpio_direction_input(MAVEO_HW_CODE_BIT_2);
 
 	/* HW 100 = 0b00; HW 200 = 0b01; HW 300 = 0b10; HW 400 = 0b11; ... */
-	hw_code = ( (gpio_get_value(SODIMM_HW_CODE_BIT_2) << 2) |
-		    (gpio_get_value(SODIMM_HW_CODE_BIT_1) << 1) |
-		    (gpio_get_value(SODIMM_HW_CODE_BIT_0) << 0)  ) + 1;
+	hw_code = ( (gpio_get_value(MAVEO_HW_CODE_BIT_2) << 2) |
+		    (gpio_get_value(MAVEO_HW_CODE_BIT_1) << 1) |
+		    (gpio_get_value(MAVEO_HW_CODE_BIT_0) << 0)  ) + 1;
 
 	return hw_code;
+}
+
+#define MAVEO_VAR_CODE_BIT_0	IMX_GPIO_NR(4, 20)
+#define MAVEO_VAR_CODE_BIT_1	IMX_GPIO_NR(4, 19)
+
+int board_get_maveo_varcode(void)
+{
+	int var_code;
+
+	gpio_direction_input(MAVEO_VAR_CODE_BIT_0);
+	gpio_direction_input(MAVEO_VAR_CODE_BIT_1);
+
+	/* VAR 0 = 0b00; VAR 1 = 0b01; VAR 2 = 0b10; VAR 3 = 0b11 */
+	var_code = ( (gpio_get_value(MAVEO_VAR_CODE_BIT_1) << 1) |
+		     (gpio_get_value(MAVEO_VAR_CODE_BIT_0) << 0)  );
+
+	return var_code;
 }
 
 #ifdef CONFIG_NAND_MXS
@@ -705,7 +722,8 @@ static void handle_hw_revision(void)
 	u32 cpu_sn_high;
 	u32 cpu_sn_low;
 	u32 lga_hw_code;
-	u32 sodimm_hw_code;
+	u32 maveo_hw_code;
+	u32 maveo_var_code;
 	u32 sw_compatibility;
 	char buf[24];
 	const char *env_value;
@@ -717,11 +735,17 @@ static void handle_hw_revision(void)
 	env_set("serial#", buf);
 
 	lga_hw_code = board_get_lga_hwcode();
-	sodimm_hw_code = board_get_sodimm_hwcode();
-	printf("HW:    LGA=HW%d00, SODIMM=HW%d00\n", lga_hw_code, sodimm_hw_code);
+	maveo_hw_code = board_get_maveo_hwcode();
+	maveo_var_code = board_get_maveo_varcode();
+	printf("HW:    LGA=HW%d00, BOARD=HW%d00, VAR=%d\n", lga_hw_code,
+							    maveo_hw_code,
+							    maveo_var_code);
 
 	snprintf(buf, sizeof(buf), "imx6ull-dhcor%1d", lga_hw_code);
 	env_set("dhcor", buf);
+
+	snprintf(buf, sizeof(buf), "%1d00var%1d", maveo_hw_code, maveo_var_code);
+	env_set("maveo_hw", buf);
 
 	env_value = env_get("SN");
 	printf("SN:    %s\n", env_value != NULL ? env_value : "not available");
@@ -1231,10 +1255,13 @@ static iomux_v3_cfg_t const hwcode_pads[] = {
 	/* LGA HW code */
 	MX6_PAD_LCD_CLK__GPIO3_IO00	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
 	MX6_PAD_LCD_ENABLE__GPIO3_IO01	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
-	/* SODIMM HW code */
-	MX6_PAD_CSI_DATA00__GPIO4_IO21	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
-	MX6_PAD_CSI_DATA01__GPIO4_IO22	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
-	MX6_PAD_CSI_DATA02__GPIO4_IO23	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	/* maveo HW code */
+	MX6_PAD_CSI_MCLK__GPIO4_IO17	| MUX_PAD_CTRL(GPIO_PAD_CTRL), /* HW0 */
+	MX6_PAD_CSI_DATA00__GPIO4_IO21	| MUX_PAD_CTRL(GPIO_PAD_CTRL), /* HW1 */
+	MX6_PAD_CSI_DATA01__GPIO4_IO22	| MUX_PAD_CTRL(GPIO_PAD_CTRL), /* HW2 */
+	/* maveo HW variant */
+	MX6_PAD_CSI_HSYNC__GPIO4_IO20	| MUX_PAD_CTRL(GPIO_PAD_CTRL), /* VAR0 */
+	MX6_PAD_CSI_VSYNC__GPIO4_IO19	| MUX_PAD_CTRL(GPIO_PAD_CTRL), /* VAR1 */
 };
 
 static void setup_iomux_boardid(void)

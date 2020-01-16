@@ -407,6 +407,55 @@ int board_phy_config(struct phy_device *phydev)
 
 	return 0;
 }
+
+static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
+{
+	unsigned char enetaddr[6];
+	int ret, eeprom_i2c_addr;
+
+	if (fec_id == 0)
+		eeprom_i2c_addr = EEPROM0_I2C_ADDRESS;
+	else
+		eeprom_i2c_addr = EEPROM1_I2C_ADDRESS;
+
+	ret = eth_env_get_enetaddr(env_name, enetaddr);
+	if (ret)	/* ethaddr is already set as env_name */
+		return 0;
+
+	imx_get_mac_from_fuse(fec_id, enetaddr);
+
+	if (is_valid_ethaddr(enetaddr)) {
+		eth_env_set_enetaddr(env_name, enetaddr);
+		env_save();
+		return 0;
+	}
+
+	ret = i2c_set_bus_num(0);
+	if (ret) {
+		printf("Error switching I2C bus!\n");
+		return ret;
+	}
+
+	ret = i2c_read(eeprom_i2c_addr, 0xfa, 0x1, enetaddr, 0x6);
+	if (ret) {
+		printf("Net:   FEC%d: EEPROM 0x%02X not available\n",
+		       fec_id, eeprom_i2c_addr);
+		return ret;
+	}
+
+	if (is_valid_ethaddr(enetaddr)) {
+		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
+		       "from EEPROM 0x%02X to env \"%s\"\n",
+		       fec_id,
+		       enetaddr[0], enetaddr[1], enetaddr[2],
+		       enetaddr[3], enetaddr[4], enetaddr[5],
+		       eeprom_i2c_addr, env_name);
+		eth_env_set_enetaddr(env_name, enetaddr);
+		env_save();
+	}
+
+	return 0;
+}
 #endif /* CONFIG_FEC_MXC */
 
 #ifdef CONFIG_VIDEO_MXS
@@ -458,55 +507,6 @@ static int setup_lcd(void)
 	return 0;
 }
 #endif /* CONFIG_VIDEO_MXS */
-
-static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
-{
-	unsigned char enetaddr[6];
-	int ret, eeprom_i2c_addr;
-
-	if (fec_id == 0)
-		eeprom_i2c_addr = EEPROM0_I2C_ADDRESS;
-	else
-		eeprom_i2c_addr = EEPROM1_I2C_ADDRESS;
-
-	ret = eth_env_get_enetaddr(env_name, enetaddr);
-	if (ret)	/* ethaddr is already set as env_name */
-		return 0;
-
-	imx_get_mac_from_fuse(fec_id, enetaddr);
-
-	if (is_valid_ethaddr(enetaddr)) {
-		eth_env_set_enetaddr(env_name, enetaddr);
-		env_save();
-		return 0;
-	}
-
-	ret = i2c_set_bus_num(0);
-	if (ret) {
-		printf("Error switching I2C bus!\n");
-		return ret;
-	}
-
-	ret = i2c_read(eeprom_i2c_addr, 0xfa, 0x1, enetaddr, 0x6);
-	if (ret) {
-		printf("Net:   FEC%d: EEPROM 0x%02X not available\n",
-		       fec_id, eeprom_i2c_addr);
-		return ret;
-	}
-
-	if (is_valid_ethaddr(enetaddr)) {
-		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
-		       "from EEPROM 0x%02X to env \"%s\"\n",
-		       fec_id,
-		       enetaddr[0], enetaddr[1], enetaddr[2],
-		       enetaddr[3], enetaddr[4], enetaddr[5],
-		       eeprom_i2c_addr, env_name);
-		eth_env_set_enetaddr(env_name, enetaddr);
-		env_save();
-	}
-
-	return 0;
-}
 
 static void handle_hw_revision(void)
 {

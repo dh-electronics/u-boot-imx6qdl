@@ -837,7 +837,7 @@ int board_late_init(void)
 
 int checkboard(void)
 {
-	puts("Board: DHCOM i.MX6ULL\n");
+	puts("Board: DHCOR i.MX6ULL on maveo box\n");
 	return 0;
 }
 

@@ -720,8 +720,8 @@ static void handle_hw_revision(void)
 	sodimm_hw_code = board_get_sodimm_hwcode();
 	printf("HW:    LGA=HW%d00, SODIMM=HW%d00\n", lga_hw_code, sodimm_hw_code);
 
-	snprintf(buf, sizeof(buf), "imx6ull-dhcom%1d%1d", lga_hw_code, sodimm_hw_code);
-	env_set("dhcom", buf);
+	snprintf(buf, sizeof(buf), "imx6ull-dhcor%1d", lga_hw_code);
+	env_set("dhcor", buf);
 
 	env_value = env_get("SN");
 	printf("SN:    %s\n", env_value != NULL ? env_value : "not available");

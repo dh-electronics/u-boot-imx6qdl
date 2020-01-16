@@ -98,7 +98,7 @@ static struct i2c_pads_info i2c_pad_info1 = {
 		.gp = IMX_GPIO_NR(1, 31),
 	},
 };
-#endif
+#endif /* CONFIG_SYS_I2C_MXC */
 
 int dram_init(void)
 {
@@ -284,7 +284,7 @@ int board_mmc_init(bd_t *bis)
 			usdhc_cfg[i].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
 			usdhc_cfg[i].max_bus_width = 8;
 			break;
-#endif
+#endif /* CONFIG_NAND_MXS */
 		default:
 			printf("Warning: you configured more USDHC controllers (%d) than supported by the board\n", i + 1);
 			return -EINVAL;
@@ -299,7 +299,7 @@ int board_mmc_init(bd_t *bis)
 
 	return 0;
 }
-#endif
+#endif /* CONFIG_FSL_ESDHC */
 
 #ifdef CONFIG_USB_EHCI_MX6
 #define USB_OTHERREGS_OFFSET	0x800
@@ -344,7 +344,7 @@ int board_ehci_power(int port, int on)
 
 	return 0;
 }
-#endif
+#endif /* CONFIG_USB_EHCI_MX6 */
 
 #ifdef CONFIG_FEC_MXC
 static int setup_fec(int fec_id)
@@ -407,7 +407,7 @@ int board_phy_config(struct phy_device *phydev)
 
 	return 0;
 }
-#endif
+#endif /* CONFIG_FEC_MXC */
 
 #ifdef CONFIG_VIDEO_MXS
 static iomux_v3_cfg_t const lcd_pads[] = {
@@ -457,7 +457,7 @@ static int setup_lcd(void)
 
 	return 0;
 }
-#endif
+#endif /* CONFIG_VIDEO_MXS */
 
 static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
 {
@@ -555,7 +555,7 @@ int board_spi_cs_gpio(unsigned bus, unsigned cs)
 	else
 		return -1;
 }
-#endif
+#endif /* CONFIG_MXC_SPI */
 
 int board_init(void)
 {
@@ -596,7 +596,7 @@ static const struct boot_mode board_boot_modes[] = {
 	{"sd", MAKE_CFGVAL(0x40, 0x20, 0x00, 0x00)},
 	{NULL,	 0},
 };
-#endif
+#endif /* CONFIG_CMD_BMODE */
 
 int board_late_init(void)
 {
@@ -614,7 +614,7 @@ int board_late_init(void)
 		env_set("dhenvloc", "emmc");
 		env_set("dhstoragetype", "emmc");
 	}
-#else
+#else /* CONFIG_NAND_MXS */
 #ifdef CONFIG_FSL_ESDHC
 	env_set("dhblloc", "emmc");
 	env_set("dhenvloc", "emmc");
@@ -752,7 +752,7 @@ void board_boot_order(u32 *spl_boot_list)
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
 		break;
 	}
-#else
+#else /* CONFIG_NAND_MXS */
 #ifdef CONFIG_FSL_ESDHC
 	switch (boot_dev) {
 	case BOOT_DEVICE_SPI: /* SERIAL_ROM SPI */
@@ -1244,4 +1244,4 @@ void board_init_f(ulong dummy)
 	/* load/boot image from boot device */
 	board_init_r(NULL, 0);
 }
-#endif
+#endif /* CONFIG_SPL_BUILD */

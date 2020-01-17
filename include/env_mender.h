@@ -145,8 +145,11 @@
     "echo --> Run mender setup... ; "                                   \
     "run mender_setup; "                                                \
     "setenv mmcpart ${mender_boot_part}; "                              \
-    "echo Loading ${bootenv_file} from ${mmcdev} ${mmcpart}; "          \
+    "echo --> Loading ${bootenv_file} from ${mmcdev} ${mmcpart}; "      \
     "if run load_bootenv; then run importbootenv; fi; "                 \
+    "setenv maveo_bootargs console=${console} dhcor=${dhcor} "          \
+    "dhsw=${dhsw} maveo_hw=${maveo_hw} SN=${SN} pwm_bl.disable "        \
+    "${maveo_custom_bootarg}; "
     MENDER_BOOTARGS                                                     \
     "echo --> Boot arguments: ${bootargs}; "                            \
     MENDER_LOAD_KERNEL_AND_FDT                                          \

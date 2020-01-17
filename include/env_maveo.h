@@ -22,42 +22,49 @@
 #define HEADER_ENV_MAVEO_H
 
 #define MAVEO_ENV_SETTINGS                                              \
-    "recoveryargs="                                                     \
+    "maveo_recoveryargs="                                               \
     "setenv bootargs console=${console} "                               \
     "src_intf=mmc src_dev_part=${mmcdev}:1 "                            \
     "vt.global_cursor_default=0 consoleblank=0 dhcom=${dhcom} "         \
     "dhsw=${dhsw} SN=${SN}\0"                                           \
                                                                         \
-    "recoveryboot="                                                     \
+    "maveo_recoveryboot="                                               \
     "echo --> Boot from recovery partition mmc ${mmcdev}:1; "           \
-    "run recoveryargs; "                                                \
+    "run maveo_recoveryargs; "                                          \
+    "setenv boot_recovery 0; saveenv; "                                 \
     "echo --> Boot arguments: ${bootargs}; "                            \
     "mmc dev ${mmcdev}:1; "                                             \
     "load mmc ${mmcdev}:1 ${loadaddr} zImage_imx6ull-v1_emmc.update; "  \
     "bootz ${loadaddr};\0"                                              \
                                                                         \
-    "resetbuttoncheck="                                                 \
+    "maveo_autoupdate="                                                 \
+    "setenv auto_update 0; saveenv; "                                   \
+    "update auto;\0"                                                    \
+                                                                        \
+    "maveo_resetbuttoncheck="                                           \
     "if gpio input 8; then"                                             \
     " echo --> Reset button pressed;"                                   \
     " echo --> Try to start update auto;"                               \
-    " setenv auto_update 0; saveenv;"                                   \
-    " update auto; "                                                    \
-    " setenv boot_recovery 0; saveenv;"                                 \
-    " run recoveryboot; "                                               \
+    " run maveo_autoupdate; "                                           \
+    " echo --> Try to start recovery auto;"                             \
+    " run maveo_recoveryboot; "                                         \
     "fi;\0"                                                             \
                                                                         \
-    "autoupdatecheck="                                                  \
+    "maveo_autoupdatecheck="                                            \
     "if test ${auto_update} -eq 1; then"                                \
     " echo --> Auto update enabled;"                                    \
-    " setenv auto_update 0; saveenv;"                                   \
-    " update auto; "                                                    \
-    "fi;0"                                                              \
+    " run maveo_autoupdate; "                                           \
+    "else"                                                              \
+    " echo --> Auto update disabled; "                                  \
+    "fi;\0"                                                             \
                                                                         \
-    "autorecoverycheck="                                                \
+    "maveo_autorecoverycheck="                                          \
     "if test ${boot_recovery} -eq 1; then"                              \
     " echo --> Auto boot recovery enabled;"                             \
     " setenv boot_recovery 0; saveenv;"                                 \
-    " run recoveryboot; "                                               \
+    " run maveo_recoveryboot; "                                         \
+    "else"                                                              \
+    " echo --> Auto boot recovery disabled; "                           \
     "fi;\0"                                                             \
                                                                         \
     "maveoboot="                                                        \
@@ -67,8 +74,8 @@
     "setenv kernel_addr_r ${loadaddr}; "                                \
     "setenv mmcdev 2; "                                                 \
     "mmc dev ${mmcdev}; "                                               \
-    "run resetbuttoncheck; "                                            \
-    "run autoupdatecheck; "                                             \
-    "run autorecoverycheck;\0"                                          \
+    "run maveo_resetbuttoncheck; "                                      \
+    "run maveo_autoupdatecheck; "                                       \
+    "run maveo_autorecoverycheck;\0"                                    \
 
 #endif /* HEADER_ENV_MAVEO_H */

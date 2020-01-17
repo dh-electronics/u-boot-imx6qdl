@@ -126,9 +126,12 @@ static int read_cpu_temperature(struct udevice *dev)
 	/* Tmeas = (c2 - Nmeas * c1 + OFFSET) / 1000000 */
 	temperature = div_s64_rem(c2 - n_meas * c1 + OFFSET, 1000000, &rem);
 
-	/* power down anatop thermal sensor */
+	/*
+	 * Power down anatop thermal sensor, but don't clear bit
+	 * MISC0_REFTOP_SELBIASOFF, because in some cases setting the bit
+	 * at Linux startup destabilizes the CPU and causes errors
+	 */
 	writel(TEMPSENSE0_POWER_DOWN, &anatop->tempsense0_set);
-	writel(MISC0_REFTOP_SELBIASOFF, &anatop->ana_misc0_clr);
 
 	return temperature;
 }

@@ -26,7 +26,7 @@
     "setenv bootargs console=${console} "                               \
     "src_intf=mmc src_dev_part=${mmcdev}:1 "                            \
     "vt.global_cursor_default=0 consoleblank=0 dhcom=${dhcom} "         \
-    "dhsw=${dhsw} SN=${SN}\0"                                           \
+    "dhsw=${dhsw} SN=${SN} recovery=1\0"                                \
                                                                         \
     "boot_recovery=0\0"                                                 \
                                                                         \
@@ -54,6 +54,8 @@
     " run maveo_autoupdate; "                                           \
     " echo --> Try to start recovery auto;"                             \
     " run maveo_recoveryboot; "                                         \
+    "else"                                                              \
+    " echo --> Reset button not pressed; "                              \
     "fi;\0"                                                             \
                                                                         \
     "maveo_autoupdatecheck="                                            \

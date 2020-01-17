@@ -25,6 +25,7 @@
 #else
 
 #include <config_mender_defines.h>
+#include <env_maveo.h>
 
 #ifdef MENDER_NO_DEFAULT_ALTBOOTCMD
 # define MENDER_DEFAULT_ALTBOOTCMD
@@ -141,18 +142,7 @@
 #endif
 
 #define CONFIG_MENDER_BOOTCOMMAND                                       \
-    "echo --> Run boot command for maveo; "                             \
-    "setenv bootenv_file /boot/u-boot.env; "                            \
-    "setenv fdt_addr_r ${fdt_addr}; "                                   \
-    "setenv kernel_addr_r ${loadaddr}; "                                \
-    "setenv mmcdev 2; "                                                 \
-    "if test ${auto_update} -eq 1 || gpio input 8; then"                \
-    " echo --> Start update auto;"                                      \
-    " setenv auto_update 0; saveenv;"                                   \
-    " update auto; "                                                    \
-    "fi; "                                                              \
-    "if test ${mmcdev} -eq 2; then echo Booting from eMMC...; fi; "     \
-    "mmc dev ${mmcdev}; "                                               \
+    MAVEO_BOOTCOMMAND                                                   \
     "echo --> Run mender setup... ; "                                   \
     "run mender_setup; "                                                \
     "setenv mmcpart ${mender_boot_part}; "                              \

@@ -25,7 +25,6 @@
 #else
 
 #include <config_mender_defines.h>
-#include <env_maveo.h>
 
 #ifdef MENDER_NO_DEFAULT_ALTBOOTCMD
 # define MENDER_DEFAULT_ALTBOOTCMD
@@ -142,7 +141,7 @@
 #endif
 
 #define CONFIG_MENDER_BOOTCOMMAND                                       \
-    MAVEO_BOOTCOMMAND                                                   \
+    "run maveoboot; "                                                   \
     "echo --> Run mender setup... ; "                                   \
     "run mender_setup; "                                                \
     "setenv mmcpart ${mender_boot_part}; "                              \

@@ -9,6 +9,7 @@
 
 #include <env_callback.h>
 
+#include <env_maveo.h>
 #include <env_mender.h>
 
 #ifdef DEFAULT_ENV_INSTANCE_EMBEDDED
@@ -23,6 +24,7 @@ static char default_environment[] = {
 #else
 const uchar default_environment[] = {
 #endif
+        MAVEO_ENV_SETTINGS
 	MENDER_ENV_SETTINGS
 #ifndef CONFIG_USE_DEFAULT_ENV_FILE
 #ifdef	CONFIG_ENV_CALLBACK_LIST_DEFAULT

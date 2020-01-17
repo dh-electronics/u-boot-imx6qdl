@@ -149,7 +149,7 @@
     "if run load_bootenv; then run importbootenv; fi; "                 \
     "setenv maveo_bootargs console=${console} dhcor=${dhcor} "          \
     "dhsw=${dhsw} maveo_hw=${maveo_hw} SN=${SN} pwm_bl.disable "        \
-    "${maveo_custom_bootarg}; "
+    "${maveo_custom_bootarg}; "                                         \
     MENDER_BOOTARGS                                                     \
     "echo --> Boot arguments: ${bootargs}; "                            \
     MENDER_LOAD_KERNEL_AND_FDT                                          \

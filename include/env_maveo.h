@@ -28,6 +28,12 @@
     "vt.global_cursor_default=0 consoleblank=0 dhcom=${dhcom} "         \
     "dhsw=${dhsw} SN=${SN}\0"                                           \
                                                                         \
+    "boot_recovery=0\0"                                                 \
+                                                                        \
+    "auto_update=0\0"                                                   \
+                                                                        \
+    "flash_counter=0\0"                                                 \
+                                                                        \
     "maveo_recoveryboot="                                               \
     "echo --> Boot from recovery partition mmc ${mmcdev}:1; "           \
     "run maveo_recoveryargs; "                                          \

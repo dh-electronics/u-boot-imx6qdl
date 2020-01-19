@@ -69,7 +69,6 @@
     "maveo_autorecoverycheck="                                          \
     "if test ${boot_recovery} -eq 1; then"                              \
     " echo --> Auto boot recovery enabled;"                             \
-    " setenv boot_recovery 0; saveenv;"                                 \
     " run maveo_recoveryboot; "                                         \
     "else"                                                              \
     " echo --> Auto boot recovery disabled; "                           \

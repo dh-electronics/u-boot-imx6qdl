@@ -111,8 +111,6 @@
 #ifndef CONFIG_SPL_BUILD
 #define EXTRA_ENV_SETTINGS \
 	"console=ttymxc0,115200\0" \
-	"ipaddr=192.168.178.101\0" \
-	"serverip=192.168.178.1\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \
 		"setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs; " \

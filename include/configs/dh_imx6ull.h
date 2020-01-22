@@ -258,8 +258,6 @@
 #define CONFIG_ETHPRIME			"FEC"
 #endif
 
-#define CONFIG_IMX_THERMAL
-
 #define CONFIG_IOMUX_LPSR
 
 #ifndef CONFIG_SPL_BUILD

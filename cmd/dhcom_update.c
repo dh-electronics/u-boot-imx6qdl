@@ -858,6 +858,7 @@ int update_eeprom_settings(context_t *context, updateini_t *DHupdateINI)
 
         filesize = ret; // eeprom.bin filesize
 
+#ifdef CONFIG_MX6QDL /* Only imx6qdl uses display settings */
 #ifdef DHCOM_DISPLAY_SETTINGS_SIZE
         // Check if the file fits into to the eeprom-partition
         ret = check_imagesize(context, filesize, DHCOM_DISPLAY_SETTINGS_SIZE);
@@ -868,6 +869,7 @@ int update_eeprom_settings(context_t *context, updateini_t *DHupdateINI)
 #else
 	#warning Please define DHCOM_DISPLAY_SETTINGS_SIZE for image size check
 #endif
+#endif /* CONFIG_MX6QDL */
 
         printf("\n--> Update: The new eeprom File needs %lu Bytes\n", filesize);
         printf("    w = Write to addr\n");
@@ -897,6 +899,7 @@ int refresh_settings(context_t *context, updateini_t *DHupdateINI)
 		return ret;
 	}
 
+#ifdef CONFIG_MX6QDL /* Only imx6qdl uses display settings */
 #ifdef CONFIG_CMD_DHCOM_SETTINGS
 	ret =  settings_bin_to_struct(context->loadaddr, false);
         if (ret == 0)
@@ -904,7 +907,7 @@ int refresh_settings(context_t *context, updateini_t *DHupdateINI)
 #else
 	#warning refresh only available with CONFIG_CMD_DHCOM_SETTINGS
 #endif
-
+#endif /* CONFIG_MX6QDL */
 
         printf("\n--> Update: refresh settings done\n");
 	return 0;
@@ -962,6 +965,7 @@ int update_wince(context_t *context, updateini_t *DHupdateINI, char OSFileType)
         filesize = ret; // nk.nb0 filesize
         ulBlocks = DIV_ROUND_UP(filesize, ulNANDFlashBlockSize);
 
+#ifdef CONFIG_MX6QDL /* Only imx6qdl supports Windows CE */
 #ifdef WEC_PARTITION_SIZE
         // Check if the file fits into to the WEC-Image-partition
 	ret = check_imagesize(context, filesize, WEC_PARTITION_SIZE);
@@ -972,6 +976,8 @@ int update_wince(context_t *context, updateini_t *DHupdateINI, char OSFileType)
 #else
 	#warning Please define WEC_PARTITION_SIZE for image size check
 #endif
+#endif /* CONFIG_MX6QDL */
+
         env_set("redundant_wince_image", "");
         env_set("wec_image_size", "");
         env_set("wec_image_type_gz", "");
@@ -1037,6 +1043,8 @@ int update_eboot(context_t *context, updateini_t *DHupdateINI)
         // Calculate necessary sectors in flash for the eboot image file.
         filesize = ret;
         ulBlocks = DIV_ROUND_UP(filesize, blocksize);
+
+#ifdef CONFIG_MX6QDL /* Only imx6qdl supports Windows CE */
 #ifdef EBOOT_PARTITION_SIZE
         // Check if the file fits into to the flash-partition
 	ret = check_imagesize(context, filesize, EBOOT_PARTITION_SIZE);
@@ -1048,6 +1056,7 @@ int update_eboot(context_t *context, updateini_t *DHupdateINI)
 #else
 	#warning Please define EBOOT_PARTITION_SIZE for image size check
 #endif
+#endif /* CONFIG_MX6QDL */
 
         env_set("eboot_image", "");
         env_save();

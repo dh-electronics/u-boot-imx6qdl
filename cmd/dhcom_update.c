@@ -1331,6 +1331,9 @@ static int do_dhcom_update(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
                 if(ret == 0) {
                         ret = DHCOMupdate(cmdtp, argc, argv, "usb", "0:1");
 			if (ret == -EAGAIN || (ret == -ENOENT && !update_auto)) {
+				ret = DHCOMupdate(cmdtp, argc, argv, "usb", "0:0");
+			}
+			if (ret == -EAGAIN || (ret == -ENOENT && !update_auto)) {
 				/**
 				 * ret == -EAGAIN 
 				 *     no DHupdate.ini file -> try next storage

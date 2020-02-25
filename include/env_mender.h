@@ -154,7 +154,7 @@
     "echo --> Boot arguments: ${bootargs}; "                            \
     MENDER_LOAD_KERNEL_AND_FDT                                          \
     "${mender_boot_kernel_type} ${kernel_addr_r} - ${fdt_addr_r}; "     \
-    "run mender_try_to_recover; "
+    "run mender_try_to_recover "
 
 #endif /* !MENDER_AUTO_PROBING */
 

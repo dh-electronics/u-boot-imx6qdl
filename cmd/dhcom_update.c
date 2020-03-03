@@ -1116,7 +1116,7 @@ int loading_updatekernel(context_t *context, updateini_t *DHupdateINI)
 int DHCOMupdate(cmd_tbl_t *cmdtp, int argc, char * const argv[], char *storage_dev, char *storage_part)
 {	
 	// default filenames of binaries
-        char *file_uboot    = "u-boot.imx";
+        char *file_uboot    = "u-boot-with-spl.imx";
         char *file_eeprom   = "eeprom.bin";
         char *file_script   = "script.bin";
         char *file_settings = "settings.bin";
@@ -1475,7 +1475,7 @@ U_BOOT_CMD(
         "           - uboot.imx, ...\n"
         "update <type> [filename] - starts update without DHupdate.ini file\n"
         "         Types:\n"
-        "           - bootloader = Bootloader update (default file name u-boot.imx)\n"
+        "           - bootloader = Bootloader update (default file name u-boot-with-spl.imx)\n"
         "           - eeprom = Display adpater EEPROM update (default file name eeprom.bin)\n"
         "           - script = Run bootloader script (default file name script.bin)\n"
         "           - auto = Run DHupdate.ini update from command line\n"

@@ -723,6 +723,16 @@ config CMD_FUSE
 	  which control the behaviour of the device. The command uses the
 	  fuse_...() API.
 
+config CMD_IMX_FUSE_MAC
+	bool "imxfmac - fuse i.MX ethernet MAC address"
+	depends on ARCH_MX6 || ARCH_MX7
+	help
+	  This allows reading, sensing and programming the i.MX ethernet
+	  MAC address fuses from evironment values:
+	    - Ethernet 1 (fec_id=0) from evironment value "ethaddr"
+	    - Ethernet 2 (fec_id=1) from evironment value "eth1addr"
+	  The command uses the fuse_...() API.
+
 config CMD_GPIO
 	bool "gpio"
 	help

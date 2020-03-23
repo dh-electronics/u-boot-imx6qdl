@@ -425,6 +425,12 @@ static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
 	imx_get_mac_from_fuse(fec_id, enetaddr);
 
 	if (is_valid_ethaddr(enetaddr)) {
+		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
+		       "from fuse to env \"%s\"\n",
+		       fec_id,
+		       enetaddr[0], enetaddr[1], enetaddr[2],
+		       enetaddr[3], enetaddr[4], enetaddr[5],
+		       env_name);
 		eth_env_set_enetaddr(env_name, enetaddr);
 		env_save();
 		return 0;

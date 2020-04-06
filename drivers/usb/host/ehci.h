@@ -250,6 +250,7 @@ struct ehci_ctrl {
 	uint32_t *periodic_list;
 	int periodic_schedules;
 	int ntds;
+	bool async_locked;
 	struct ehci_ops ops;
 	void *priv;	/* client's private data */
 };

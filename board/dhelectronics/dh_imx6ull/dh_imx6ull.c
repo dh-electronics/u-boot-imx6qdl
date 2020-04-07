@@ -30,6 +30,7 @@
 #include <usb.h>
 #include <usb/ehci-ci.h>
 #include <nand.h>
+#include <fuse.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -508,11 +509,17 @@ static int setup_lcd(void)
 
 static void handle_hw_revision(void)
 {
+	u32 cpu_sn_high;
+	u32 cpu_sn_low;
 	u32 lga_hw_code;
 	u32 sodimm_hw_code;
 	u32 sw_compatibility;
 	char buf[16];
 	const char *env_value;
+
+	fuse_sense(0, 1, &cpu_sn_low);
+	fuse_sense(0, 2, &cpu_sn_high);
+	printf("CPUSN: %08X%08X\n", cpu_sn_high, cpu_sn_low);
 
 	lga_hw_code = board_get_lga_hwcode();
 	sodimm_hw_code = board_get_sodimm_hwcode();

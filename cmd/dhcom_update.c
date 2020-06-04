@@ -100,7 +100,7 @@ typedef enum {
 #define UPDATEINI_LED        "led"
 #define UPDATEINI_UPDATE     "update"
 #define UPDATEINI_END        "end"
-#define UPDATEINI_MAX_STEPS  10
+#define UPDATEINI_MAX_STEPS  30
 
 typedef struct {
     char *p_cUpdateType;

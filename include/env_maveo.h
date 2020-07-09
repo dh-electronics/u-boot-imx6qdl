@@ -69,8 +69,8 @@
     "if i2c probe 0x08; then"                                           \
     " i2c mw 0x08.1 0x01 0x00;"                                         \
     " i2c mw 0x08.1 0x05 0x00;"                                         \
-    " i2c mw 0x08.1 0x06 0x00;"                                         \
-    " i2c mw 0x08.1 0x07 0xFF;"                                         \
+    " i2c mw 0x08.1 0x06 0xFF;"                                         \
+    " i2c mw 0x08.1 0x07 0x00;"                                         \
     "else"                                                              \
     " echo LED controller could not be found; "                         \
     "fi;\0"                                                             \
@@ -87,12 +87,13 @@
     "fi;\0"                                                             \
                                                                         \
     "maveo_led_boot_recovery="                                          \
-    "echo --> Set LED into boot mode; "                                 \
+    "echo --> Set LED into boot recovery mode; "                        \
     "i2c dev 1; "                                                       \
     "if i2c probe 0x08; then"                                           \
-    " i2c mw 0x08.1 0x01 0x08;"                                         \
-    " i2c mw 0x08.1 0x03 0x01;"                                         \
-    " i2c mw 0x08.1 0x04 0x90;"                                         \
+    " i2c mw 0x08.1 0x01 0x00;"                                         \
+    " i2c mw 0x08.1 0x05 0xFF;"                                         \
+    " i2c mw 0x08.1 0x06 0x00;"                                         \
+    " i2c mw 0x08.1 0x07 0xFF;"                                         \
     "else"                                                              \
     " echo LED controller could not be found; "                         \
     "fi;\0"                                                             \

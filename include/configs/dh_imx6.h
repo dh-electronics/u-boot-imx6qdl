@@ -173,6 +173,7 @@
 
 #ifndef CONFIG_SPL_BUILD
 #define EXTRA_ENV_SETTINGS	\
+	"usb_pgood_delay=1000\0" \
 	"panel=no_panel\0" 		\
 	"console=ttymxc0,115200\0"	\
 	"splashimage=0x10000002\0" 	\

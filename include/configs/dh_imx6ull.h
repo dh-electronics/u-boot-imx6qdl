@@ -110,6 +110,7 @@
 
 #ifndef CONFIG_SPL_BUILD
 #define EXTRA_ENV_SETTINGS \
+	"usb_pgood_delay=1000\0" \
 	"console=ttymxc0,115200\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \

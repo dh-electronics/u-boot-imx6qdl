@@ -899,7 +899,11 @@ struct mx6_ddr_sysinfo dhcom_ddr_16bit  = {
 	.refr = 3,	/* 4 refresh commands per refresh cycle */
 };
 
-/* TBD */
+/*
+ * DDR3 128MB:
+ * TBD
+ * Values are taken from JEDEC DDR3-800E
+ */
 static struct mx6_ddr3_cfg dhcom_mem_ddr_1G = {
 	.mem_speed = 800,
 	.density = 1,
@@ -908,12 +912,16 @@ static struct mx6_ddr3_cfg dhcom_mem_ddr_1G = {
 	.rowaddr = 13,
 	.coladdr = 10,
 	.pagesz = 2,
-	.trcd = 1375,
-	.trcmin = 4875,
-	.trasmin = 3500,
+	.trcd = 1500,
+	.trcmin = 5250,
+	.trasmin = 3750,
 };
 
-/* Nanya Technology NT5CC128M16IP-DII */
+/*
+ * DDR3 256MB:
+ * Nanya Technology NT5CC128M16IP-DII
+ * Values are taken from JEDEC DDR3-800E
+ */
 static struct mx6_ddr3_cfg dhcom_mem_ddr_2G = {
 	.mem_speed = 800,
 	.density = 2,
@@ -922,12 +930,16 @@ static struct mx6_ddr3_cfg dhcom_mem_ddr_2G = {
 	.rowaddr = 14,
 	.coladdr = 10,
 	.pagesz = 2,
-	.trcd = 1375,
-	.trcmin = 4875,
-	.trasmin = 3500,
+	.trcd = 1500,
+	.trcmin = 5250,
+	.trasmin = 3750,
 };
 
-/* Intelligent Memory IM4G16D3FABG-125I */
+/*
+ * DDR3 512MB:
+ * Intelligent Memory IM4G16D3FABG-125(I) / IM4G16D3FDBG-107(I)
+ * Values are taken from JEDEC DDR3-800E
+ */
 static struct mx6_ddr3_cfg dhcom_mem_ddr_4G = {
 	.mem_speed = 800,
 	.density = 4,
@@ -936,9 +948,9 @@ static struct mx6_ddr3_cfg dhcom_mem_ddr_4G = {
 	.rowaddr = 15,
 	.coladdr = 10,
 	.pagesz = 2,
-	.trcd = 1375,
-	.trcmin = 4875,
-	.trasmin = 3500,
+	.trcd = 1500,
+	.trcmin = 5250,
+	.trasmin = 3750,
 };
 
 static void ccgr_init(void)

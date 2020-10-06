@@ -360,6 +360,56 @@ static int do_import_spiflash_env(cmd_tbl_t *cmdtp, int flag, int argc,
 }
 #endif /* CONFIG_ENV_IS_IN_MMC */
 
+#if defined(EXTRA_BOOT_ENV_FOR_SDCARD) || defined(EXTRA_BOOT_ENV_FOR_USB)
+static int do_set_boot_env(cmd_tbl_t *cmdtp, int flag, int argc,
+			   char * const argv[])
+{
+	int slen, idx;
+	char* idx_separator;
+	int ret = CMD_RET_USAGE;
+
+#ifdef EXTRA_BOOT_ENV_FOR_SDCARD
+	char boot_env_sdcard[] = EXTRA_BOOT_ENV_FOR_SDCARD;
+	if (!strcmp(argv[1], "sd")) {
+		printf("Set environment for sdcard boot:\n");
+		idx = 0;
+		while (idx < sizeof(boot_env_sdcard)) {
+			slen = strlen((const char *)(boot_env_sdcard + idx));
+			if (slen == 0)
+				break;
+			idx_separator = strchr(boot_env_sdcard + idx,'=');
+			idx_separator[0] = 0;
+			idx_separator++;
+			printf("  %s=%s\n", boot_env_sdcard + idx, idx_separator);
+			env_set(boot_env_sdcard + idx, idx_separator);
+			idx += slen + 1;
+		}
+		ret = 0;
+	}
+#endif
+#ifdef EXTRA_BOOT_ENV_FOR_USB
+	char boot_env_usb[] = EXTRA_BOOT_ENV_FOR_USB;
+	if (!strcmp(argv[1], "usb")) {
+		printf("Set environment for usb boot:\n");
+		idx = 0;
+		while (idx < sizeof(boot_env_usb)) {
+			slen = strlen((const char *)(boot_env_usb + idx));
+			if (slen == 0)
+				break;
+			idx_separator = strchr(boot_env_usb + idx,'=');
+			idx_separator[0] = 0;
+			idx_separator++;
+			printf("  %s=%s\n", boot_env_usb + idx, idx_separator);
+			env_set(boot_env_usb + idx, idx_separator);
+			idx += slen + 1;
+		}
+		ret = 0;
+	}
+#endif
+	return ret;
+}
+#endif
+
 #ifdef CONFIG_CMD_GREPENV
 static int do_env_grep(cmd_tbl_t *cmdtp, int flag,
 		       int argc, char * const argv[])
@@ -1557,6 +1607,22 @@ U_BOOT_CMD_COMPLETE(
 	"import environment variables from spiflash",
 	"name ...\n"
 	"    - import environment variable 'name' from spiflash",
+	var_complete
+);
+#endif
+
+#if defined(EXTRA_BOOT_ENV_FOR_SDCARD) || defined(EXTRA_BOOT_ENV_FOR_USB)
+U_BOOT_CMD_COMPLETE(
+	setbenv, CONFIG_SYS_MAXARGS, 0,	do_set_boot_env,
+	"Set boot environemnt to start from specific device",
+	"<boot device>\n"
+#if defined(EXTRA_BOOT_ENV_FOR_SDCARD)
+	"setbenv sd  - Booting from sdcard\n"
+#endif
+#if defined(EXTRA_BOOT_ENV_FOR_USB)
+	"setbenv usb - Booting from usb\n"
+#endif
+	"",
 	var_complete
 );
 #endif

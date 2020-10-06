@@ -181,6 +181,24 @@
 	"ubi part "MTDPARTS_PART_NAME"; ubifsmount ubi0:boot; run bootlinux"
 
 #endif
+
+#define EXTRA_BOOT_ENV_FOR_SDCARD \
+	"bootcmd=update auto; run bootlinux\0" \
+	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux kernel ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+	"mmcdev=1\0" \
+	"mmcpart=1\0" \
+	"mmc_rootfs_part=2\0"
+
+#define EXTRA_BOOT_ENV_FOR_USB \
+	"bootcmd=update auto; run bootlinux\0" \
+	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...; load usb ${usbdev}:${usbpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...; load usb ${usbdev}:${usbpart} ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux ${zImage_file}...; load usb ${usbdev}:${usbpart} ${loadaddr} ${zImage_file}\0" \
+	"usbdev=0\0" \
+	"usbpart=1\0"
+
 #endif
 
 /* Miscellaneous configurable options */

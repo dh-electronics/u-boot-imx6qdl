@@ -53,14 +53,21 @@
                                                                         \
     "maveo_led_initialize="                                             \
     "echo --> Init LED controller; "                                    \
-    "echo --> Enable PSoC reset pin; "                                  \
+    "echo --> Toggle PSoC reset pin; "                                  \
+    "gpio clear 130; "                                                  \
     "gpio set 130; "                                                    \
     "i2c dev 1; "                                                       \
     "if i2c probe 0x08; then"                                           \
-    " echo LED controller found. Perform software reset;"               \
-    " i2c mw 0x08.1 0x01 0xFF;"                                         \
+    " echo LED controller ready. Performing software reset;"            \
+    " i2c mw 0x08.1 0x01 0xFF; "                                        \
     "else"                                                              \
-    " echo LED controller could not be found; "                         \
+    " echo LED controller not ready yet, retry in 2.5 seconds;"         \
+    " sleep 2.5; "                                                      \
+    "fi; "                                                              \
+    "if i2c probe 0x08; then"                                           \
+    " echo LED controller ready; "                                      \
+    "else"                                                              \
+    " echo PsoC still not ready. Giving up.; "                          \
     "fi;\0"                                                             \
                                                                         \
     "maveo_led_boot_system="                                            \

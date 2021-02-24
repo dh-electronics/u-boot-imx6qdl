@@ -1073,6 +1073,38 @@ static void setup_iomux_fec(int fec_id)
 }
 #endif /* CONFIG_FEC_MXC */
 
+/* Unused uart pins */
+static iomux_v3_cfg_t const uart1_rtscts_pads[] = {
+	MX6_PAD_UART1_RTS_B__GPIO1_IO19		| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_UART1_CTS_B__GPIO1_IO18		| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+};
+
+static iomux_v3_cfg_t const uart2_pads[] = {
+	MX6_PAD_UART2_TX_DATA__GPIO1_IO20	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_UART2_RX_DATA__GPIO1_IO21	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_UART3_RX_DATA__GPIO1_IO25	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+	MX6_PAD_UART3_TX_DATA__GPIO1_IO24	| MUX_PAD_CTRL(GPIO_PAD_CTRL),
+};
+
+static void setup_iomux_unused_uart_pins_as_gpio_input(void)
+{
+	/*
+	 * For now uart1 rts/cts is muxed as gpios input, because if used as
+	 * rs485 it would not enable Tx to the bus and therefore not block it.
+	 * Later uart1 rts will be used as SD card detect, uart1 cts as GPIO I.
+	 */
+	imx_iomux_v3_setup_multiple_pads(uart1_rtscts_pads, ARRAY_SIZE(uart1_rtscts_pads));
+	gpio_direction_input(IMX_GPIO_NR(1, 19));
+	gpio_direction_input(IMX_GPIO_NR(1, 18));
+
+	/* All uart2 pins are muxed as gpio input to avoid blocking if used as rs485 */
+	imx_iomux_v3_setup_multiple_pads(uart2_pads, ARRAY_SIZE(uart2_pads));
+	gpio_direction_input(IMX_GPIO_NR(1, 20));
+	gpio_direction_input(IMX_GPIO_NR(1, 21));
+	gpio_direction_input(IMX_GPIO_NR(1, 25));
+	gpio_direction_input(IMX_GPIO_NR(1, 24));
+}
+
 /* GPIO */
 static iomux_v3_cfg_t const gpio_pads[] = {
 	MX6_PAD_SNVS_TAMPER0__GPIO5_IO00 | MUX_PAD_CTRL(GPIO_PAD_CTRL) | MUX_MODE_SION, /* A */
@@ -1240,6 +1272,7 @@ void board_init_f(ulong dummy)
 
 	/* iomux and setup of i2c */
 	board_early_init_f();
+	setup_iomux_unused_uart_pins_as_gpio_input();
 
 	/* setup GP timer */
 	timer_init();

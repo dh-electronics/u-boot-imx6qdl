@@ -17,6 +17,8 @@ struct arm_z_header {
 	uint32_t	zi_end;
 } __attribute__ ((__packed__));
 
+__weak int bootz_board_prep_linux(ulong image) { return 0; }
+
 int bootz_setup(ulong image, ulong *start, ulong *end)
 {
 	struct arm_z_header *zi = (struct arm_z_header *)image;
@@ -34,6 +36,8 @@ int bootz_setup(ulong image, ulong *start, ulong *end)
 	printf("Kernel image @ %#08lx [ %#08lx - %#08lx ]\n",
 	       image, *start, *end);
 #endif
+
+	bootz_board_prep_linux(image);
 
 	return 0;
 }

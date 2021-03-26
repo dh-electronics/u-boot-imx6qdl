@@ -67,6 +67,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define EEPROM0_I2C_ADDRESS	0x50
 #define EEPROM1_I2C_ADDRESS	0x53
+#define PMIC_I2C_ADDRESS	0x58
 
 #define SPI_CS			IMX_GPIO_NR(4, 26)
 #define SPI_BOOT_FLASH_EN	IMX_GPIO_NR(1, 9)
@@ -409,6 +410,68 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
+#define DA9061_PAGE_CON			0x000
+#define DA9061_CONTROL_D		0x011
+#define DA9061_BUCK1_CFG		0x09E
+#define DA9061_BUCK2_CFG		0x0A0
+#define DA9061_BUCK3_CFG		0x09F
+#define DA9061_CONFIG_H			0x10D
+static int da9061_write(int reg, unsigned char val)
+{
+	int ret;
+	unsigned char page_con;
+
+	/* Adjust PAGE_CON if necessary */
+	if (reg > 0xFF) {
+		val &= 0xFF;
+		page_con = 0x02;
+		ret = i2c_write(PMIC_I2C_ADDRESS, DA9061_PAGE_CON, 1, &page_con, 1);
+		if (ret)
+			return ret;
+	}
+
+	ret = i2c_write(PMIC_I2C_ADDRESS, reg, 1, &val, 1);
+	if (ret)
+		return ret;
+
+	/* Reset PAGE_CON, if necessary */
+	if (reg > 0xFF) {
+		page_con = 0x00;
+		ret = i2c_write(PMIC_I2C_ADDRESS, DA9061_PAGE_CON, 1, &page_con, 1);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static void pmic_watchdog_adjustments(void)
+{
+#ifdef CONFIG_SYS_I2C_MXC
+	int ret, ret_b1, ret_b2, ret_b3;
+
+	ret = i2c_set_bus_num(0);
+	if (ret) {
+		printf("Error switching I2C bus!\n");
+		return;
+	}
+
+	ret = da9061_write(DA9061_CONTROL_D, 0x00);
+	if (ret == 0)
+		printf("PMIC:  Disabled WDT\n");
+
+	ret_b1 = da9061_write(DA9061_BUCK1_CFG, 0x80);
+	ret_b2 = da9061_write(DA9061_BUCK2_CFG, 0x80);
+	ret_b3 = da9061_write(DA9061_BUCK3_CFG, 0x80);
+	if ((ret_b1 == 0) && (ret_b2 == 0) && (ret_b3 == 0))
+		printf("PMIC:  Enable synchronous (PWM)\n");
+
+	ret = da9061_write(DA9061_CONFIG_H, 0x00);
+	if (ret == 0)
+		printf("PMIC:  Enable half-current mode\n");
+#endif
+}
+
 static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
 {
 	unsigned char enetaddr[6];
@@ -605,6 +668,8 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
+	pmic_watchdog_adjustments();
+
 #ifdef CONFIG_FEC_MXC
 	setup_dhcom_mac_from_fuse(0, "ethaddr");
 	setup_dhcom_mac_from_fuse(1, "eth1addr");

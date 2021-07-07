@@ -717,7 +717,7 @@ int board_prep_linux(bootm_headers_t *images)
 }
 
 /* Reset ethernet phy before starting the linux kernel with bootz */
-int bootz_board_prep_linux(ulong image)
+int bootz_board_prep_linux()
 {
 	eth_phy_reset(CONFIG_FEC_ENET_DEV);
 	return 0;

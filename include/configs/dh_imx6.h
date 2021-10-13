@@ -184,7 +184,6 @@
 	        "console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom} " \
 	        "${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} vt.global_cursor_default=0\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0" \
-	"ipaddr=10.64.31.252\0" 	\
 	"bootenv_file=uLinuxEnv.txt\0" 	\
 	"bootlinux=if run load_bootenv; then run importbootenv;fi;" \
                 " setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs;" \

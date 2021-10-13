@@ -113,11 +113,15 @@
 	"usb_pgood_delay=1000\0" \
 	"console=ttymxc0,115200\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
+	"bootscript_file=boot.scr\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv; fi;" \
 		" setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs;" \
-		" setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt;" \
-		" run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr}\0" \
+		" setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file;" \
+		" run linuxargs;" \
+		" if run load_bootscript; then run runbootscript; fi;" \
+		" run load_fdt; run load_zimage; bootz ${loadaddr} - ${fdt_addr}\0" \
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
+	"runbootscript=echo Run U-Boot script ${bootscript_file}...; source ${loadaddr}\0" \
 	"linuxargs=setenv bootargs" \
 		" console=${console} ${rootfs} ${mtdparts} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs}" \
 		" dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
@@ -139,6 +143,8 @@
 	EXTRA_ENV_SETTINGS \
 	"load_bootenv=echo Loading ${bootenv_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_bootscript=echo Loading ${bootscript_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootscript_file}\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
@@ -168,6 +174,8 @@
 	"mtdparts="MTDPARTS_DEFAULT"\0" \
 	"load_bootenv=echo Loading ${bootenv_file}...;" \
 		" ubifsload ${loadaddr} ${bootenv_file}\0" \
+	"load_bootscript=echo Loading ${bootscript_file}...;" \
+		" ubifsload ${loadaddr} ${bootscript_file}\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...;" \
 		" ubifsload ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
@@ -186,6 +194,8 @@
 	"bootcmd=update auto; run bootlinux\0" \
 	"load_bootenv=echo Loading ${bootenv_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_bootscript=echo Loading ${bootscript_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootscript_file}\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
@@ -198,6 +208,8 @@
 	"bootcmd=update auto; run bootlinux\0" \
 	"load_bootenv=echo Loading ${bootenv_file}...;" \
 		" load usb ${usbdev}:${usbpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_bootscript=echo Loading ${bootscript_file}...;" \
+		" load usb ${usbdev}:${usbpart} ${loadaddr} ${bootscript_file}\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...;" \
 		" load usb ${usbdev}:${usbpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \

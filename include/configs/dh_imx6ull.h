@@ -113,48 +113,48 @@
 	"usb_pgood_delay=1000\0" \
 	"console=ttymxc0,115200\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
-	"bootlinux=if run load_bootenv; then run importbootenv;fi; " \
-		"setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs; " \
-		"setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt; " \
-		"run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr};\0" \
+	"bootlinux=if run load_bootenv; then run importbootenv; fi;" \
+		" setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs;" \
+		" setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file; run load_fdt;" \
+		" run load_zimage; run linuxargs; bootz ${loadaddr} - ${fdt_addr}\0" \
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
-	"linuxargs=setenv bootargs " \
-		"console=${console} ${rootfs} ${mtdparts} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs} " \
-		"dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
+	"linuxargs=setenv bootargs" \
+		" console=${console} ${rootfs} ${mtdparts} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs}" \
+		" dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
 	"fdt_addr=0x83000000\0" \
 	"fdt_high=0xffffffff\0" \
 	"enable_watchdog_128s=mw.w 20bc000 0xffb7; run serv_watchdog\0" \
 	"serv_watchdog=mw.w 0x020bc002 0x5555; mw.w 0x020bc002 0xaaaa\0" \
-	"setupdateargs=setenv bootargs " \
-		"console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args} ${mtdparts} " \
-		"vt.global_cursor_default=0 consoleblank=0 ${backlight} dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
+	"setupdateargs=setenv bootargs" \
+		" console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args} ${mtdparts}" \
+		" vt.global_cursor_default=0 consoleblank=0 ${backlight} dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dhstoragetype}.update; run setupdateargs; bootz ${loadaddr}\0" \
-	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=65464; " \
-		"if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dhstoragetype}.update; " \
-		"then run setupdateargs; bootz ${loadaddr}; fi;\0" \
+	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=65464;" \
+		" if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dhstoragetype}.update;" \
+		" then run setupdateargs; bootz ${loadaddr}; fi\0" \
 
 #ifndef CONFIG_NAND_MXS /* eMMC default args */
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	EXTRA_ENV_SETTINGS \
-	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...; " \
-		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file};\0" \
-	"load_fdt=echo Loading device tree ${fdt_file}...; " \
-		"load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"load_zimage=echo Loading linux kernel ${zImage_file}...; " \
-		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+	"load_bootenv=echo Loading ${bootenv_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0" \
 	""
 
 #define CONFIG_BOOTCOMMAND \
-	"update auto; " \
-	"if test ${mmcdev} -eq 1; then echo Trying to boot from uSD/SD/MMC card...; fi; " \
-	"if test ${mmcdev} -eq 2; then echo Trying to boot from eMMC...; fi; " \
-	"mmc dev ${mmcdev}; " \
-	"if mmc rescan; then run bootlinux; " \
-	"else echo Boot failed, because mmc${mmcdev} not found!; fi;"
+	"update auto;" \
+	" if test ${mmcdev} -eq 1; then echo Trying to boot from uSD/SD/MMC card...; fi;" \
+	" if test ${mmcdev} -eq 2; then echo Trying to boot from eMMC...; fi;" \
+	" mmc dev ${mmcdev};" \
+	" if mmc rescan; then run bootlinux;" \
+	" else echo Boot failed, because mmc${mmcdev} not found!; fi"
 
 #else /* NAND default args */
 
@@ -166,36 +166,42 @@
 	EXTRA_ENV_SETTINGS \
 	"mtdids=nand0=gpmi-nand\0" \
 	"mtdparts="MTDPARTS_DEFAULT"\0" \
-	"load_bootenv=echo Loading u-boot env file ${bootenv_file}...; " \
-		"ubifsload ${loadaddr} ${bootenv_file};\0" \
-	"load_fdt=echo Loading device tree ${fdt_file}...; " \
-		"ubifsload ${fdt_addr} ${fdt_file}\0" \
-	"load_zimage=echo Loading linux ${zImage_file}...; " \
-		"ubifsload ${loadaddr} ${zImage_file}\0" \
+	"load_bootenv=echo Loading ${bootenv_file}...;" \
+		" ubifsload ${loadaddr} ${bootenv_file}\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...;" \
+		" ubifsload ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
+		" ubifsload ${loadaddr} ${zImage_file}\0" \
 	""
 
 #define CONFIG_BOOTCOMMAND \
-	"update auto; " \
-	"if mtdparts; then echo Starting nand boot...; " \
-	"else mtdparts default; fi; " \
-	"ubi part "MTDPARTS_PART_NAME"; ubifsmount ubi0:boot; run bootlinux"
+	"update auto;" \
+	" if mtdparts; then echo Starting nand boot...;" \
+	" else mtdparts default; fi;" \
+	" ubi part "MTDPARTS_PART_NAME"; ubifsmount ubi0:boot; run bootlinux"
 
 #endif
 
 #define EXTRA_BOOT_ENV_FOR_SDCARD \
 	"bootcmd=update auto; run bootlinux\0" \
-	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
-	"load_fdt=echo Loading device tree ${fdt_file}...; load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"load_zimage=echo Loading linux kernel ${zImage_file}...; load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+	"load_bootenv=echo Loading ${bootenv_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0"
 
 #define EXTRA_BOOT_ENV_FOR_USB \
 	"bootcmd=update auto; run bootlinux\0" \
-	"load_bootenv=echo Loading u-boot environment ${bootenv_file}...; load usb ${usbdev}:${usbpart} ${loadaddr} ${bootenv_file}\0" \
-	"load_fdt=echo Loading device tree ${fdt_file}...; load usb ${usbdev}:${usbpart} ${fdt_addr} ${fdt_file}\0" \
-	"load_zimage=echo Loading linux ${zImage_file}...; load usb ${usbdev}:${usbpart} ${loadaddr} ${zImage_file}\0" \
+	"load_bootenv=echo Loading ${bootenv_file}...;" \
+		" load usb ${usbdev}:${usbpart} ${loadaddr} ${bootenv_file}\0" \
+	"load_fdt=echo Loading device tree ${fdt_file}...;" \
+		" load usb ${usbdev}:${usbpart} ${fdt_addr} ${fdt_file}\0" \
+	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
+		" load usb ${usbdev}:${usbpart} ${loadaddr} ${zImage_file}\0" \
 	"usbdev=0\0" \
 	"usbpart=1\0"
 

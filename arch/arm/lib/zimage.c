@@ -17,7 +17,7 @@ struct arm_z_header {
 	uint32_t	zi_end;
 } __attribute__ ((__packed__));
 
-__weak int bootz_board_prep_linux(ulong image) { return 0; }
+__weak int bootz_board_prep_linux(void) { return 0; }
 
 int bootz_setup(ulong image, ulong *start, ulong *end)
 {
@@ -37,7 +37,7 @@ int bootz_setup(ulong image, ulong *start, ulong *end)
 	       image, *start, *end);
 #endif
 
-	bootz_board_prep_linux(image);
+	bootz_board_prep_linux();
 
 	return 0;
 }

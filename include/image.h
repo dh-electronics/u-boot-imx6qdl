@@ -873,6 +873,8 @@ int image_setup_linux(bootm_headers_t *images);
  */
 int bootz_setup(ulong image, ulong *start, ulong *end);
 
+int bootz_board_prep_linux(void);
+
 /**
  * Return the correct start address and size of a Linux aarch64 Image.
  *

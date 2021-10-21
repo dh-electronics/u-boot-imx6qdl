@@ -696,3 +696,17 @@ int checkboard(void)
 	puts("Board: DHCOM i.MX6\n");
 	return 0;
 }
+
+/* Reset ethernet phy before starting the linux kernel with bootm */
+int board_prep_linux(bootm_headers_t *images)
+{
+	eth_phy_reset();
+	return 0;
+}
+
+/* Reset ethernet phy before starting the linux kernel with bootz */
+int bootz_board_prep_linux()
+{
+	eth_phy_reset();
+	return 0;
+}

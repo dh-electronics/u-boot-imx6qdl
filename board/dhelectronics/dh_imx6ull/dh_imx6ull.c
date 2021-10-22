@@ -381,17 +381,22 @@ static int setup_fec(int fec_id)
 
 static void eth_phy_reset(int fec_id)
 {
+	/*
+	 * On the i.MX6ULL VIO doesn't need to be enabled,
+	 * because this is directly connected to the supply.
+	 */
+
 	/* Reset PHY */
 	if (fec_id == 0)
 		gpio_direction_output(IMX_GPIO_NR(3, 23) , 0);
 	else
 		gpio_direction_output(IMX_GPIO_NR(3, 24) , 0);
-	mdelay(1);
+	udelay(500);
 	if (fec_id == 0)
 		gpio_direction_output(IMX_GPIO_NR(3, 23) , 1);
 	else
 		gpio_direction_output(IMX_GPIO_NR(3, 24) , 1);
-	mdelay(10);
+	udelay(500);
 }
 
 int board_eth_init(bd_t *bis)

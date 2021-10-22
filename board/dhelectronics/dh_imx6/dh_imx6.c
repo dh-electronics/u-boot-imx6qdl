@@ -405,11 +405,7 @@ static void eth_phy_reset(void)
 	/* Enable VIO */
 	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
 
-	/*
-	 * KSZ9021 PHY needs at least 10 mSec after PHY reset
-	 * is released to stabilize
-	 */
-	mdelay(10);
+	udelay(500);
 }
 
 static int setup_fec_clock(void)

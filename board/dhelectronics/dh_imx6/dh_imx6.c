@@ -397,14 +397,14 @@ static void setup_gpmi_nand(void)
 #ifdef CONFIG_FEC_MXC
 static void eth_phy_reset(void)
 {
+	/* Enable VIO */
+	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
+	mdelay(10);
+
 	/* Reset PHY */
 	gpio_direction_output(IMX_GPIO_NR(5, 0) , 0);
 	udelay(500);
 	gpio_set_value(IMX_GPIO_NR(5, 0), 1);
-
-	/* Enable VIO */
-	gpio_direction_output(IMX_GPIO_NR(1, 7) , 0);
-
 	udelay(500);
 }
 

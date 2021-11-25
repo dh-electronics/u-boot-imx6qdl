@@ -121,7 +121,6 @@
 		" if run load_bootscript; then run runbootscript; fi;" \
 		" run load_fdt; run load_zimage; bootz ${loadaddr} - ${fdt_addr}\0" \
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
-	"runbootscript=echo Run U-Boot script ${bootscript_file}...; source ${loadaddr}\0" \
 	"linuxargs=setenv bootargs" \
 		" console=${console} ${rootfs} ${mtdparts} fbcon=${fbcon} ${videoargs} ${backlight} ${optargs}" \
 		" dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
@@ -149,6 +148,9 @@
 		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
+		" setenv devtype mmc; setenv devnum ${mmcdev}; setenv partition ${mmcpart};" \
+		" source ${loadaddr}\0" \
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0" \
@@ -180,6 +182,9 @@
 		" ubifsload ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" ubifsload ${loadaddr} ${zImage_file}\0" \
+	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
+		" setenv devtype nand;" \
+		" source ${loadaddr}\0" \
 	""
 
 #define CONFIG_BOOTCOMMAND \
@@ -200,6 +205,9 @@
 		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
+	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
+		" setenv devtype mmc; setenv devnum ${mmcdev}; setenv partition ${mmcpart};" \
+		" source ${loadaddr}\0" \
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0"
@@ -214,6 +222,9 @@
 		" load usb ${usbdev}:${usbpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" load usb ${usbdev}:${usbpart} ${loadaddr} ${zImage_file}\0" \
+	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
+		" setenv devtype usb; setenv devnum ${usbdev}; setenv partition ${usbpart};" \
+		" source ${loadaddr}\0" \
 	"usbdev=0\0" \
 	"usbpart=1\0"
 

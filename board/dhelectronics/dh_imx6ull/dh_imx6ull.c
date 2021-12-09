@@ -421,6 +421,35 @@ int board_phy_config(struct phy_device *phydev)
 #define DA9061_BUCK2_CFG		0x0A0
 #define DA9061_BUCK3_CFG		0x09F
 #define DA9061_CONFIG_H			0x10D
+#define DA9061_VARIANT_ID		0x182
+static int da9061_read(int reg, unsigned char *val)
+{
+	int ret;
+	unsigned char page_con;
+
+	/* Adjust PAGE_CON if necessary */
+	if (reg > 0xFF) {
+		page_con = 0x02;
+		ret = i2c_write(PMIC_I2C_ADDRESS, DA9061_PAGE_CON, 1, &page_con, 1);
+		if (ret)
+			return ret;
+	}
+
+	ret = i2c_read(PMIC_I2C_ADDRESS, reg, 1, val, 1);
+	if (ret)
+		return ret;
+
+	/* Reset PAGE_CON, if necessary */
+	if (reg > 0xFF) {
+		page_con = 0x00;
+		ret = i2c_write(PMIC_I2C_ADDRESS, DA9061_PAGE_CON, 1, &page_con, 1);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int da9061_write(int reg, unsigned char val)
 {
 	int ret;
@@ -454,11 +483,33 @@ static void pmic_watchdog_adjustments(void)
 {
 #ifdef CONFIG_SYS_I2C_MXC
 	int ret, ret_b1, ret_b2, ret_b3;
+	unsigned char val;
+	char *var;
 
 	ret = i2c_set_bus_num(0);
 	if (ret) {
 		printf("Error switching I2C bus!\n");
 		return;
+	}
+
+	ret = da9061_read(DA9061_VARIANT_ID, &val);
+	if (ret == 0) {
+		val = (val & 0xF0) >> 4;
+		switch (val) {
+		case 1:
+			var = "-AA";
+			break;
+		case 2:
+			var = "-AB";
+			break;
+		case 3:
+			var = "-BA";
+			break;
+		default:
+			var = "";
+			break;
+		}
+		printf("PMIC:  DA9061%s\n", var);
 	}
 
 	ret = da9061_write(DA9061_CONTROL_D, 0x00);

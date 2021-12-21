@@ -582,12 +582,14 @@ static void handle_hw_revision(void)
 	u32 lga_hw_code;
 	u32 sodimm_hw_code;
 	u32 sw_compatibility;
-	char buf[16];
+	char buf[24];
 	const char *env_value;
 
 	fuse_sense(0, 1, &cpu_sn_low);
 	fuse_sense(0, 2, &cpu_sn_high);
-	printf("CPUSN: %08X%08X\n", cpu_sn_high, cpu_sn_low);
+	snprintf(buf, sizeof(buf), "%08X%08X", cpu_sn_high, cpu_sn_low);
+	printf("CPUSN: %s\n", buf);
+	env_set("serial#", buf);
 
 	lga_hw_code = board_get_lga_hwcode();
 	sodimm_hw_code = board_get_sodimm_hwcode();

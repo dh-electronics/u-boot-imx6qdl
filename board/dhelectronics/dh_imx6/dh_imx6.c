@@ -659,7 +659,9 @@ int board_get_hwcode(void)
 int board_late_init(void)
 {
 	u32 hw_code;
-	char buf[16];
+	char buf[24];
+	u32 cpu_sn_high;
+	u32 cpu_sn_low;
 
 	setup_dhcom_mac_from_fuse();
 
@@ -684,6 +686,12 @@ int board_late_init(void)
 	}
 
 	env_set("dhcom", buf);
+
+	fuse_sense(0, 1, &cpu_sn_low);
+	fuse_sense(0, 2, &cpu_sn_high);
+	snprintf(buf, sizeof(buf), "%08X%08X", cpu_sn_high, cpu_sn_low);
+	printf("CPUSN: %s\n", buf);
+	env_set("serial#", buf);
 
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);

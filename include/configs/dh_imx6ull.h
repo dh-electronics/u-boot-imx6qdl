@@ -133,6 +133,7 @@
 		" vt.global_cursor_default=0 consoleblank=0 ${backlight} dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dhstoragetype}.update; run setupdateargs; bootz ${loadaddr}\0" \
 	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=16384;" \
+		" if tftp ${loadaddr} ${serverip}:${tftp_path}/${tftp_script_file}; then source ${loadaddr}; fi;" \
 		" if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dhstoragetype}.update;" \
 		" then run setupdateargs; bootz ${loadaddr}; fi\0" \
 
@@ -151,6 +152,7 @@
 	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
 		" setenv devtype mmc; setenv devnum ${mmcdev}; setenv partition ${mmcpart};" \
 		" source ${loadaddr}\0" \
+	"tftp_script_file=Restore_uboot_emmc.bin\0" \
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
 	"mmc_rootfs_part=2\0" \
@@ -185,6 +187,7 @@
 	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
 		" setenv devtype nand;" \
 		" source ${loadaddr}\0" \
+	"tftp_script_file=Restore_uboot_nand.bin\0" \
 	""
 
 #define CONFIG_BOOTCOMMAND \

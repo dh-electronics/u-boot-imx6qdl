@@ -206,8 +206,8 @@
 	"scriptaddr=0x14000000\0" \
 	"fdtfile=imx6q-dhcom-pdk2.dtb\0" \
 	"setupdateargs=setenv bootargs" \
-		" console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom}" \
-		" ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN} PSN=${PSN} vt.global_cursor_default=0\0" \
+		" console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args}" \
+		" vt.global_cursor_default=0 consoleblank=0 ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} dhcom=${dhcom} SN=${SN} PSN=${PSN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0"
 
 #ifndef CONFIG_NAND_MXS /* eMMC default args */

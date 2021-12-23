@@ -180,10 +180,6 @@
 	"splashpos=m,m\0" \
 	"settings_bin_file=settings.bin\0" \
 	"splash_file=splash.bmp\0" \
-	"setupdateargs=setenv bootargs" \
-		" console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom}" \
-		" ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN} PSN=${PSN} vt.global_cursor_default=0\0" \
-	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
 	"bootscript_file=boot.scr\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv; fi;" \
@@ -208,7 +204,11 @@
 	"fdt_addr_r=0x13000000\0" \
 	"ramdisk_addr_r=0x18000000\0" \
 	"scriptaddr=0x14000000\0" \
-	"fdtfile=imx6q-dhcom-pdk2.dtb\0"
+	"fdtfile=imx6q-dhcom-pdk2.dtb\0" \
+	"setupdateargs=setenv bootargs" \
+		" console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} dhcom=${dhcom}" \
+		" ${backlight} ${parallel_display} ${lvds_display0} ${lvds_display1} SN=${SN} PSN=${PSN} vt.global_cursor_default=0\0" \
+	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhcom}.update; run setupdateargs; bootz ${loadaddr}\0"
 
 #ifndef CONFIG_NAND_MXS /* eMMC default args */
 

@@ -132,7 +132,7 @@
 		" console=${console} src_intf=${src_intf} src_dev_part=${src_dev_part} ${upd_extra_args} ${mtdparts}" \
 		" vt.global_cursor_default=0 consoleblank=0 ${backlight} dhblloc=${dhblloc} dhenvloc=${dhenvloc} dhcom=${dhcom} dhsw=${dhsw} SN=${SN} PSN=${PSN}\0" \
 	"load_update_kernel=load ${src_intf} ${src_dev_part} ${loadaddr} zImage_${dhsw}_${dhstoragetype}.update; run setupdateargs; bootz ${loadaddr}\0" \
-	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=65464;" \
+	"tftp_update=setenv src_intf tftp; setenv src_dev_part ${tftp_path}; setenv upd_extra_args tftp_blocksize=16384;" \
 		" if tftp ${loadaddr} ${serverip}:${tftp_path}/zImage_${dhsw}_${dhstoragetype}.update;" \
 		" then run setupdateargs; bootz ${loadaddr}; fi\0" \
 

@@ -3,7 +3,7 @@
 # Copyright (C) 2017 Marek Vasut <marex@denx.de>
 
 ifdef CONFIG_SPL_BUILD
-obj-y	:= dh_imx6_spl.o
+obj-y	:= dh_imx6_common.o dh_imx6_spl.o
 else
-obj-y	:= dh_imx6.o
+obj-y	:= dh_imx6_common.o dh_imx6.o
 endif

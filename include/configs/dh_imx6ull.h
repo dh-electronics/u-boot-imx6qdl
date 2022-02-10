@@ -87,6 +87,9 @@
 #define MMC_START_INDEX			1
 #define CONFIG_SYS_FSL_USDHC_NUM	3 /* 0=dummy, 1=uSD/SD/MMC, 2=eMMC */
 #define CONFIG_SUPPORT_EMMC_BOOT	/* eMMC specific */
+#define BOOT_DEVICE_MMC1_NAME		"SD"
+#define BOOT_DEVICE_MMC2_NAME		"uSD"
+#define BOOT_DEVICE_MMC2_2_NAME		"eMMC"
 
 /* NAND stuff */
 #ifdef CONFIG_NAND_MXS

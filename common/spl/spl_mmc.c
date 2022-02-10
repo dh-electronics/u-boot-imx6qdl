@@ -94,7 +94,7 @@ end:
 	return 0;
 }
 
-static int spl_mmc_get_device_index(u32 boot_device)
+int __weak spl_mmc_get_device_index(u32 boot_device)
 {
 	switch (boot_device) {
 	case BOOT_DEVICE_MMC1:

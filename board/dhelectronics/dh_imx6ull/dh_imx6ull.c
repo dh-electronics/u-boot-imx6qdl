@@ -508,10 +508,16 @@ static void pmic_watchdog_adjustments(void)
 	#define REG 0x09F
 	da9061_read(REG, &val); printf("PMIC:  [0x%03X]=0x%02X\n", REG, val);
 	#undef REG
+	#define REG 0x108
+	da9061_read(REG, &val); printf("PMIC:  [0x%03X]=0x%02X\n", REG, val);
+	#undef REG
 	#define REG 0x10D
 	da9061_read(REG, &val); printf("PMIC:  [0x%03X]=0x%02X\n", REG, val);
 	#undef REG
 	#define REG 0x10E
+	da9061_read(REG, &val); printf("PMIC:  [0x%03X]=0x%02X\n", REG, val);
+	#undef REG
+	#define REG 0x112
 	da9061_read(REG, &val); printf("PMIC:  [0x%03X]=0x%02X\n", REG, val);
 	#undef REG
 	#define REG 0x182

@@ -850,8 +850,7 @@ void board_boot_order(u32 *spl_boot_list)
 	u32 sbmr1 = readl(&src_base->sbmr1);
 	u32 reg, bmode, bt_fuse_sel;
 	u8 boot_dev;
-	u32 index;
-	char imx6_mmc_str[][5] = { "sd", "esd", "mmc", "emmc" };
+	u32 index, cs;
 	char bootdev_str[][8] = { "MMC1", "MMC2", "MMC2_2", "NAND", "ONENAND",
 				 "NOR", "UART", "SPI", "USB", "SATA", "I2C",
 				 "BOARD", "DFU", "XIP", "BOOTROM", "NONE" };
@@ -917,25 +916,35 @@ void board_boot_order(u32 *spl_boot_list)
 			printf(" + USB OTG phy active");
 	}
 
+	/*
+	 * Boot order rules:
+	 * - Default order = SPI, eMMC, uSD
+	 * - Selected device has priority
+	 * - External devices doesn't need boot order
+	 */
 	boot_dev = spl_boot_device();
-#ifdef CONFIG_NAND_MXS
+#ifdef CONFIG_NAND_MXS /* eMMC isn't available */
 	switch (boot_dev) {
 	case BOOT_DEVICE_SPI: /* SERIAL_ROM SPI */
 		reg = imx6_src_get_boot_mode();
-		index = (reg & IMX6_BMODE_SERIAL_ROM_MASK) >> IMX6_BMODE_SERIAL_ROM_SHIFT;
-		printf(", device=spi%d\n", index + 1);
-		spl_boot_list[0] = BOOT_DEVICE_SPI;
+		index = ((reg & IMX6_BMODE_SERIAL_ROM_MASK) >> IMX6_BMODE_SERIAL_ROM_SHIFT) + 1;
+		cs = ((reg & IMX6_BMODE_SERIAL_ROM_CS_MASK) >> IMX6_BMODE_SERIAL_ROM_CS_SHIFT);
+		printf(", device=ECSPI%d:SS%d (set order: SPI, uSD)\n", index, cs);
+		spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[1] = DH_BOOT_DEVICE_USD;
 		break;
 	case BOOT_DEVICE_MMC1: /* SD, eSD, MMC, eMMC */
 		reg = imx6_src_get_boot_mode();
-		index = (reg & IMX6_BMODE_MASK) >> IMX6_BMODE_SHIFT;
-		printf(", device=%s (", imx6_mmc_str[index - IMX6_BMODE_SD]);
-		if (   (((reg & IMX6_BMODE_MASK) >> IMX6_BMODE_SHIFT) != IMX6_BMODE_SD)
-		    && (((reg & IMX6_BMODE_MASK) >> IMX6_BMODE_SHIFT) != IMX6_BMODE_ESD) )
-			printf("unsupported => ");
-		printf("set order: MMC1, SPI)\n");
-		spl_boot_list[0] = BOOT_DEVICE_MMC1;
-		spl_boot_list[1] = BOOT_DEVICE_SPI;
+		index = ((reg & IMX6_BMODE_USDHC_MASK) >> IMX6_BMODE_USDHC_SHIFT) + 1;
+		printf(", device=uSDHC%d", index);
+		if (index == 1) { /* Could only boot from uSDHC1 */
+			printf("\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_USD;
+		} else {
+			printf(" (unsupported => set order: SPI, uSD)\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+			spl_boot_list[1] = DH_BOOT_DEVICE_USD;
+		}
 		break;
 	case BOOT_DEVICE_BOARD: /* USB SDP */
 		printf(", device=USB SDP\n");
@@ -949,7 +958,8 @@ void board_boot_order(u32 *spl_boot_list)
 		printf("      SBMR1      = 0x%08X\n", sbmr1);
 		printf("      BOOT_DEVICE_%s\n", bootdev_str[boot_dev]);
 		spl_boot_list[0] = boot_dev;
-		spl_boot_list[1] = BOOT_DEVICE_SPI;
+		spl_boot_list[1] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[2] = DH_BOOT_DEVICE_USD;
 		break;
 	}
 #else /* CONFIG_NAND_MXS */
@@ -957,26 +967,33 @@ void board_boot_order(u32 *spl_boot_list)
 	switch (boot_dev) {
 	case BOOT_DEVICE_SPI: /* SERIAL_ROM SPI */
 		reg = imx6_src_get_boot_mode();
-		index = (reg & IMX6_BMODE_SERIAL_ROM_MASK) >> IMX6_BMODE_SERIAL_ROM_SHIFT;
-		printf(", device=spi%d (set order: SPI, MMC2)\n", index + 1);
-		spl_boot_list[0] = BOOT_DEVICE_SPI;
-		spl_boot_list[1] = BOOT_DEVICE_MMC2;
+		index = ((reg & IMX6_BMODE_SERIAL_ROM_MASK) >> IMX6_BMODE_SERIAL_ROM_SHIFT) + 1;
+		cs = ((reg & IMX6_BMODE_SERIAL_ROM_CS_MASK) >> IMX6_BMODE_SERIAL_ROM_CS_SHIFT);
+		printf(", device=ECSPI%d:SS%d (set order: SPI, eMMC, uSD)\n", index, cs);
+		spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[1] = DH_BOOT_DEVICE_EMMC;
+		spl_boot_list[2] = DH_BOOT_DEVICE_USD;
 		break;
 	case BOOT_DEVICE_MMC1: /* SD, eSD, MMC, eMMC */
 		reg = imx6_src_get_boot_mode();
-		index = (reg & IMX6_BMODE_MASK) >> IMX6_BMODE_SHIFT;
-		printf(", device=%s", imx6_mmc_str[index - IMX6_BMODE_SD]);
-		switch ((reg & IMX6_BMODE_MASK) >> IMX6_BMODE_SHIFT) {
-		case IMX6_BMODE_SD:
-		case IMX6_BMODE_ESD:
-			printf(" (set order: MMC1, SPI)\n");
-			spl_boot_list[0] = BOOT_DEVICE_MMC1;
-			spl_boot_list[1] = BOOT_DEVICE_SPI;
+		index = ((reg & IMX6_BMODE_USDHC_MASK) >> IMX6_BMODE_USDHC_SHIFT) + 1;
+		printf(", device=uSDHC%d", index);
+		switch (index) {
+		case 1: /* uSDHC1 */
+			printf("\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_USD;
+			break;
+		case 2: /* uSDHC2 */
+			printf(" (set order: eMMC, SPI, uSD)\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_EMMC;
+			spl_boot_list[1] = DH_BOOT_DEVICE_SPI;
+			spl_boot_list[2] = DH_BOOT_DEVICE_USD;
 			break;
 		default:
-			printf(" (set order: MMC2, SPI)\n");
-			spl_boot_list[0] = BOOT_DEVICE_MMC2;
-			spl_boot_list[1] = BOOT_DEVICE_SPI;
+			printf(" (unsupported => set order: SPI, eMMC, uSD)\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+			spl_boot_list[1] = DH_BOOT_DEVICE_EMMC;
+			spl_boot_list[2] = DH_BOOT_DEVICE_USD;
 			break;
 		}
 		break;
@@ -992,8 +1009,9 @@ void board_boot_order(u32 *spl_boot_list)
 		printf("      SBMR1      = 0x%08X\n", sbmr1);
 		printf("      BOOT_DEVICE_%s\n", bootdev_str[boot_dev]);
 		spl_boot_list[0] = boot_dev;
-		spl_boot_list[1] = BOOT_DEVICE_SPI;
-		spl_boot_list[2] = BOOT_DEVICE_MMC2;
+		spl_boot_list[1] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[2] = DH_BOOT_DEVICE_EMMC;
+		spl_boot_list[3] = DH_BOOT_DEVICE_USD;
 		break;
 	}
 #endif /* CONFIG_FSL_ESDHC */

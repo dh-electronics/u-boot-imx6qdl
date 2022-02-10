@@ -752,7 +752,7 @@ int board_init(void)
 static const struct boot_mode board_boot_modes[] = {
 	{"spi", MAKE_CFGVAL(0x30, 0x00, 0x00, 0x08)},
 	{"emmc", MAKE_CFGVAL(0x60, 0x48, 0x00, 0x00)},
-	{"sd", MAKE_CFGVAL(0x40, 0x20, 0x00, 0x00)},
+	{"usd", MAKE_CFGVAL(0x40, 0x20, 0x00, 0x00)},
 	{NULL,	 0},
 };
 #endif /* CONFIG_CMD_BMODE */

@@ -388,6 +388,15 @@ int spl_mmc_load_image(struct spl_image_info *spl_image,
 	return err;
 }
 
-SPL_LOAD_IMAGE_METHOD("MMC1", 0, BOOT_DEVICE_MMC1, spl_mmc_load_image);
-SPL_LOAD_IMAGE_METHOD("MMC2", 0, BOOT_DEVICE_MMC2, spl_mmc_load_image);
-SPL_LOAD_IMAGE_METHOD("MMC2_2", 0, BOOT_DEVICE_MMC2_2, spl_mmc_load_image);
+#ifndef BOOT_DEVICE_MMC1_NAME
+#define BOOT_DEVICE_MMC1_NAME "MMC1"
+#endif
+#ifndef BOOT_DEVICE_MMC2_NAME
+#define BOOT_DEVICE_MMC2_NAME "MMC2"
+#endif
+#ifndef BOOT_DEVICE_MMC2_2_NAME
+#define BOOT_DEVICE_MMC2_2_NAME "MMC2_2"
+#endif
+SPL_LOAD_IMAGE_METHOD(BOOT_DEVICE_MMC1_NAME, 0, BOOT_DEVICE_MMC1, spl_mmc_load_image);
+SPL_LOAD_IMAGE_METHOD(BOOT_DEVICE_MMC2_NAME, 0, BOOT_DEVICE_MMC2, spl_mmc_load_image);
+SPL_LOAD_IMAGE_METHOD(BOOT_DEVICE_MMC2_2_NAME, 0, BOOT_DEVICE_MMC2_2, spl_mmc_load_image);

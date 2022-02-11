@@ -607,6 +607,217 @@ int spl_mmc_get_device_index(u32 boot_device)
 	return -ENODEV;
 }
 
+void board_boot_order(u32 *spl_boot_list)
+{
+	u32 dir_bt_dis = (readl(&src_base->sbmr2) >> 3) & 0x01;
+	u32 gpr9 = readl(&src_base->gpr9);
+	u32 sbmr1 = readl(&src_base->sbmr1);
+	u32 reg, bmode, bt_fuse_sel;
+	u8 boot_dev;
+	u32 index, cs;
+	char bootdev_str[][8] = { "MMC1", "MMC2", "MMC2_2", "NAND", "ONENAND",
+				 "NOR", "UART", "SPI", "USB", "SATA", "I2C",
+				 "BOARD", "DFU", "XIP", "BOOTROM", "NONE" };
+
+	/*
+	 * Dealing with bmode command:
+	 * The bit location IMX6_SRC_GPR10_BMODE in SRC_GPR10 determines where
+	 * BOOT_CFGX come from (only if it isn't disabled by DIR_BT_DIS fuse):
+	 *   0 = SBMR1:    normal boot
+	 *   1 = SRC_GPR9: boot values by bmode command
+	 * This is requested by function imx6_is_bmode_from_gpr9().
+	 * DIR_BT_DIS fuse prevents rom code from fetching SPL from bmode source.
+	 * So if active reset IMX6_SRC_GPR10_BMODE in SRC_GPR10 to prevent the
+	 * next bootloader stage to boot from bmode source.
+	 */
+	if (dir_bt_dis) {
+		reg = readl(&src_base->gpr10);
+		reg &= ~IMX6_SRC_GPR10_BMODE;
+		writel(reg, &src_base->gpr10);
+	}
+
+	printf("BOOT:");
+	if (imx6_is_bmode_from_gpr9() && !dir_bt_dis) {
+		printf(" Using SRC_GPR9 (0x%08X)", gpr9);
+	} else {
+		fuse_read(0, 6, &reg);
+		/*
+		 * Shows reg 0x460 (bank 0 word 6) if other bits besides
+		 * DIR_BT_DIS (bit 3), BT_FUSE_SEL (bit 4) and
+		 * FORCE_INTERNAL_BOOT (bit 16) are active
+		 */
+		if (reg & ~0x10018)
+			printf(" [0x460]=0x%08X,", reg);
+		/* Showing DIR_BT_DIS to indicate that bmode command is ignored */
+		if (dir_bt_dis)
+			printf(" DIR_BT_DIS=1,");
+		/* FORCE_INTERNAL_BOOT (bit 16) */
+		if (reg & 0x10000) {
+			printf(" FORCE_INTERNAL_BOOT=1 => force boot from fuses");
+		/* Mode + BT_FUSE_SEL */
+		} else {
+			bmode = (readl(&src_base->sbmr2) >> 24) & 0x03;
+			bt_fuse_sel = (readl(&src_base->sbmr2) >> 4) & 0x01;
+			printf(" mode=%d + BT_FUSE_SEL=%d", bmode, bt_fuse_sel);
+			if (bt_fuse_sel) {
+				if (bmode == 0x1)
+					printf(" => serial downloader");
+				else
+					printf(" => force boot from fuses");
+			} else {
+				if (bmode == 0x2)
+					printf(" => boot from gpios");
+				else
+					printf(" => serial downloader");
+			}
+		}
+		/*
+		 * Infer that the boot ROM used the USB serial downloader by
+		 * checking whether the USB PHY is currently active... This
+		 * assumes that SPL did not (yet) initialize the USB PHY...
+		 */
+		if (is_usbotg_phy_active())
+			printf(" + USB OTG phy active");
+	}
+
+	/*
+	 * Boot order rules:
+	 * - Default order = SPI, eMMC, uSD, SD
+	 * - Selected device has priority
+	 * - External devices doesn't need boot order
+	 */
+	boot_dev = spl_boot_device();
+#ifdef CONFIG_NAND_MXS /* eMMC isn't available */
+	switch (boot_dev) {
+	case BOOT_DEVICE_SPI: /* SERIAL_ROM SPI */
+		reg = imx6_src_get_boot_mode();
+		index = ((reg & IMX6_BMODE_SERIAL_ROM_MASK) >> IMX6_BMODE_SERIAL_ROM_SHIFT) + 1;
+		cs = ((reg & IMX6_BMODE_SERIAL_ROM_CS_MASK) >> IMX6_BMODE_SERIAL_ROM_CS_SHIFT);
+		printf(", device=ECSPI%d:SS%d (set order: SPI, uSD, SD)\n", index, cs);
+		spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[1] = DH_BOOT_DEVICE_USD;
+		spl_boot_list[2] = DH_BOOT_DEVICE_SD;
+		break;
+	case BOOT_DEVICE_MMC1: /* SD, eSD, MMC, eMMC */
+		reg = imx6_src_get_boot_mode();
+		index = ((reg & IMX6_BMODE_USDHC_MASK) >> IMX6_BMODE_USDHC_SHIFT) + 1;
+		printf(", device=uSDHC%d", index);
+		switch (index) {
+		case 2: /* uSDHC2 */
+			printf("\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_SD;
+			break;
+		case 3: /* uSDHC3 */
+			printf("\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_USD;
+			break;
+		default:
+			printf(" (unsupported => set order: SPI, uSD, SD)\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+			spl_boot_list[1] = DH_BOOT_DEVICE_USD;
+			spl_boot_list[2] = DH_BOOT_DEVICE_SD;
+			break;
+		}
+		break;
+	case BOOT_DEVICE_BOARD: /* USB SDP */
+		printf(", device=USB SDP\n");
+		spl_boot_list[0] = boot_dev;
+		break;
+	default:
+		printf(", device=unsupported\n");
+		fuse_read(0, 5, &reg);
+		printf("      Fuse 0x450 = 0x%08X\n", reg);
+		printf("      SRC_GPR9   = 0x%08X\n", gpr9);
+		printf("      SBMR1      = 0x%08X\n", sbmr1);
+		printf("      BOOT_DEVICE_%s\n", bootdev_str[boot_dev]);
+		spl_boot_list[0] = boot_dev;
+		spl_boot_list[1] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[2] = DH_BOOT_DEVICE_USD;
+		spl_boot_list[3] = DH_BOOT_DEVICE_SD;
+		break;
+	}
+#else /* CONFIG_NAND_MXS */
+#ifdef CONFIG_FSL_ESDHC
+	switch (boot_dev) {
+	case BOOT_DEVICE_SPI: /* SERIAL_ROM SPI */
+		reg = imx6_src_get_boot_mode();
+		index = ((reg & IMX6_BMODE_SERIAL_ROM_MASK) >> IMX6_BMODE_SERIAL_ROM_SHIFT) + 1;
+		cs = ((reg & IMX6_BMODE_SERIAL_ROM_CS_MASK) >> IMX6_BMODE_SERIAL_ROM_CS_SHIFT);
+		printf(", device=ECSPI%d:SS%d (set order: SPI, eMMC, uSD, SD)\n", index, cs);
+		spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[1] = DH_BOOT_DEVICE_EMMC;
+		spl_boot_list[2] = DH_BOOT_DEVICE_USD;
+		spl_boot_list[3] = DH_BOOT_DEVICE_SD;
+		break;
+	case BOOT_DEVICE_MMC1: /* SD, eSD, MMC, eMMC */
+		reg = imx6_src_get_boot_mode();
+		index = ((reg & IMX6_BMODE_USDHC_MASK) >> IMX6_BMODE_USDHC_SHIFT) + 1;
+		printf(", device=uSDHC%d", index);
+		switch (index) {
+		case 2: /* uSDHC2 */
+			printf("\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_SD;
+			break;
+		case 3: /* uSDHC3 */
+			printf("\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_USD;
+			break;
+		case 4: /* uSDHC4 */
+			printf(" (set order: eMMC, SPI, uSD, SD)\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_EMMC;
+			spl_boot_list[1] = DH_BOOT_DEVICE_SPI;
+			spl_boot_list[2] = DH_BOOT_DEVICE_USD;
+			spl_boot_list[3] = DH_BOOT_DEVICE_SD;
+			break;
+		default:
+			printf(" (unsupported => set order: SPI, eMMC, uSD, SD)\n");
+			spl_boot_list[0] = DH_BOOT_DEVICE_SPI;
+			spl_boot_list[1] = DH_BOOT_DEVICE_EMMC;
+			spl_boot_list[2] = DH_BOOT_DEVICE_USD;
+			spl_boot_list[3] = DH_BOOT_DEVICE_SD;
+			break;
+		}
+		break;
+	case BOOT_DEVICE_BOARD: /* USB SDP */
+		printf(", device=USB SDP\n");
+		spl_boot_list[0] = boot_dev;
+		break;
+	default:
+		printf(", device=unsupported\n");
+		fuse_read(0, 5, &reg);
+		printf("      Fuse 0x450 = 0x%08X\n", reg);
+		printf("      SRC_GPR9   = 0x%08X\n", gpr9);
+		printf("      SBMR1      = 0x%08X\n", sbmr1);
+		printf("      BOOT_DEVICE_%s\n", bootdev_str[boot_dev]);
+		spl_boot_list[0] = boot_dev;
+		spl_boot_list[1] = DH_BOOT_DEVICE_SPI;
+		spl_boot_list[2] = DH_BOOT_DEVICE_EMMC;
+		spl_boot_list[3] = DH_BOOT_DEVICE_USD;
+		spl_boot_list[4] = DH_BOOT_DEVICE_SD;
+		break;
+	}
+#endif /* CONFIG_FSL_ESDHC */
+#endif /* CONFIG_NAND_MXS */
+
+#if defined(DEBUG)
+	fuse_read(0, 5, &reg);
+	printf("      Fuse 0x450:  CFG1=0x%02X CFG2=0x%02X CFG3=0x%02X CFG4=0x%02X\n",
+	       reg & 0xFF, (reg >> 8) & 0xFF, (reg >> 16) & 0xFF, (reg >> 24) & 0xFF );
+	reg = gpr9;
+	printf("      GPR9:        CFG1=0x%02X CFG2=0x%02X CFG4=0x%02X CFG4=0x%02X\n",
+	       reg & 0xFF, (reg >> 8) & 0xFF, (reg >> 16) & 0xFF, (reg >> 24) & 0xFF );
+	reg = sbmr1;
+	printf("      SBMR1:       CFG1=0x%02X CFG2=0x%02X CFG4=0x%02X CFG4=0x%02X\n",
+	       reg & 0xFF, (reg >> 8) & 0xFF, (reg >> 16) & 0xFF, (reg >> 24) & 0xFF );
+	fuse_read(0, 6, &reg);
+	printf("      Fuse 0x460:  0x%08X\n", reg);
+	fuse_read(0, 7, &reg);
+	printf("      Fuse 0x470:  0x%08X\n", reg);
+	fuse_read(5, 5, &reg);
+	printf("      Fuse 0x6D0:  0x%08X\n", reg);
+#endif /* DEBUG */
+}
+
 void board_init_f(ulong dummy)
 {
 	/* setup AIPS and disable watchdog */

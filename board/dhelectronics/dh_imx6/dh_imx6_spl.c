@@ -585,6 +585,28 @@ static void spl_dram_init(void)
 	}
 }
 
+#define DH_BOOT_DEVICE_SPI	BOOT_DEVICE_SPI
+#define DH_BOOT_DEVICE_SD	BOOT_DEVICE_MMC1   /* mmc0 */
+#define DH_BOOT_DEVICE_USD	BOOT_DEVICE_MMC2   /* mmc1 */
+#define DH_BOOT_DEVICE_EMMC	BOOT_DEVICE_MMC2_2 /* mmc2 */
+int spl_mmc_get_device_index(u32 boot_device)
+{
+	switch (boot_device) {
+	case DH_BOOT_DEVICE_SD:
+		return 0;
+	case DH_BOOT_DEVICE_USD:
+		return 1;
+	case DH_BOOT_DEVICE_EMMC:
+		return 2;
+	}
+
+#ifdef CONFIG_SPL_LIBCOMMON_SUPPORT
+	printf("spl: unsupported mmc boot device.\n");
+#endif
+
+	return -ENODEV;
+}
+
 void board_init_f(ulong dummy)
 {
 	/* setup AIPS and disable watchdog */

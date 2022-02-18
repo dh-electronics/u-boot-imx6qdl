@@ -1474,6 +1474,18 @@ static void dhcom_spl_dram_init(void)
 #endif /* CONFIG_MX6_DDRCAL */
 }
 
+#define SNVS_LPSR		0x020CC04C
+#define SNVS_LPPGDR		0x020CC064
+#define SNVS_LPPGDR_INIT	0x41736166
+static void imx6ull_snvs_lp_init(void)
+{
+	/* Initialize glitch detect */
+	writel(SNVS_LPPGDR_INIT, (void *)SNVS_LPPGDR);
+
+	/* Clear interrupt status */
+	writel(0xFFFFFFFF, (void *)SNVS_LPSR);
+}
+
 void board_init_f(ulong dummy)
 {
 	ccgr_init();
@@ -1504,6 +1516,9 @@ void board_init_f(ulong dummy)
 
 	/* DDR initialization */
 	dhcom_spl_dram_init();
+
+	/* Init i.MX6ULL SNVS_LP (for writing to SNVS_LPGPR) */
+	imx6ull_snvs_lp_init();
 
 	/* Clear the BSS. */
 	memset(__bss_start, 0, __bss_end - __bss_start);

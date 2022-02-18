@@ -34,6 +34,9 @@
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x11400 /* 0x8a * 512 */
 #define CONFIG_SPL_TARGET		"u-boot-with-spl-env.imx"
 
+/* Bootcounter */
+#define CONFIG_SYS_BOOTCOUNT_BE
+
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(4 * SZ_1M)
 

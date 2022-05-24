@@ -600,6 +600,54 @@ int board_get_hwcode(void)
 	return hw_code;
 }
 
+#define BAREBOX_HEADER_STR     "barebox"
+#define BAREBOX_HEADER_OFFSET  0x20
+
+/*
+ * u-boot -> barebox migration path:
+ * If a barebox header is found on mmc0 (SD card), set boot from SD card and
+ * reset. Otherwise continue booting as usual.
+ */
+static void jump_to_sd_barebox(void)
+{
+	ulong loadaddr = env_get_hex("loadaddr", 0x12000000);
+	char cmd[128];
+	int ret;
+
+	/* expecting barebox on SD card */
+	ret = run_command("mmc dev 0", 0);
+	if (ret) {
+		printf("%s: mmc0: no such device\n", __func__);
+		return;
+	}
+
+	/* load barebox header into memory */
+	snprintf(cmd, sizeof(cmd), "mmc read 0x%08lx 0x0 0x1", loadaddr);
+	ret = run_command(cmd, 0);
+	if (ret) {
+		printf("%s: could not read from mmc0\n", __func__);
+		return;
+	}
+
+	/*
+	 * check barebox header: BAREBOX_HEADER_STR is null-terminated, so we
+	 * can use strcmp()
+	 */
+	if (strcmp((char*)loadaddr + BAREBOX_HEADER_OFFSET,
+		   BAREBOX_HEADER_STR)) {
+
+		printf("%s: no barebox header found on mmc0\n", __func__);
+		return;
+	}
+
+	/* boot from barebox SD card */
+	printf("%s: barebox header found on mmc0, jumping to barebox..\n",
+	       __func__);
+	ret = run_command("bmode sd", 0);
+	if (ret)
+		printf("%s: bmode command returned error\n", __func__);
+}
+
 int board_late_init(void)
 {
 	u32 hw_code;
@@ -640,6 +688,9 @@ int board_late_init(void)
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
+
+	jump_to_sd_barebox();
+
 	return 0;
 }
 

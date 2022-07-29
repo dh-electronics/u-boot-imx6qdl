@@ -234,7 +234,7 @@
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
 	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
-		" setenv devtype mmc; setenv devnum ${mmcdev}; setenv partition ${mmcpart};" \
+		" setenv devtype mmc; setenv devnum ${mmcdev}; setenv bootpart ${mmcpart};" \
 		" source ${loadaddr}\0" \
 	"tftp_script_file=Restore_uboot_emmc.bin\0" \
 	"mmcdev=1\0" \

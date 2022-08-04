@@ -565,7 +565,7 @@ static void pmic_adjustments(void)
 		printf("PMIC:  Disabled WDT\n");
 
 	/* PMIC BUCKX_CFG */
-	value = DA9061_BUCKX_CFG_PWM << 16 | /* BUCK1 */
+	value = DA9061_BUCKX_CFG_PFM << 16 | /* BUCK1 */
 		DA9061_BUCKX_CFG_PWM << 8  | /* BUCK2 */
 		DA9061_BUCKX_CFG_PWM << 0;   /* BUCK3 */
 	buck_cfg = env_get("pmic_buck_cfg"); /* Check for overwriting by environment */
@@ -582,8 +582,7 @@ static void pmic_adjustments(void)
 		       buck_cfg_str[((value >>  0) & DA9061_BUCKX_CFG_MASK) >> 6]);
 
 	/* PMIC CONFIG_C (BUCK config) */
-	value = DA9061_CONFIG_C_BUCK1_CLK_INV |
-		DA9061_CONFIG_C_BUCK3_CLK_INV |
+	value = DA9061_CONFIG_C_BUCK2_CLK_INV |
 		DA9061_CONFIG_C_BUCK_ACTV_DISCHRG;
 	config_c = env_get("pmic_config_c"); /* Check for overwriting by environment */
 	if (config_c != NULL)

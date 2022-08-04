@@ -479,7 +479,7 @@ static int da9061_write(int reg, unsigned char val)
 	return 0;
 }
 
-static void pmic_watchdog_adjustments(void)
+static void pmic_adjustments(void)
 {
 #ifdef CONFIG_SYS_I2C_MXC
 	int ret, ret_b1, ret_b2, ret_b3;
@@ -759,7 +759,7 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
-	pmic_watchdog_adjustments();
+	pmic_adjustments();
 
 #ifdef CONFIG_FEC_MXC
 	setup_dhcom_mac_from_fuse(0, "ethaddr");

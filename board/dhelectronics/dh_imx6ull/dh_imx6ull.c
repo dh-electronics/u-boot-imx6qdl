@@ -415,13 +415,13 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
-#define DA9061_PAGE_CON			0x000
-#define DA9061_CONTROL_D		0x011
-#define DA9061_BUCK1_CFG		0x09E
-#define DA9061_BUCK2_CFG		0x0A0
-#define DA9061_BUCK3_CFG		0x09F
-#define DA9061_CONFIG_H			0x10D
-#define DA9061_VARIANT_ID		0x182
+#define DA9061_PAGE_CON				0x000
+#define DA9061_CONTROL_D			0x011
+#define DA9061_BUCK1_CFG			0x09E
+#define DA9061_BUCK2_CFG			0x0A0
+#define DA9061_BUCK3_CFG			0x09F
+#define DA9061_CONFIG_H				0x10D
+#define DA9061_VARIANT_ID			0x182
 static int da9061_read(int reg, unsigned char *val)
 {
 	int ret;
@@ -525,6 +525,7 @@ static void pmic_adjustments(void)
 	#undef REG
 #endif
 
+	/* PMIC Variant */
 	ret = da9061_read(DA9061_VARIANT_ID, &val);
 	if (ret == 0) {
 		val = (val & 0xF0) >> 4;
@@ -545,16 +546,19 @@ static void pmic_adjustments(void)
 		printf("PMIC:  DA9061%s\n", var);
 	}
 
+	/* PMIC CONTROL_D (watchdog) */
 	ret = da9061_write(DA9061_CONTROL_D, 0x00);
 	if (ret == 0)
 		printf("PMIC:  Disabled WDT\n");
 
+	/* PMIC BUCKX_CFG */
 	ret_b1 = da9061_write(DA9061_BUCK1_CFG, 0x80);
 	ret_b2 = da9061_write(DA9061_BUCK2_CFG, 0x80);
 	ret_b3 = da9061_write(DA9061_BUCK3_CFG, 0x80);
 	if ((ret_b1 == 0) && (ret_b2 == 0) && (ret_b3 == 0))
 		printf("PMIC:  Enable synchronous (PWM)\n");
 
+	/* PMIC CONFIG_H (BUCK current mode) */
 	ret = da9061_write(DA9061_CONFIG_H, 0x00);
 	if (ret == 0)
 		printf("PMIC:  Enable half-current mode\n");

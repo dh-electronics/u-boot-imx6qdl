@@ -423,6 +423,14 @@ int board_phy_config(struct phy_device *phydev)
 #define DA9061_CONFIG_C				0x108
 #define DA9061_CONFIG_H				0x10D
 #define DA9061_VARIANT_ID			0x182
+#define DA9061_CONFIG_C_BUCK_ACTV_DISCHRG	0x04
+#define DA9061_CONFIG_C_BUCK1_CLK_INV		0x08
+#define DA9061_CONFIG_C_BUCK2_CLK_INV		0x40
+#define DA9061_CONFIG_C_BUCK3_CLK_INV		0x10
+#define DA9061_BUCKX_CFG_PFM			0x40
+#define DA9061_BUCKX_CFG_PWM			0x80
+#define DA9061_BUCKX_CFG_AUTO			0xC0
+#define DA9061_BUCKX_CFG_MASK			0xC0
 static int da9061_read(int reg, unsigned char *val)
 {
 	int ret;
@@ -486,6 +494,10 @@ static void pmic_adjustments(void)
 	int ret, ret_b1, ret_b2, ret_b3;
 	unsigned char val;
 	char *var;
+	const char *buck_cfg;
+	const char *config_c;
+	int value;
+	const char buck_cfg_str[][7] = {"SL_A/B", "PFM", "PWM", "AUTO"};
 
 	ret = i2c_set_bus_num(0);
 	if (ret) {
@@ -553,16 +565,37 @@ static void pmic_adjustments(void)
 		printf("PMIC:  Disabled WDT\n");
 
 	/* PMIC BUCKX_CFG */
-	ret_b1 = da9061_write(DA9061_BUCK1_CFG, 0x80);
-	ret_b2 = da9061_write(DA9061_BUCK2_CFG, 0x80);
-	ret_b3 = da9061_write(DA9061_BUCK3_CFG, 0x80);
+	value = DA9061_BUCKX_CFG_PWM << 16 | /* BUCK1 */
+		DA9061_BUCKX_CFG_PWM << 8  | /* BUCK2 */
+		DA9061_BUCKX_CFG_PWM << 0;   /* BUCK3 */
+	buck_cfg = env_get("pmic_buck_cfg"); /* Check for overwriting by environment */
+	if (buck_cfg != NULL)
+		value = simple_strtol(buck_cfg, NULL, 16);
+	ret_b1 = da9061_write(DA9061_BUCK1_CFG, (value >> 16) & 0xFF);
+	ret_b2 = da9061_write(DA9061_BUCK2_CFG, (value >>  8) & 0xFF);
+	ret_b3 = da9061_write(DA9061_BUCK3_CFG, (value >>  0) & 0xFF);
 	if ((ret_b1 == 0) && (ret_b2 == 0) && (ret_b3 == 0))
-		printf("PMIC:  Enable synchronous (PWM)\n");
+		printf("PMIC:  BUCK_CFG=0x%06X (BUCK1=%s, BUCK2=%s, BUCK3=%s)\n",
+		       value,
+		       buck_cfg_str[((value >> 16) & DA9061_BUCKX_CFG_MASK) >> 6],
+		       buck_cfg_str[((value >>  8) & DA9061_BUCKX_CFG_MASK) >> 6],
+		       buck_cfg_str[((value >>  0) & DA9061_BUCKX_CFG_MASK) >> 6]);
 
 	/* PMIC CONFIG_C (BUCK config) */
-	ret = da9061_write(DA9061_CONFIG_C, 0x1C);
+	value = DA9061_CONFIG_C_BUCK1_CLK_INV |
+		DA9061_CONFIG_C_BUCK3_CLK_INV |
+		DA9061_CONFIG_C_BUCK_ACTV_DISCHRG;
+	config_c = env_get("pmic_config_c"); /* Check for overwriting by environment */
+	if (config_c != NULL)
+		value = simple_strtol(config_c, NULL, 16);
+	ret = da9061_write(DA9061_CONFIG_C, value);
 	if (ret == 0)
-		printf("PMIC:  BUCK config: BUCK1=INV, BUCK2=NORM, BUCK3=INV, ACTV_DISCHRG=ON\n");
+		printf("PMIC:  CONFIG_C=0x%02X (BUCK1=%s, BUCK2=%s, BUCK3=%s, ACTV_DISCHRG=%s)\n",
+		       value,
+		       (value & DA9061_CONFIG_C_BUCK1_CLK_INV) ? "INV" : "NORM",
+		       (value & DA9061_CONFIG_C_BUCK2_CLK_INV) ? "INV" : "NORM",
+		       (value & DA9061_CONFIG_C_BUCK3_CLK_INV) ? "INV" : "NORM",
+		       (value & DA9061_CONFIG_C_BUCK_ACTV_DISCHRG) ? "ON" : "OFF");
 
 	/* PMIC CONFIG_H (BUCK current mode) */
 	ret = da9061_write(DA9061_CONFIG_H, 0x00);

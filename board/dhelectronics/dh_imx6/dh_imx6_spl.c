@@ -327,6 +327,37 @@ int get_ddr3_size(void)
 	return 256 << size;
 }
 
+/* Unused uart pins */
+static iomux_v3_cfg_t const uart1_rtscts_pads[] = {
+	IOMUX_PADS(PAD_EIM_D20__GPIO3_IO20	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+	IOMUX_PADS(PAD_EIM_D19__GPIO3_IO19	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+};
+
+static iomux_v3_cfg_t const uart2_pads[] = {
+	IOMUX_PADS(PAD_CSI0_DAT14__GPIO6_IO00	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+	IOMUX_PADS(PAD_CSI0_DAT15__GPIO6_IO01	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+	IOMUX_PADS(PAD_CSI0_DAT18__GPIO6_IO04	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+	IOMUX_PADS(PAD_CSI0_DAT19__GPIO6_IO05	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
+};
+
+static void setup_iomux_unused_uart_pins_as_gpio_input(void)
+{
+	/*
+	 * For now uart1 rts/cts is muxed as gpios input, because if used as
+	 * rs485 it would not enable Tx to the bus and therefore not block it.
+	 */
+	SETUP_IOMUX_PADS(uart1_rtscts_pads);
+	gpio_direction_input(IMX_GPIO_NR(3, 20));
+	gpio_direction_input(IMX_GPIO_NR(3, 19));
+
+	/* All uart2 pins are muxed as gpio input to avoid blocking if used as rs485 */
+	SETUP_IOMUX_PADS(uart2_pads);
+	gpio_direction_input(IMX_GPIO_NR(6, 0));
+	gpio_direction_input(IMX_GPIO_NR(6, 1));
+	gpio_direction_input(IMX_GPIO_NR(6, 4));
+	gpio_direction_input(IMX_GPIO_NR(6, 5));
+}
+
 /* GPIO */
 static iomux_v3_cfg_t const gpio_pads[] = {
 	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02	| MUX_PAD_CTRL(GPIO_PAD_CTRL)),
@@ -825,6 +856,8 @@ void board_init_f(ulong dummy)
 
 	ccgr_init();
 	gpr_init();
+
+	setup_iomux_unused_uart_pins_as_gpio_input();
 
 	/* setup GP timer */
 	timer_init();

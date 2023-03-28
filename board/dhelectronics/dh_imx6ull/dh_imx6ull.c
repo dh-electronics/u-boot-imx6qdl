@@ -415,6 +415,62 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
+static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
+{
+	unsigned char enetaddr[6];
+	int ret, eeprom_i2c_addr;
+
+	if (fec_id == 0)
+		eeprom_i2c_addr = EEPROM0_I2C_ADDRESS;
+	else
+		eeprom_i2c_addr = EEPROM1_I2C_ADDRESS;
+
+	ret = eth_env_get_enetaddr(env_name, enetaddr);
+	if (ret)	/* ethaddr is already set as env_name */
+		return 0;
+
+	imx_get_mac_from_fuse(fec_id, enetaddr);
+
+	if (is_valid_ethaddr(enetaddr)) {
+		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
+		       "from fuse to env \"%s\"\n",
+		       fec_id,
+		       enetaddr[0], enetaddr[1], enetaddr[2],
+		       enetaddr[3], enetaddr[4], enetaddr[5],
+		       env_name);
+		eth_env_set_enetaddr(env_name, enetaddr);
+		env_save();
+		return 0;
+	}
+
+	ret = i2c_set_bus_num(0);
+	if (ret) {
+		printf("Error switching I2C bus!\n");
+		return ret;
+	}
+
+	ret = i2c_read(eeprom_i2c_addr, 0xfa, 0x1, enetaddr, 0x6);
+	if (ret) {
+		printf("Net:   FEC%d: EEPROM 0x%02X not available\n",
+		       fec_id, eeprom_i2c_addr);
+		return ret;
+	}
+
+	if (is_valid_ethaddr(enetaddr)) {
+		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
+		       "from EEPROM 0x%02X to env \"%s\"\n",
+		       fec_id,
+		       enetaddr[0], enetaddr[1], enetaddr[2],
+		       enetaddr[3], enetaddr[4], enetaddr[5],
+		       eeprom_i2c_addr, env_name);
+		eth_env_set_enetaddr(env_name, enetaddr);
+		env_save();
+	}
+
+	return 0;
+}
+#endif /* CONFIG_FEC_MXC */
+
 #define DA9061_PAGE_CON				0x000
 #define DA9061_CONTROL_D			0x011
 #define DA9061_BUCK1_CFG			0x09E
@@ -603,62 +659,6 @@ static void pmic_adjustments(void)
 #endif
 }
 
-static int setup_dhcom_mac_from_fuse(int fec_id, const char *env_name)
-{
-	unsigned char enetaddr[6];
-	int ret, eeprom_i2c_addr;
-
-	if (fec_id == 0)
-		eeprom_i2c_addr = EEPROM0_I2C_ADDRESS;
-	else
-		eeprom_i2c_addr = EEPROM1_I2C_ADDRESS;
-
-	ret = eth_env_get_enetaddr(env_name, enetaddr);
-	if (ret)	/* ethaddr is already set as env_name */
-		return 0;
-
-	imx_get_mac_from_fuse(fec_id, enetaddr);
-
-	if (is_valid_ethaddr(enetaddr)) {
-		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
-		       "from fuse to env \"%s\"\n",
-		       fec_id,
-		       enetaddr[0], enetaddr[1], enetaddr[2],
-		       enetaddr[3], enetaddr[4], enetaddr[5],
-		       env_name);
-		eth_env_set_enetaddr(env_name, enetaddr);
-		env_save();
-		return 0;
-	}
-
-	ret = i2c_set_bus_num(0);
-	if (ret) {
-		printf("Error switching I2C bus!\n");
-		return ret;
-	}
-
-	ret = i2c_read(eeprom_i2c_addr, 0xfa, 0x1, enetaddr, 0x6);
-	if (ret) {
-		printf("Net:   FEC%d: EEPROM 0x%02X not available\n",
-		       fec_id, eeprom_i2c_addr);
-		return ret;
-	}
-
-	if (is_valid_ethaddr(enetaddr)) {
-		printf("Net:   FEC%d: Save MAC %02X:%02X:%02X:%02X:%02X:%02X "
-		       "from EEPROM 0x%02X to env \"%s\"\n",
-		       fec_id,
-		       enetaddr[0], enetaddr[1], enetaddr[2],
-		       enetaddr[3], enetaddr[4], enetaddr[5],
-		       eeprom_i2c_addr, env_name);
-		eth_env_set_enetaddr(env_name, enetaddr);
-		env_save();
-	}
-
-	return 0;
-}
-#endif /* CONFIG_FEC_MXC */
-
 #ifdef CONFIG_VIDEO_MXS
 static iomux_v3_cfg_t const lcd_pads[] = {
 	MX6_PAD_LCD_CLK__LCDIF_CLK | MUX_PAD_CTRL(LCD_PAD_CTRL),
@@ -845,14 +845,18 @@ int checkboard(void)
 /* Reset ethernet phy before starting the linux kernel with bootm */
 int board_prep_linux(bootm_headers_t *images)
 {
+#ifdef CONFIG_FEC_MXC
 	eth_phy_reset(CONFIG_FEC_ENET_DEV);
+#endif
 	return 0;
 }
 
 /* Reset ethernet phy before starting the linux kernel with bootz */
 int bootz_board_prep_linux()
 {
+#ifdef CONFIG_FEC_MXC
 	eth_phy_reset(CONFIG_FEC_ENET_DEV);
+#endif
 	return 0;
 }
 

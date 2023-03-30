@@ -337,7 +337,6 @@ int board_ehci_power(int port, int on)
 	case 0:
 		break;
 	case 1:
-		gpio_direction_output(IMX_GPIO_NR(1, 5), !on);
 		break;
 	default:
 		printf("MXC USB port %d not yet supported\n", port);
@@ -1465,7 +1464,6 @@ static void setup_iomux_spi(void)
 /* USB */
 static iomux_v3_cfg_t const usb_pads[] = {
 	MX6_PAD_GPIO1_IO00__ANATOP_OTG1_ID	| MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_GPIO1_IO05__GPIO1_IO05		| MUX_PAD_CTRL(GPIO_PAD_CTRL),
 };
 
 static void setup_iomux_usb(void)

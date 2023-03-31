@@ -842,18 +842,22 @@ int checkboard(void)
 	return 0;
 }
 
-/* Reset ethernet phy before starting the linux kernel with bootm */
+/* Preparations before starting the linux kernel with bootm */
 int board_prep_linux(bootm_headers_t *images)
 {
+	/* Set SPI CS as input, because pin is used as DHCOM GPIO P */
+	gpio_direction_input(SPI_CS);
 #ifdef CONFIG_FEC_MXC
 	eth_phy_reset(CONFIG_FEC_ENET_DEV);
 #endif
 	return 0;
 }
 
-/* Reset ethernet phy before starting the linux kernel with bootz */
+/* Preparations before starting the linux kernel with bootz */
 int bootz_board_prep_linux()
 {
+	/* Set SPI CS as input, because pin is used as DHCOM GPIO P */
+	gpio_direction_input(SPI_CS);
 #ifdef CONFIG_FEC_MXC
 	eth_phy_reset(CONFIG_FEC_ENET_DEV);
 #endif

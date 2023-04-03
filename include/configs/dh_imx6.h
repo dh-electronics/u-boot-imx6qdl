@@ -186,12 +186,13 @@
 	"settings_bin_file=settings.bin\0" \
 	"splash_file=splash.bmp\0" \
 	"bootenv_file=uLinuxEnv.txt\0" \
-	"bootscript_file=boot.scr\0" \
+	"bootscript_file=/boot/boot.scr\0" \
+	"bootscript_file_alt=boot.scr\0" \
 	"bootlinux=if run load_bootenv; then run importbootenv; fi;" \
 		" setenv set_rootfs setenv rootfs ${rootfs}; run set_rootfs;" \
 		" setenv set_fdt_file setenv fdt_file ${fdt_file}; run set_fdt_file;" \
 		" run linuxargs;" \
-		" if run load_bootscript; then run runbootscript; fi;" \
+		" if run load_bootscript; then run runbootscript; else if run load_bootscript_alt; then run runbootscript; fi; fi;" \
 		" run load_fdt; run load_zimage; bootz ${loadaddr} - ${fdt_addr}\0" \
 	"importbootenv=echo Importing environment from ${bootenv_file}...; env import -t ${loadaddr} ${filesize}\0" \
 	"linuxargs=setenv bootargs" \
@@ -229,11 +230,13 @@
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv_file}\0" \
 	"load_bootscript=echo Loading ${bootscript_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootscript_file}\0" \
+	"load_bootscript_alt=echo Loading ${bootscript_file_alt}...;" \
+		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootscript_file_alt}\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zImage_file}\0" \
-	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
+	"runbootscript=echo Run U-Boot script...;" \
 		" setenv devtype mmc; setenv devnum ${mmcdev}; setenv bootpart ${mmcpart};" \
 		" source ${loadaddr}\0" \
 	"tftp_script_file=Restore_uboot_emmc.bin\0" \
@@ -262,11 +265,13 @@
 		" ubifsload ${loadaddr} ${bootenv_file}\0" \
 	"load_bootscript=echo Loading ${bootscript_file}...;" \
 		" ubifsload ${loadaddr} ${bootscript_file}\0" \
+	"load_bootscript_alt=echo Loading ${bootscript_file_alt}...;" \
+		" ubifsload ${loadaddr} ${bootscript_file_alt}\0" \
 	"load_fdt=echo Loading device tree ${fdt_file}...;" \
 		" ubifsload ${fdt_addr} ${fdt_file}\0" \
 	"load_zimage=echo Loading linux kernel ${zImage_file}...;" \
 		" ubifsload ${loadaddr} ${zImage_file}\0" \
-	"runbootscript=echo Run U-Boot script ${bootscript_file}...;" \
+	"runbootscript=echo Run U-Boot script...;" \
 		" setenv devtype nand;" \
 		" source ${loadaddr}\0" \
 	"tftp_script_file=Restore_uboot_nand.bin\0" \
